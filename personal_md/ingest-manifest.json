@@ -1,0 +1,77 @@
+[
+  {
+    "filename": "certificate--aws-ai-practitioner--2025-06-01.md",
+    "doc_type": "certificate",
+    "size_bytes": 728
+  },
+  {
+    "filename": "certificate--aws-cloud-practitioner--2025-05-26.md",
+    "doc_type": "certificate",
+    "size_bytes": 744
+  },
+  {
+    "filename": "certificate--cka--2024-06-26.md",
+    "doc_type": "certificate",
+    "size_bytes": 612
+  },
+  {
+    "filename": "course--cs-610-database-systems.md",
+    "doc_type": "course",
+    "size_bytes": 702
+  },
+  {
+    "filename": "course--cs-633-cloud-computing.md",
+    "doc_type": "course",
+    "size_bytes": 700
+  },
+  {
+    "filename": "course--cs-645-modern-cryptography.md",
+    "doc_type": "course",
+    "size_bytes": 708
+  },
+  {
+    "filename": "course--cs-652-advanced-algorithms-applications.md",
+    "doc_type": "course",
+    "size_bytes": 732
+  },
+  {
+    "filename": "course--cs-660-artificial-intelligence.md",
+    "doc_type": "course",
+    "size_bytes": 712
+  },
+  {
+    "filename": "course--cs-662-natural-language-processing.md",
+    "doc_type": "course",
+    "size_bytes": 720
+  },
+  {
+    "filename": "course--cs-665-deep-learning.md",
+    "doc_type": "course",
+    "size_bytes": 696
+  },
+  {
+    "filename": "course--cs-667-machine-learning.md",
+    "doc_type": "course",
+    "size_bytes": 698
+  },
+  {
+    "filename": "course--cs-673-computer-vision-conv-neural-nets.md",
+    "doc_type": "course",
+    "size_bytes": 732
+  },
+  {
+    "filename": "course--cs-685-foundations-of-data-science.md",
+    "doc_type": "course",
+    "size_bytes": 724
+  },
+  {
+    "filename": "resume--vaishak-menon--2025-09-23.md",
+    "doc_type": "resume",
+    "size_bytes": 3858
+  },
+  {
+    "filename": "transcript--summary--2025-06-04.md",
+    "doc_type": "transcript_summary",
+    "size_bytes": 1820
+  }
+]
