@@ -16,38 +16,30 @@ aliases: ["Fall 2024", "2024 Fall Term", "Fall24"]
 
 ## Term Performance
 - **Credits Earned:** 9.00
+- **GPA-Hrs:** 9.00
 - **Quality Points:** 36.00
 - **Term GPA:** 4.00
 - **Academic Standing:** Good Standing
 
 ## Coursework
 
-| Course | Title                               | Credits | Grade | Quality Points |
-|--------|-------------------------------------|---------|-------|----------------|
-| CS 652 | Advanced Algorithms & Applications  | 3.00    | A     | 12.00          |
-| CS 667 | Machine Learning                    | 3.00    | A     | 12.00          |
-| CS 673 | Computer Vision & Conv Neural Nets  | 3.00    | A     | 12.00          |
-
-## Course Focus Areas
+| Course | Title | Credits | Grade | Quality Points |
+|--------|-------|---------|-------|----------------|
+| CS 652 | Adv Algorithms & Apps | 3.00 | A | 12.00 |
+| CS 667 | Machine Learning | 3.00 | A | 12.00 |
+| CS 673 | Computer Vision & Conv Neu Net | 3.00 | A | 12.00 |
 
 ### CS 652 - Advanced Algorithms & Applications
-- **Focus:** Advanced algorithmic techniques and their practical applications
-- **Performance:** A grade (4.0)
 - **Credits:** 3.00
+- **Performance:** A
+- **Quality Points:** 12.00
 
-### CS 667 - Machine Learning  
-- **Focus:** Core machine learning algorithms and methodologies
-- **Performance:** A grade (4.0)
+### CS 667 - Machine Learning
 - **Credits:** 3.00
+- **Performance:** A
+- **Quality Points:** 12.00
 
 ### CS 673 - Computer Vision & Convolutional Neural Networks
-- **Focus:** Computer vision techniques using deep learning and CNNs
-- **Performance:** A grade (4.0) 
 - **Credits:** 3.00
-
-## Academic Achievement
-
-- **Perfect Term Performance:** All A grades
-- **Heavy Course Load:** 9 credits in advanced graduate courses
-- **Specialization Alignment:** All courses directly support AI/ML specialization
-- **Cumulative Impact:** Maintained 4.00 cumulative graduate GPA
+- **Performance:** A
+- **Quality Points:** 12.00
