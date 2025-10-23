@@ -27,3 +27,6 @@ hf_cache/
 # Logs (optional)
 *.log
 logs/
+
+# Ignore Archive
+archive/
