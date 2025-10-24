@@ -123,3 +123,75 @@ class QueryRouter:
             return best_match[0]
         
         return None
+    
+    def is_broad_question(self, question: str) -> bool:
+        """Check if question is broad/general."""
+        return any(pattern.search(question) for pattern in self.broad_regexes)
+    
+    def is_specific_question(self, question: str) -> bool:
+        """Check if question is specific/narrow."""
+        return any(pattern.search(question) for pattern in self.specific_regexes)
+    
+    def route(self, question: str) -> Dict[str, Any]:
+        """
+        Analyze question and return optimal retrieval parameters.
+        
+        Args:
+            question: User's question
+        
+        Returns:
+            Dict with: doc_type, top_k, null_threshold, max_distance, rerank, etc.
+        """
+        question = question.strip()
+        
+        # Detect document type
+        doc_type = self.detect_doc_type(question)
+        
+        # Detect question breadth
+        is_broad = self.is_broad_question(question)
+        is_specific = self.is_specific_question(question)
+        
+        # Default parameters
+        params = {
+            "doc_type": doc_type,
+            "top_k": 5,
+            "null_threshold": 0.60,
+            "max_distance": 0.60,
+            "rerank": False,
+            "rerank_lex_weight": 0.5,
+        }
+        
+        # Adjust based on question type and doc_type
+        
+        # Broad questions need more chunks
+        if is_broad:
+            params["top_k"] = 10
+            params["rerank"] = True
+            params["null_threshold"] = 0.65  # More lenient
+            params["max_distance"] = 0.65
+            logger.info("Broad question detected: increasing top_k and enabling rerank")
+        
+        # Specific questions can use fewer, stricter chunks
+        elif is_specific:
+            params["top_k"] = 5
+            params["null_threshold"] = 0.55  # Stricter
+            params["max_distance"] = 0.60
+            logger.info("Specific question detected: using default tight parameters")
+        
+        # If doc_type detected, can be more confident with fewer chunks
+        if doc_type:
+            # When filtering by doc_type, we can use fewer chunks
+            if not is_broad:
+                params["top_k"] = 5
+            logger.info(f"Doc type filter: {doc_type}")
+        
+        # No doc_type detected and broad: cast a wide net
+        if not doc_type and is_broad:
+            params["top_k"] = 15
+            params["rerank"] = True
+            logger.info("Broad question without doc_type: maximizing retrieval")
+        
+        # Log final decision
+        logger.info(f"Query routing decision: {params}")
+        
+        return params
