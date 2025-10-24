@@ -1,28 +1,101 @@
+"""
+Document ingestion module for Personal RAG system.
+
+Handles:
+- Reading markdown/text files
+- Extracting YAML front-matter metadata
+- Chunking with paragraph/sentence awareness
+- Deduplication via SHA-256
+- Batch insertion to ChromaDB
+"""
+
 import os
 import re
 import hashlib
 import logging
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
+
+import yaml
+from fastapi import HTTPException
+
 from .retrieval import add_documents
 from .settings import settings
-from fastapi import HTTPException
-from .metrics import rag_ingested_chunks_total, rag_ingest_skipped_files_total
 
+logger = logging.getLogger(__name__)
+
+# Configuration
 ALLOWED_EXT = {".txt", ".md"}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB max per file
 BATCH_SIZE = 500
 
-def read_text(path: str) -> str:
+# Optional: Import Prometheus metrics if available
+try:
+    from .metrics import rag_ingested_chunks_total, rag_ingest_skipped_files_total
+    METRICS_ENABLED = True
+except ImportError:
+    METRICS_ENABLED = False
+    logger.info("Prometheus metrics not available (metrics.py not found)")
+
+
+def extract_frontmatter(text: str) -> Tuple[Dict, str]:
     """
-    Read and return the full text content of a file using UTF-8 encoding (ignores errors).
+    Extract YAML front-matter from Markdown.
+    
+    Expected format:
+    ---
+    doc_type: transcript
+    term_id: 2024-spring
+    level: graduate
+    gpa: 4.00
+    ---
+    
+    Body text here...
     
     Args:
-        path (str): File path to read.
+        text: Full file content
+    
     Returns:
-        str: File contents as a single string.
+        Tuple of (metadata_dict, body_text)
+        If no front-matter found, returns ({}, original_text)
+    """
+    if not text.startswith('---'):
+        return {}, text
+    
+    parts = text.split('---', 2)
+    if len(parts) < 3:
+        logger.warning("Malformed YAML front-matter (missing closing ---)")
+        return {}, text
+    
+    try:
+        metadata = yaml.safe_load(parts[1])
+        if metadata is None:
+            metadata = {}
+        body = parts[2].strip()
+        
+        logger.debug(f"Extracted metadata keys: {list(metadata.keys())}")
+        return metadata, body
+    
+    except yaml.YAMLError as e:
+        logger.warning(f"Failed to parse YAML front-matter: {e}")
+        return {}, text
+
+
+def read_text(path: str) -> str:
+    """
+    Read and return the full text content of a file using UTF-8 encoding.
+    
+    Args:
+        path: File path to read
+    
+    Returns:
+        File contents as a single string
+    
+    Raises:
+        Exception: If file cannot be read
     """
     with open(path, "r", encoding="utf-8", errors="ignore") as f:
         return f.read()
+
 
 def find_files(base_paths: List[str]) -> List[str]:
     """
@@ -30,122 +103,154 @@ def find_files(base_paths: List[str]) -> List[str]:
     Accepts both files and directories.
     
     Args:
-        base_paths (List[str]): List of file or directory paths to search.
+        base_paths: List of file or directory paths to search
+    
     Returns:
-        List[str]: List of discovered file paths.
+        List of discovered file paths
+    
     Raises:
-        HTTPException: If no files are found to ingest.
+        HTTPException: If no files are found to ingest
     """
     files = []
     base_docs_dir = os.path.abspath(settings.docs_dir)
+    
+    logger.info(f"Searching for files in: {base_paths}")
+    logger.info(f"Base docs directory: {base_docs_dir}")
 
     for base in base_paths:
         abs_base = os.path.abspath(base)
 
+        # Security: Only allow files within docs_dir
         if not abs_base.startswith(base_docs_dir):
-            logging.warning(f"Skipping {base}: outside docs_dir {base_docs_dir}")
+            logger.warning(f"Skipping {base}: outside docs_dir {base_docs_dir}")
+            if METRICS_ENABLED:
+                rag_ingest_skipped_files_total.labels(reason="outside_docs_dir").inc()
             continue
 
         if os.path.isfile(abs_base):
             ext = os.path.splitext(abs_base)[1].lower()
             if ext in ALLOWED_EXT:
                 files.append(abs_base)
+                logger.debug(f"Found file: {abs_base}")
             else:
-                logging.warning(f"Skipping {abs_base}: invalid extension")
-        else:
-            for root, _, fs in os.walk(abs_base):
-                for name in fs:
+                logger.warning(f"Skipping {abs_base}: invalid extension {ext}")
+                if METRICS_ENABLED:
+                    rag_ingest_skipped_files_total.labels(reason="invalid_ext").inc()
+        
+        elif os.path.isdir(abs_base):
+            for root, _, filenames in os.walk(abs_base):
+                for name in filenames:
                     fp = os.path.join(root, name)
                     ext = os.path.splitext(name)[1].lower()
                     abs_fp = os.path.abspath(fp)
+                    
                     if abs_fp.startswith(base_docs_dir) and ext in ALLOWED_EXT:
                         files.append(abs_fp)
+                        logger.debug(f"Found file: {abs_fp}")
                     else:
-                        logging.warning(f"Skipping {fp}: invalid or outside docs_dir")
+                        logger.debug(f"Skipping {fp}: invalid or outside docs_dir")
+        else:
+            logger.warning(f"Path does not exist: {abs_base}")
 
     if not files:
-        raise HTTPException(status_code=400, detail="No valid .txt or .md files found to ingest inside docs_dir.")
+        raise HTTPException(
+            status_code=400,
+            detail=f"No valid .txt or .md files found in {base_paths}"
+        )
+    
+    logger.info(f"Found {len(files)} files to process")
     return files
 
-def chunk_text(text: str, chunk_size: int, overlap: int) -> list[str]:
+
+def chunk_text(text: str, chunk_size: int, overlap: int) -> List[str]:
     """
     Split text into overlapping chunks, preferring natural boundaries (paragraphs/sentences).
     
+    Strategy:
+    1. Split by paragraphs (\\n\\n)
+    2. If paragraph > chunk_size, split by sentences
+    3. Pack into chunks with overlap
+    
     Args:
-        text (str): Raw text to chunk.
-        chunk_size (int): Target maximum size of each chunk (in characters).
-        overlap (int): Number of characters to overlap between consecutive chunks.
+        text: Raw text to chunk
+        chunk_size: Target maximum size of each chunk (in characters)
+        overlap: Number of characters to overlap between consecutive chunks
     
     Returns:
-        list[str]: List of non-empty text chunks.
+        List of non-empty text chunks
     """
     if not text.strip():
         return []
 
-    # First split into paragraphs, then sentences
+    # Split into paragraphs
     paragraphs = re.split(r"\n\s*\n", text)
-    units: list[str] = []
+    
+    chunks = []
+    current_chunk = ""
+    
     for para in paragraphs:
-        # Keep paragraph if short, otherwise split by sentences
-        if len(para) <= chunk_size:
-            units.append(para.strip())
-        else:
-            sentences = re.split(r'(?<=[.!?])\s+', para)
-            for s in sentences:
-                if s.strip():
-                    units.append(s.strip())
-
-    # Now pack units into chunks ~chunk_size long
-    chunks: list[str] = []
-    current = ""
-    for unit in units:
-        if not unit:
+        para = para.strip()
+        if not para:
             continue
-        if len(current) + len(unit) + 1 <= chunk_size:
-            current = (current + " " + unit).strip()
+        
+        # If adding this paragraph exceeds chunk_size
+        if len(current_chunk) + len(para) + 2 > chunk_size:  # +2 for \n\n
+            # Save current chunk if not empty
+            if current_chunk:
+                chunks.append(current_chunk.strip())
+            
+            # If paragraph itself is too large, split by sentences
+            if len(para) > chunk_size:
+                sentences = re.split(r'(?<=[.!?])\s+', para)
+                temp_chunk = ""
+                
+                for sent in sentences:
+                    if len(temp_chunk) + len(sent) + 1 > chunk_size:
+                        if temp_chunk:
+                            chunks.append(temp_chunk.strip())
+                        temp_chunk = sent + " "
+                    else:
+                        temp_chunk += sent + " "
+                
+                # Save last sentence chunk with overlap for continuity
+                if temp_chunk.strip():
+                    current_chunk = temp_chunk[-overlap:] if len(temp_chunk) > overlap else temp_chunk
+                else:
+                    current_chunk = ""
+            else:
+                # Start new chunk with this paragraph
+                current_chunk = para + "\n\n"
         else:
-            if current:
-                chunks.append(current)
-            current = unit
-    if current:
-        chunks.append(current)
+            # Add paragraph to current chunk
+            current_chunk += para + "\n\n"
+    
+    # Don't forget last chunk
+    if current_chunk.strip():
+        chunks.append(current_chunk.strip())
+    
+    return chunks
 
-    # Apply overlap: re-slice chunks into overlapping windows
-    overlapped: list[str] = []
-    for i, chunk in enumerate(chunks):
-        if not chunk.strip():
-            continue
-        overlapped.append(chunk)
-        # Add overlap with next chunk if possible
-        if overlap > 0 and i + 1 < len(chunks):
-            actual_ov = min(overlap, len(chunk))
-            overlap_text = chunk[-actual_ov:]
-            next_part = chunks[i + 1][: chunk_size - actual_ov]
-            combined = overlap_text + next_part
-            if combined.strip():
-                overlapped.append(combined.strip())
-
-    # Deduplicate and clean
-    final = []
-    seen = set()
-    for ch in overlapped:
-        ch = ch.strip()
-        if ch and ch not in seen:
-            seen.add(ch)
-            final.append(ch)
-
-    return final
 
 def ingest_paths(paths: Optional[List[str]] = None) -> int:
     """
-    Ingests text files from the given paths, chunking them and adding to the retrieval database.
-    Skips files that are too large, unreadable, or produce no valid chunks.
-    De-duplicates chunk TEXTS within this ingestion run via SHA-256, and adds to Chroma in batches of 500.
+    Ingest text files from the given paths, chunking them and adding to the retrieval database.
+    
+    Process:
+    1. Find all .md/.txt files in paths
+    2. Extract YAML front-matter from each file
+    3. Chunk the body text
+    4. Deduplicate chunks via SHA-256
+    5. Batch insert to ChromaDB with full metadata
     
     Args:
-        paths (Optional[List[str]]): List of file or directory paths to ingest. Defaults to settings.docs_dir if None.
+        paths: List of file or directory paths to ingest.
+              Defaults to [settings.docs_dir] if None.
+    
     Returns:
-        int: Total number of text chunks successfully ingested.
+        Total number of text chunks successfully ingested
+    
+    Raises:
+        HTTPException: If no valid files found
     """
     base_paths = paths or [settings.docs_dir]
     files = find_files(base_paths)
@@ -155,78 +260,96 @@ def ingest_paths(paths: Optional[List[str]] = None) -> int:
     duplicates_total = 0
     seen_hashes: set[str] = set()
 
+    logger.info(f"Starting ingestion of {len(files)} files")
+
     for fp in files:
-        # stat
+        # Check file size
         try:
             file_size = os.path.getsize(fp)
         except Exception as e:
-            logging.warning(f"Could not stat file {fp}: {e}")
+            logger.warning(f"Could not stat file {fp}: {e}")
             continue
 
-        # guards
         if file_size > MAX_FILE_SIZE:
-            logging.warning(f"Skipping {fp}: file too large ({file_size} bytes)")
-            rag_ingest_skipped_files_total.labels(reason="too_large").inc()
+            logger.warning(f"Skipping {fp}: file too large ({file_size} bytes)")
+            if METRICS_ENABLED:
+                rag_ingest_skipped_files_total.labels(reason="too_large").inc()
             continue
 
-        if os.path.splitext(fp)[1].lower() not in ALLOWED_EXT:
-            logging.warning(f"Skipping {fp}: invalid extension")
-            rag_ingest_skipped_files_total.labels(reason="invalid_ext").inc()
-            continue
-
-        # read
+        # Read file
         try:
             text = read_text(fp)
         except Exception as e:
-            logging.warning(f"Could not read {fp}: {e}")
+            logger.warning(f"Could not read {fp}: {e}")
+            if METRICS_ENABLED:
+                rag_ingest_skipped_files_total.labels(reason="read_error").inc()
             continue
 
-        # chunk
-        chunks = chunk_text(text, settings.chunk_size, settings.chunk_overlap)
+        # Extract YAML front-matter
+        metadata, body = extract_frontmatter(text)
+        
+        # Ensure source is always in metadata
+        metadata["source"] = fp
+
+        # Chunk the body (not the YAML header)
+        chunks = chunk_text(body, settings.chunk_size, settings.chunk_overlap)
+        
         if not chunks:
-            logging.info(f"{fp}: produced no valid chunks (empty or whitespace).")
+            logger.info(f"{fp}: produced no valid chunks (empty or whitespace)")
             continue
 
-        # per-file counters
+        # Per-file counters
         file_added = 0
         file_dupes = 0
 
-        # enqueue chunks with de-duplication
-        for idx, ch in enumerate(chunks):
-            # hash on normalized text to catch trivial whitespace dupes
-            norm = ch.strip()
-            if not norm:
+        # Add chunks with metadata
+        for idx, chunk_text in enumerate(chunks):
+            # Normalize and hash for deduplication
+            normalized = chunk_text.strip()
+            if not normalized:
                 continue
-            h = hashlib.sha256(norm.encode("utf-8")).hexdigest()
-            if h in seen_hashes:
+            
+            chunk_hash = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+            
+            if chunk_hash in seen_hashes:
                 file_dupes += 1
                 duplicates_total += 1
-                logging.info(f"Skipped duplicate chunk {fp}:{idx} (sha256={h[:8]})")
+                logger.debug(f"Skipped duplicate chunk {fp}:{idx} (hash={chunk_hash[:8]})")
                 continue
 
-            seen_hashes.add(h)
-            docs_batch.append({"id": f"{fp}:{idx}", "text": norm, "source": fp})
+            seen_hashes.add(chunk_hash)
+            
+            # Create chunk record with full metadata
+            docs_batch.append({
+                "id": f"{fp}:{idx}",
+                "text": normalized,
+                "metadata": metadata.copy()  # Each chunk gets full file metadata
+            })
+            
             file_added += 1
 
-            # flush batch
+            # Flush batch to ChromaDB
             if len(docs_batch) >= BATCH_SIZE:
                 add_documents(docs_batch)
-                rag_ingested_chunks_total.inc(len(docs_batch))
+                if METRICS_ENABLED:
+                    rag_ingested_chunks_total.inc(len(docs_batch))
                 added_total += len(docs_batch)
-                logging.info(f"Added batch of {len(docs_batch)} chunks to Chroma.")
+                logger.info(f"Added batch of {len(docs_batch)} chunks to ChromaDB")
                 docs_batch.clear()
 
-        logging.info(f"{fp}: added {file_added} chunks, skipped {file_dupes} duplicates")
+        logger.info(f"{os.path.basename(fp)}: added {file_added} chunks, skipped {file_dupes} duplicates")
 
-    # flush any remaining
+    # Flush any remaining chunks
     if docs_batch:
         add_documents(docs_batch)
-        rag_ingested_chunks_total.inc(len(docs_batch))
+        if METRICS_ENABLED:
+            rag_ingested_chunks_total.inc(len(docs_batch))
         added_total += len(docs_batch)
-        logging.info(f"Added final batch of {len(docs_batch)} chunks to Chroma.")
+        logger.info(f"Added final batch of {len(docs_batch)} chunks to ChromaDB")
 
-    logging.info(
-        f"Ingest complete: added {added_total} chunks from {len(files)} files; "
-        f"skipped {duplicates_total} duplicate chunks."
+    logger.info(
+        f"✅ Ingestion complete: added {added_total} chunks from {len(files)} files; "
+        f"skipped {duplicates_total} duplicate chunks"
     )
+    
     return added_total

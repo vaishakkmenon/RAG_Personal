@@ -1,41 +1,147 @@
+"""
+Application settings for Personal RAG system.
+
+Loads configuration from environment variables (.env file) with sensible defaults.
+All settings can be overridden via environment variables.
+"""
+
 import os
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
+# Load .env file if present
 load_dotenv()
+
 
 class Settings(BaseModel):
     """
-    Global application configuration, loaded from environment variables (with sensible defaults).
+    Global application configuration.
     
-    Attributes:
-        ollama_host (str): URL for the Ollama LLM API server.
-        ollama_model (str): Name of the LLM model to use.
-        num_ctx (int): Context window size for Ollama model (tokens or bytes).
-        ollama_timeout (int): Max seconds to wait for LLM responses.
-        max_bytes (int): Max HTTP request body size (in bytes).
-        chroma_dir (str): Filesystem path for ChromaDB persistent storage.
-        docs_dir (str): Filesystem path for document ingestion.
-        top_k (int): Default number of top results to retrieve for context.
-        chunk_size (int): Chunk size (in characters) for document splitting.
-        chunk_overlap (int): Overlap (in characters) between consecutive text chunks.
-        embed_model (str): Embedding model name for Chroma/SentenceTransformers.
+    Configuration priority:
+    1. Environment variables (.env file or system)
+    2. Defaults specified below
+    
+    Categories:
+    - LLM: Ollama connection and model settings
+    - Embeddings: Sentence transformer model
+    - Storage: ChromaDB and document paths
+    - Retrieval: Search and chunking parameters
+    - Security: API authentication
     """
-    ollama_host: str = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
-    ollama_model: str = os.getenv("OLLAMA_MODEL", "llama3.1:8b-instruct-q4_K_M")
-    num_ctx: int = int(os.getenv("NUM_CTX", 2048))
-    ollama_timeout: int = int(os.getenv("OLLAMA_TIMEOUT", 60))
-    max_bytes: int = int(os.getenv("MAX_BYTES", 32768))
-    num_predict: int = int(os.getenv("NUM_PREDICT", 48))
-    chroma_dir: str = os.getenv("CHROMA_DIR", "./data/chroma")
-    docs_dir: str = os.getenv("DOCS_DIR", "./data/docs")
-    api_key: str = os.getenv("API_KEY", "")
+    
+    # ==================== LLM Settings ====================
+    
+    ollama_host: str = Field(
+        default=os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434"),
+        description="URL for the Ollama API server"
+    )
+    
+    ollama_model: str = Field(
+        default=os.getenv("OLLAMA_MODEL", "llama3.2:3b-instruct-q4_K_M"),
+        description="Ollama model name (with quantization tag)"
+    )
+    
+    num_ctx: int = Field(
+        default=int(os.getenv("NUM_CTX", "2048")),
+        description="Context window size for Ollama model (tokens)"
+    )
+    
+    ollama_timeout: int = Field(
+        default=int(os.getenv("OLLAMA_TIMEOUT", "60")),
+        description="Maximum seconds to wait for LLM responses"
+    )
+    
+    # ==================== Embedding Settings ====================
+    
+    embed_model: str = Field(
+        default=os.getenv("EMBED_MODEL", "BAAI/bge-small-en-v1.5"),
+        description="SentenceTransformer model for embeddings"
+    )
+    
+    # ==================== Storage Settings ====================
+    
+    chroma_dir: str = Field(
+        default=os.getenv("CHROMA_DIR", "./data/chroma"),
+        description="ChromaDB persistent storage directory"
+    )
+    
+    docs_dir: str = Field(
+        default=os.getenv("DOCS_DIR", "./data/mds"),
+        description="Directory containing documents to ingest (resume, transcripts, certs)"
+    )
+    
+    collection_name: str = Field(
+        default=os.getenv("COLLECTION_NAME", "personal_rag"),
+        description="ChromaDB collection name"
+    )
+    
+    # ==================== Retrieval Settings ====================
+    
+    top_k: int = Field(
+        default=int(os.getenv("TOP_K", "5")),
+        description="Default number of chunks to retrieve"
+    )
+    
+    max_distance: float = Field(
+        default=float(os.getenv("MAX_DISTANCE", "0.60")),
+        description="Maximum cosine distance for retrieval (0-2, lower = more similar)"
+    )
+    
+    null_threshold: float = Field(
+        default=float(os.getenv("NULL_THRESHOLD", "0.60")),
+        description="Distance threshold for grounding check (refuse if distance > threshold)"
+    )
+    
+    # ==================== Chunking Settings ====================
+    
+    chunk_size: int = Field(
+        default=int(os.getenv("CHUNK_SIZE", "600")),
+        description="Target chunk size in characters"
+    )
+    
+    chunk_overlap: int = Field(
+        default=int(os.getenv("CHUNK_OVERLAP", "120")),
+        description="Overlap between consecutive chunks in characters"
+    )
+    
+    # ==================== Security Settings ====================
+    
+    api_key: str = Field(
+        default=os.getenv("API_KEY", "change-me"),
+        description="API key for authentication (change in production!)"
+    )
+    
+    # ==================== HTTP Settings ====================
+    
+    max_bytes: int = Field(
+        default=int(os.getenv("MAX_BYTES", "32768")),
+        description="Maximum HTTP request body size in bytes"
+    )
+    
+    class Config:
+        """Pydantic configuration."""
+        extra = "forbid"  # Prevent typos in environment variables
+        validate_assignment = True  # Validate on attribute assignment
 
-    max_distance: float = float(os.getenv("MAX_DISTANCE", "0.7"))
-    top_k: int = int(os.getenv("TOP_K", 4))
-    chunk_size: int = int(os.getenv("CHUNK_SIZE", 600))
-    chunk_overlap: int = int(os.getenv("CHUNK_OVERLAP", 120))
-    null_threshold: float = float(os.getenv("NULL_THRESHOLD", "0.55"))
-    embed_model: str = os.getenv("EMBED_MODEL", "BAAI/bge-small-en-v1.5")
 
+# Global settings instance
 settings = Settings()
+
+
+# Log critical settings on startup (don't log API key!)
+if __name__ != "__main__":  # Only log when imported, not when running directly
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"Settings loaded:")
+    logger.info(f"  Ollama: {settings.ollama_host}")
+    logger.info(f"  Model: {settings.ollama_model}")
+    logger.info(f"  Embeddings: {settings.embed_model}")
+    logger.info(f"  ChromaDB: {settings.chroma_dir}")
+    logger.info(f"  Documents: {settings.docs_dir}")
+    logger.info(f"  Collection: {settings.collection_name}")
+    logger.info(f"  Retrieval: top_k={settings.top_k}, max_distance={settings.max_distance}")
+    logger.info(f"  Chunking: size={settings.chunk_size}, overlap={settings.chunk_overlap}")
+
+
+# Export
+__all__ = ["settings", "Settings"]
