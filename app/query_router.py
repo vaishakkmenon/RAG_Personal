@@ -37,7 +37,7 @@ class QueryRouter:
             r"\bskills?\b",
             r"\bproject",
         ],
-        "transcript": [
+        "term": [
             r"\b(gpa|grade\s+point\s+average)\b",
             r"\bacademic\s+(record|performance|standing)\b",
             r"\bdegree",
@@ -195,3 +195,19 @@ class QueryRouter:
         logger.info(f"Query routing decision: {params}")
         
         return params
+
+# Global router instance
+_router = QueryRouter()
+
+
+def route_query(question: str) -> Dict[str, Any]:
+    """
+    Convenience function to route a query.
+    
+    Args:
+        question: User's question
+    
+    Returns:
+        Dict of retrieval parameters
+    """
+    return _router.route(question)

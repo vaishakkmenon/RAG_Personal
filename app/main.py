@@ -14,12 +14,13 @@ from fastapi import FastAPI, HTTPException, Depends, Header, status
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from .settings import settings
-from .ingest import ingest_paths
-from .retrieval import search, get_sample_chunks
 from .middleware.api_key import APIKeyMiddleware
 from .middleware.logging import LoggingMiddleware
 from .middleware.max_size import MaxSizeMiddleware
+from .ingest import ingest_paths
+from .query_router import route_query
+from .retrieval import search, get_sample_chunks
+from .settings import settings
 
 from .models import (
     IngestRequest,
@@ -196,44 +197,116 @@ async def ingest(req: IngestRequest):
 @app.post("/chat")
 def chat(
     request: ChatRequest,
-    grounded_only: bool = True,
-    null_threshold: float = 0.60,
-    max_distance: float = 0.60,
-    top_k: int = 5,
+    # Make all parameters optional with None default
+    grounded_only: Optional[bool] = None,
+    null_threshold: Optional[float] = None,
+    max_distance: Optional[float] = None,
+    top_k: Optional[int] = None,
     temperature: float = 0.0,
+    rerank: Optional[bool] = None,
+    rerank_lex_weight: Optional[float] = None,
     doc_type: Optional[str] = None,
     term_id: Optional[str] = None,
+    level: Optional[str] = None,
+    use_router: bool = True,
     api_key: str = Depends(check_api_key)
 ):
     """
-    Answer questions with grounded retrieval.
+    Answer questions with intelligent query routing.
     
-    Simple flow:
-    1. Retrieve top-k chunks
-    2. Check if best chunk meets threshold
-    3. Generate answer or refuse
+    The system automatically analyzes the question and selects optimal
+    retrieval parameters. You can override any parameter manually.
+    
+    Args:
+        request: ChatRequest with question
+        use_router: If True, automatically route query (default: True)
+        grounded_only: Override grounding behavior
+        null_threshold: Override confidence threshold
+        max_distance: Override retrieval threshold
+        top_k: Override number of chunks
+        temperature: LLM sampling temperature
+        rerank: Override reranking
+        rerank_lex_weight: Lexical weight for reranking
+        doc_type: Override document type filter
+        term_id: Filter by term
+        level: Filter by academic level
+        api_key: Validated API key
+    
+    Returns:
+        ChatResponse with answer, sources, and grounding status
     """
+    logger.info(f"Question: {request.question}")
+    
+    if use_router:
+        routed_params = route_query(request.question)
+        
+        # Use routed values only if not manually overridden
+        doc_type = doc_type if doc_type is not None else routed_params.get("doc_type")
+        top_k = top_k if top_k is not None else routed_params.get("top_k", 5)
+        null_threshold = null_threshold if null_threshold is not None else routed_params.get("null_threshold", 0.60)
+        max_distance = max_distance if max_distance is not None else routed_params.get("max_distance", 0.60)
+        rerank = rerank if rerank is not None else routed_params.get("rerank", False)
+        rerank_lex_weight = rerank_lex_weight if rerank_lex_weight is not None else routed_params.get("rerank_lex_weight", 0.5)
+        
+        logger.info(f"Routed parameters: doc_type={doc_type}, top_k={top_k}, threshold={null_threshold}, rerank={rerank}")
+    else:
+        # Use defaults if router disabled
+        top_k = top_k or 5
+        null_threshold = null_threshold or 0.60
+        max_distance = max_distance or 0.60
+        rerank = rerank or False
+        rerank_lex_weight = rerank_lex_weight or 0.5
+        logger.info("Router disabled, using manual/default parameters")
+    
+    grounded_only = grounded_only if grounded_only is not None else True
+        
     # Build metadata filter
     metadata_filter = {}
     if doc_type:
         metadata_filter["doc_type"] = doc_type
     if term_id:
         metadata_filter["term_id"] = term_id
+    if level:
+        metadata_filter["level"] = level
     
     # Retrieve chunks
-    chunks = search(
-        query=request.question,
-        k=top_k,
-        max_distance=max_distance,
-        metadata_filter=metadata_filter if metadata_filter else None
-    )
+    try:
+        chunks = search(
+            query=request.question,
+            k=top_k,
+            max_distance=max_distance,
+            metadata_filter=metadata_filter if metadata_filter else None
+        )
+    except Exception as e:
+        logger.error(f"Retrieval failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve documents"
+        )
+    
+    # Optional reranking
+    if rerank and chunks:
+        chunks = rerank_chunks(request.question, chunks, lex_weight=rerank_lex_weight)
+        logger.info(f"Reranked {len(chunks)} chunks")
     
     rag_retrieval_chunks.observe(len(chunks))
     
-    # Grounding check: refuse if no good chunks
-    if not chunks or (grounded_only and chunks[0]["distance"] > null_threshold):
+    # Grounding check
+    if not chunks:
+        logger.warning("No chunks retrieved")
         return ChatResponse(
-            answer="I don't know. I couldn't find relevant information in my documents.",
+            answer="I don't know. I couldn't find any relevant information in my documents.",
+            sources=[],
+            grounded=False
+        )
+    
+    best_distance = chunks[0]["distance"]
+    logger.info(f"Best chunk distance: {best_distance:.3f}, threshold: {null_threshold}")
+    
+    if grounded_only and best_distance > null_threshold:
+        logger.info(f"Refusing: best distance {best_distance:.3f} > threshold {null_threshold}")
+        return ChatResponse(
+            answer="I don't know. I couldn't find sufficiently relevant information in my documents to answer this question confidently.",
             sources=[
                 ChatSource(
                     id=c.get("id", ""),
@@ -246,7 +319,7 @@ def chat(
             grounded=False
         )
     
-    # Build context from top chunks
+    # Build context
     context = "\n\n".join([
         f"[Source: {c['source']}]\n{c['text']}"
         for c in chunks
@@ -254,17 +327,27 @@ def chat(
     
     # Generate answer
     prompt = f"""Based on the following excerpts from my personal documents, answer the question concisely and accurately. If the answer isn't in the excerpts, say "I don't know."
-        Question: {request.question}
-        Excerpts:
-        {context}
-        Answer:"""
+    Question: {request.question}
+    Excerpts:
+    {context}
+    Answer:"""
     
-    answer = generate_with_ollama(
-        prompt=prompt,
-        temperature=temperature,
-        max_tokens=300
-    )
+    try:
+        answer = generate_with_ollama(
+            prompt=prompt,
+            temperature=temperature,
+            max_tokens=300
+        )
+    except Exception as e:
+        logger.error(f"Generation failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate answer"
+        )
     
+    logger.info(f"Generated answer: {answer[:100]}...")
+    
+    # Format sources
     sources = [
         ChatSource(
             id=c.get("id", ""),
@@ -274,7 +357,7 @@ def chat(
         )
         for c in chunks
     ]
-
+    
     return ChatResponse(
         answer=answer.strip(),
         sources=sources,
