@@ -60,9 +60,9 @@ def add_documents(docs: List[dict]) -> None:
     
     Args:
         docs: List of dicts, each with keys:
-              - id: Unique chunk identifier
-              - text: Chunk text content
-              - metadata: Dict with source, doc_type, term_id, etc.
+            - id: Unique chunk identifier
+            - text: Chunk text content
+            - metadata: Dict with source, doc_type, term_id, etc.
     
     Example:
         docs = [{
@@ -297,13 +297,14 @@ def reset_collection() -> None:
     DANGER: Delete all documents from the collection.
     Only use for testing or when you need a fresh start.
     """
+    global _collection
+    
     count = _collection.count()
     logger.warning(f"Resetting collection '{COLLECTION_NAME}' - will delete {count} documents")
     
     _client.delete_collection(COLLECTION_NAME)
     
     # Recreate collection
-    global _collection
     _collection = _client.get_or_create_collection(
         name=COLLECTION_NAME,
         metadata={"hnsw:space": "cosine"},

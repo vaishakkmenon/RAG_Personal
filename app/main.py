@@ -234,8 +234,15 @@ def chat(
     if not chunks or (grounded_only and chunks[0]["distance"] > null_threshold):
         return ChatResponse(
             answer="I don't know. I couldn't find relevant information in my documents.",
-            sources=[{"source": c["source"], "text": c["text"][:200], "distance": c["distance"]} 
-                    for c in chunks[:3]],
+            sources=[
+                ChatSource(
+                    id=c.get("id", ""),
+                    source=c.get("source", ""),
+                    text=c.get("text", "")[:200] + "..." if len(c.get("text", "")) > 200 else c.get("text", ""),
+                    distance=c.get("distance", 1.0)
+                )
+                for c in chunks[:3]
+            ],
             grounded=False
         )
     
@@ -247,13 +254,10 @@ def chat(
     
     # Generate answer
     prompt = f"""Based on the following excerpts from my personal documents, answer the question concisely and accurately. If the answer isn't in the excerpts, say "I don't know."
-
-Question: {request.question}
-
-Excerpts:
-{context}
-
-Answer:"""
+        Question: {request.question}
+        Excerpts:
+        {context}
+        Answer:"""
     
     answer = generate_with_ollama(
         prompt=prompt,
@@ -261,10 +265,19 @@ Answer:"""
         max_tokens=300
     )
     
+    sources = [
+        ChatSource(
+            id=c.get("id", ""),
+            source=c.get("source", ""),
+            text=c.get("text", "")[:200] + "..." if len(c.get("text", "")) > 200 else c.get("text", ""),
+            distance=c.get("distance", 1.0)
+        )
+        for c in chunks
+    ]
+
     return ChatResponse(
-        answer=answer,
-        sources=[{"source": c["source"], "text": c["text"][:200], "distance": c["distance"]} 
-                for c in chunks],
+        answer=answer.strip(),
+        sources=sources,
         grounded=True
     )
 

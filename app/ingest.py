@@ -14,6 +14,7 @@ import re
 import hashlib
 import logging
 from typing import List, Dict, Optional, Tuple
+from datetime import date, datetime
 
 import yaml
 from fastapi import HTTPException
@@ -39,17 +40,11 @@ except ImportError:
 
 def extract_frontmatter(text: str) -> Tuple[Dict, str]:
     """
-    Extract YAML front-matter from Markdown.
+    Extract YAML front-matter from Markdown and normalize for ChromaDB.
     
-    Expected format:
-    ---
-    doc_type: transcript
-    term_id: 2024-spring
-    level: graduate
-    gpa: 4.00
-    ---
-    
-    Body text here...
+    ChromaDB metadata requirements:
+    - Values must be: str, int, float, or bool (NOT None!)
+    - No date objects, no nested dicts, no None values
     
     Args:
         text: Full file content
@@ -70,10 +65,40 @@ def extract_frontmatter(text: str) -> Tuple[Dict, str]:
         metadata = yaml.safe_load(parts[1])
         if metadata is None:
             metadata = {}
+        
+        # Normalize metadata for ChromaDB compatibility
+        normalized_metadata = {}
+        for key, value in metadata.items():
+            # Skip None values entirely (ChromaDB doesn't like them)
+            if value is None:
+                continue
+            elif isinstance(value, bool):
+                normalized_metadata[key] = value
+            elif isinstance(value, (int, float)):
+                normalized_metadata[key] = value
+            elif isinstance(value, str):
+                normalized_metadata[key] = value
+            elif isinstance(value, (date, datetime)):
+                # Convert dates to ISO format strings
+                normalized_metadata[key] = value.isoformat()
+            elif isinstance(value, list):
+                # Convert list to comma-separated string
+                if value:  # Only if list is not empty
+                    normalized_metadata[key] = ", ".join(str(item) for item in value)
+            elif isinstance(value, dict):
+                # Skip nested dicts (not supported by ChromaDB)
+                logger.warning(f"Skipping nested dict metadata for key '{key}'")
+                continue
+            else:
+                # Convert anything else to string (but skip if it's falsy)
+                str_value = str(value)
+                if str_value:
+                    normalized_metadata[key] = str_value
+        
         body = parts[2].strip()
         
-        logger.debug(f"Extracted metadata keys: {list(metadata.keys())}")
-        return metadata, body
+        logger.debug(f"Extracted metadata keys: {list(normalized_metadata.keys())}")
+        return normalized_metadata, body
     
     except yaml.YAMLError as e:
         logger.warning(f"Failed to parse YAML front-matter: {e}")
@@ -244,7 +269,7 @@ def ingest_paths(paths: Optional[List[str]] = None) -> int:
     
     Args:
         paths: List of file or directory paths to ingest.
-              Defaults to [settings.docs_dir] if None.
+                Defaults to [settings.docs_dir] if None.
     
     Returns:
         Total number of text chunks successfully ingested
@@ -303,9 +328,9 @@ def ingest_paths(paths: Optional[List[str]] = None) -> int:
         file_dupes = 0
 
         # Add chunks with metadata
-        for idx, chunk_text in enumerate(chunks):
+        for idx, text_chunk in enumerate(chunks):
             # Normalize and hash for deduplication
-            normalized = chunk_text.strip()
+            normalized = text_chunk.strip()
             if not normalized:
                 continue
             
