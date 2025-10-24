@@ -75,3 +75,51 @@ class QueryRouter:
         r"\bwhich\b",
         r"\blist\b",
     ]
+    
+    def __init__(self):
+        """Initialize the query router."""
+        # Compile patterns for efficiency
+        self.doc_type_regexes = {
+            doc_type: [re.compile(pattern, re.IGNORECASE) for pattern in patterns]
+            for doc_type, patterns in self.DOC_TYPE_PATTERNS.items()
+        }
+        
+        self.broad_regexes = [
+            re.compile(pattern, re.IGNORECASE) 
+            for pattern in self.BROAD_QUESTION_PATTERNS
+        ]
+        
+        self.specific_regexes = [
+            re.compile(pattern, re.IGNORECASE)
+            for pattern in self.SPECIFIC_QUESTION_PATTERNS
+        ]
+        
+    def detect_doc_type(self, question: str) -> Optional[str]:
+        """
+        Detect the most relevant document type based on question content.
+        
+        Args:
+            question: User's question
+        
+        Returns:
+            Document type string or None if no clear match
+        """
+        scores = {}
+        
+        for doc_type, patterns in self.doc_type_regexes.items():
+            score = sum(1 for pattern in patterns if pattern.search(question))
+            if score > 0:
+                scores[doc_type] = score
+        
+        if not scores:
+            return None
+        
+        # Return doc type with highest score
+        best_match = max(scores.items(), key=lambda x: x[1])
+        
+        # Only return if we have at least 1 match
+        if best_match[1] >= 1:
+            logger.info(f"Detected doc_type: {best_match[0]} (score: {best_match[1]})")
+            return best_match[0]
+        
+        return None
