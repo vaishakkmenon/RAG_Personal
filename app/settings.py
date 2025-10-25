@@ -83,24 +83,24 @@ class Settings(BaseModel):
     )
     
     max_distance: float = Field(
-        default=float(os.getenv("MAX_DISTANCE", "0.60")),
+        default=float(os.getenv("MAX_DISTANCE", "0.50")),
         description="Maximum cosine distance for retrieval (0-2, lower = more similar)"
     )
     
     null_threshold: float = Field(
-        default=float(os.getenv("NULL_THRESHOLD", "0.60")),
+        default=float(os.getenv("NULL_THRESHOLD", "0.50")),
         description="Distance threshold for grounding check (refuse if distance > threshold)"
     )
     
     # ==================== Chunking Settings ====================
     
     chunk_size: int = Field(
-        default=int(os.getenv("CHUNK_SIZE", "600")),
+        default=int(os.getenv("CHUNK_SIZE", "200")),
         description="Target chunk size in characters"
     )
     
     chunk_overlap: int = Field(
-        default=int(os.getenv("CHUNK_OVERLAP", "120")),
+        default=int(os.getenv("CHUNK_OVERLAP", "75")),
         description="Overlap between consecutive chunks in characters"
     )
     

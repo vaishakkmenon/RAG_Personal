@@ -243,8 +243,8 @@ def chat(
         # Use routed values only if not manually overridden
         doc_type = doc_type if doc_type is not None else routed_params.get("doc_type")
         top_k = top_k if top_k is not None else routed_params.get("top_k", 5)
-        null_threshold = null_threshold if null_threshold is not None else routed_params.get("null_threshold", 0.60)
-        max_distance = max_distance if max_distance is not None else routed_params.get("max_distance", 0.60)
+        null_threshold = null_threshold if null_threshold is not None else routed_params.get("null_threshold", 0.50)
+        max_distance = max_distance if max_distance is not None else routed_params.get("max_distance", 0.50)
         rerank = rerank if rerank is not None else routed_params.get("rerank", False)
         rerank_lex_weight = rerank_lex_weight if rerank_lex_weight is not None else routed_params.get("rerank_lex_weight", 0.5)
         
@@ -257,9 +257,7 @@ def chat(
         rerank = rerank or False
         rerank_lex_weight = rerank_lex_weight or 0.5
         logger.info("Router disabled, using manual/default parameters")
-    
-    grounded_only = grounded_only if grounded_only is not None else True
-        
+            
     # Build metadata filter
     metadata_filter = {}
     if doc_type:
@@ -303,19 +301,11 @@ def chat(
     best_distance = chunks[0]["distance"]
     logger.info(f"Best chunk distance: {best_distance:.3f}, threshold: {null_threshold}")
     
-    if grounded_only and best_distance > null_threshold:
+    if best_distance > null_threshold:
         logger.info(f"Refusing: best distance {best_distance:.3f} > threshold {null_threshold}")
         return ChatResponse(
             answer="I don't know. I couldn't find sufficiently relevant information in my documents to answer this question confidently.",
-            sources=[
-                ChatSource(
-                    id=c.get("id", ""),
-                    source=c.get("source", ""),
-                    text=c.get("text", "")[:200] + "..." if len(c.get("text", "")) > 200 else c.get("text", ""),
-                    distance=c.get("distance", 1.0)
-                )
-                for c in chunks[:3]
-            ],
+            sources=[],
             grounded=False
         )
     
@@ -326,11 +316,20 @@ def chat(
     ])
     
     # Generate answer
-    prompt = f"""Based on the following excerpts from my personal documents, answer the question concisely and accurately. If the answer isn't in the excerpts, say "I don't know."
+    prompt = f"""Based on the following excerpts from my personal documents, answer the question concisely and accurately.
+
+    CRITICAL RULES:
+    1. READ values directly - DO NOT calculate or compute.
+    2. For "undergraduate/graduate GPA", look for "Overall GPA: X.XX" or "Cumulative GPA: X.XX"
+    3. Prefer summary statistics over individual term statistics.
+    4. If answer not in excerpts, say "I don't know."
+
     Question: {request.question}
+
     Excerpts:
     {context}
-    Answer:"""
+
+    Answer (read directly, no calculations):"""
     
     try:
         answer = generate_with_ollama(
@@ -347,7 +346,48 @@ def chat(
     
     logger.info(f"Generated answer: {answer[:100]}...")
     
-    # Format sources
+    answer_stripped = answer.strip()
+    answer_lower = answer_stripped.lower()
+
+    # Expanded refusal detection
+    refusal_starts = [
+        "i don't know",
+        "i do not know",
+        "i couldn't find",
+        "there is no mention",
+        "there is no information",
+        "not mentioned in",
+    ]
+
+    # Check for absence explanation without content
+    explains_absence = any(phrase in answer_lower for phrase in [
+        "do not mention",
+        "does not mention", 
+        "not mentioned",
+        "no information about",
+        "there is no",
+    ])
+
+    has_real_content = any(phrase in answer_lower for phrase in [
+        "you have",
+        "you earned",
+        "you worked",
+        "you graduated",
+        "based on the excerpts, you"
+    ])
+
+    starts_with_refusal = any(answer_lower.startswith(p) for p in refusal_starts)
+
+    # Unground if refusing OR explaining absence without content
+    if starts_with_refusal or (explains_absence and not has_real_content):
+        logger.info("Marking as ungrounded (refusal detected)")
+        return ChatResponse(
+            answer=answer_stripped,
+            sources=[],
+            grounded=False
+        )
+
+    # Format sources (this is a grounded answer)
     sources = [
         ChatSource(
             id=c.get("id", ""),
@@ -357,9 +397,9 @@ def chat(
         )
         for c in chunks
     ]
-    
+
     return ChatResponse(
-        answer=answer.strip(),
+        answer=answer_stripped,
         sources=sources,
         grounded=True
     )
