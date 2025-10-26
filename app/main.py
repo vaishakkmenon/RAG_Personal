@@ -1,7 +1,7 @@
 # main.py — FastAPI RAG Chatbot (cleaned & organized)
-# - Keeps endpoints: /health, /ingest, /rc, /chat (+ debug routes)
+# - Keeps endpoints: /health, /ingest, /chat (+ debug routes)
 # - Keeps middleware, metrics, CORS
-# - Keeps A2 deterministic evidence span, A3 reranker, extractive/generative modes, abstention gates
+# - Keeps A3 reranker
 # - Removes dead code & duplicates; merges duplicate constants; consistent naming/docstrings
 
 import logging
@@ -48,16 +48,14 @@ _NUM_CTX = settings.num_ctx
 REQUEST_TIMEOUT_S = settings.ollama_timeout
 MAX_BYTES = settings.max_bytes
 
-# ------------------------------------------------------------------------------
-# System prompts (small, stable)
-# ------------------------------------------------------------------------------
-
-CHAT_SYS_PROMPT = (
-    "You are answering questions about a person's resume, academic transcripts, "
-    "and certifications. Use only the information provided in the excerpts below. "
-    "Be concise and factual. If the answer is not in the excerpts, respond with "
-    "'I don't know based on the available information.'"
-)
+RETRIEVAL_DEFAULTS = {
+    'top_k': 5,
+    'null_threshold': 0.50,
+    'max_distance': 0.50,
+    'rerank': False,
+    'rerank_lex_weight': 0.5,
+    'temperature': 0.0
+}
 
 # ------------------------------------------------------------------------------
 # FastAPI app & middleware wiring
@@ -174,6 +172,30 @@ def rerank_chunks(question: str, chunks: List[dict], lex_weight: float = 0.5) ->
     scored.sort(key=lambda x: x[1], reverse=True)
     return [chunk for chunk, score in scored]
 
+def merge_params(manual, routed, defaults):
+    """Merge manual overrides with routed params and defaults"""
+    result = defaults.copy()
+    result.update(routed)
+    result.update({k: v for k, v in manual.items() if v is not None})
+    return result
+
+def is_refusal(answer: str, chunks: list) -> bool:
+    """Check if answer is a refusal/ungrounded response"""
+    if not chunks:
+        return True
+    
+    answer_lower = answer.lower()
+    
+    # Check explicit refusals
+    refusal_patterns = [
+        "i don't know", "i do not know", "i couldn't find",
+        "there is no mention", "there is no information",
+        "not mentioned in", "not mentioned", "not listed",
+        "not specified", "not provided", "not included"
+    ]
+    
+    return any(pattern in answer_lower for pattern in refusal_patterns)
+
 # ==============================================================================
 # Routes
 # ==============================================================================
@@ -240,39 +262,49 @@ def chat(
     if use_router:
         routed_params = route_query(request.question)
         
-        # Use routed values only if not manually overridden
-        doc_type = doc_type if doc_type is not None else routed_params.get("doc_type")
-        top_k = top_k if top_k is not None else routed_params.get("top_k", 5)
-        null_threshold = null_threshold if null_threshold is not None else routed_params.get("null_threshold", 0.50)
-        max_distance = max_distance if max_distance is not None else routed_params.get("max_distance", 0.50)
-        rerank = rerank if rerank is not None else routed_params.get("rerank", False)
-        rerank_lex_weight = rerank_lex_weight if rerank_lex_weight is not None else routed_params.get("rerank_lex_weight", 0.5)
+        params = merge_params(
+            manual={
+                'doc_type': doc_type,
+                'term_id': term_id,
+                'top_k': top_k,
+                'null_threshold': null_threshold,
+                'max_distance': max_distance,
+                'rerank': rerank,
+                'rerank_lex_weight': rerank_lex_weight,
+                'temperature': temperature
+            },
+            routed=routed_params,
+            defaults=RETRIEVAL_DEFAULTS
+        )
         
-        logger.info(f"Routed parameters: doc_type={doc_type}, top_k={top_k}, threshold={null_threshold}, rerank={rerank}")
+        logger.info(f"Routed parameters: doc_type={params.get('doc_type')}, top_k={params.get('top_k')}")
     else:
-        # Use defaults if router disabled
-        top_k = top_k or 5
-        null_threshold = null_threshold or 0.60
-        max_distance = max_distance or 0.60
-        rerank = rerank or False
-        rerank_lex_weight = rerank_lex_weight or 0.5
-        logger.info("Router disabled, using manual/default parameters")
-            
+        params = {
+            'doc_type': doc_type,
+            'term_id': term_id,
+            'top_k': top_k or RETRIEVAL_DEFAULTS['top_k'],
+            'null_threshold': null_threshold or RETRIEVAL_DEFAULTS['null_threshold'],
+            'max_distance': max_distance or RETRIEVAL_DEFAULTS['max_distance'],
+            'rerank': rerank if rerank is not None else RETRIEVAL_DEFAULTS['rerank'],
+            'rerank_lex_weight': rerank_lex_weight or RETRIEVAL_DEFAULTS['rerank_lex_weight'],
+            'temperature': temperature or RETRIEVAL_DEFAULTS['temperature']
+        }
+        
     # Build metadata filter
-    metadata_filter = {}
-    if doc_type:
-        metadata_filter["doc_type"] = doc_type
-    if term_id:
-        metadata_filter["term_id"] = term_id
-    if level:
-        metadata_filter["level"] = level
+    metadata_filter = {
+        k: v for k, v in {
+            "doc_type": params.get("doc_type"),
+            "term_id": params.get("term_id"),
+            "level": level
+        }.items() if v is not None
+    }
     
     # Retrieve chunks
     try:
         chunks = search(
             query=request.question,
-            k=top_k,
-            max_distance=max_distance,
+            k=params['top_k'],
+            max_distance=params['max_distance'],
             metadata_filter=metadata_filter if metadata_filter else None
         )
     except Exception as e:
@@ -282,9 +314,19 @@ def chat(
             detail="Failed to retrieve documents"
         )
     
+    # Post-filter by section prefix if requested
+    if use_router and routed_params.get("post_filter_section_prefix"):
+        section_prefix = routed_params["post_filter_section_prefix"]
+        original_count = len(chunks)
+        chunks = [
+            c for c in chunks 
+            if c.get("metadata", {}).get("section", "").startswith(section_prefix)
+        ]
+        logger.info(f"Section prefix filter '{section_prefix}': {original_count} → {len(chunks)} chunks")
+    
     # Optional reranking
-    if rerank and chunks:
-        chunks = rerank_chunks(request.question, chunks, lex_weight=rerank_lex_weight)
+    if params['rerank'] and chunks:
+        chunks = rerank_chunks(request.question, chunks, lex_weight=params['rerank_lex_weight'])
         logger.info(f"Reranked {len(chunks)} chunks")
     
     rag_retrieval_chunks.observe(len(chunks))
@@ -299,10 +341,10 @@ def chat(
         )
     
     best_distance = chunks[0]["distance"]
-    logger.info(f"Best chunk distance: {best_distance:.3f}, threshold: {null_threshold}")
+    logger.info(f"Best chunk distance: {best_distance:.3f}, threshold: {params['null_threshold']}")
     
-    if best_distance > null_threshold:
-        logger.info(f"Refusing: best distance {best_distance:.3f} > threshold {null_threshold}")
+    if best_distance > params['null_threshold']:
+        logger.info(f"Refusing: best distance {best_distance:.3f} > threshold {params['null_threshold']}")
         return ChatResponse(
             answer="I don't know. I couldn't find sufficiently relevant information in my documents to answer this question confidently.",
             sources=[],
@@ -316,25 +358,36 @@ def chat(
     ])
     
     # Generate answer
+    # Build base rules
+    base_rules = """CRITICAL RULES:
+    1. READ values directly - DO NOT calculate or compute.
+    2. For course questions, look for tables with format: | Course | Title | Credits | Grade |
+    3. If you see a section header (like "## Coursework") without details, CHECK THE NEXT EXCERPTS.
+    4. Each excerpt has a [Source: ...] label showing which document it's from - all excerpts from the same source are related.
+    5. For "undergraduate/graduate GPA", look for "Overall GPA: X.XX" or "Cumulative GPA: X.XX"
+    6. "IMPORTANT: 'Graduate credits' or 'Master's degree' does NOT mean PhD. Only say 'PhD' if explicitly mentioned."
+    7. If answer not in excerpts, say "I don't know."
+    """
+
+    # Add counting rule only for "how many" questions
+    if "how many" in request.question.lower():
+        base_rules += "8. Count ALL separate entries with different date ranges.\n"
+
     prompt = f"""Based on the following excerpts from my personal documents, answer the question concisely and accurately.
 
-    CRITICAL RULES:
-    1. READ values directly - DO NOT calculate or compute.
-    2. For "undergraduate/graduate GPA", look for "Overall GPA: X.XX" or "Cumulative GPA: X.XX"
-    3. Prefer summary statistics over individual term statistics.
-    4. If answer not in excerpts, say "I don't know."
+{base_rules}
 
-    Question: {request.question}
+Question: {request.question}
 
-    Excerpts:
-    {context}
+Excerpts:
+{context}
 
-    Answer (read directly, no calculations):"""
+Answer (read directly from the excerpts):"""
     
     try:
         answer = generate_with_ollama(
             prompt=prompt,
-            temperature=temperature,
+            temperature=params['temperature'],
             max_tokens=300
         )
     except Exception as e:
@@ -347,45 +400,9 @@ def chat(
     logger.info(f"Generated answer: {answer[:100]}...")
     
     answer_stripped = answer.strip()
-    answer_lower = answer_stripped.lower()
 
-    # Expanded refusal detection
-    refusal_starts = [
-        "i don't know",
-        "i do not know",
-        "i couldn't find",
-        "there is no mention",
-        "there is no information",
-        "not mentioned in",
-    ]
-
-    # Check for absence explanation without content
-    explains_absence = any(phrase in answer_lower for phrase in [
-        "do not mention",
-        "does not mention", 
-        "not mentioned",
-        "no information about",
-        "there is no",
-    ])
-
-    has_real_content = any(phrase in answer_lower for phrase in [
-        "you have",
-        "you earned",
-        "you worked",
-        "you graduated",
-        "based on the excerpts, you"
-    ])
-
-    starts_with_refusal = any(answer_lower.startswith(p) for p in refusal_starts)
-
-    # Unground if refusing OR explaining absence without content
-    if starts_with_refusal or (explains_absence and not has_real_content):
-        logger.info("Marking as ungrounded (refusal detected)")
-        return ChatResponse(
-            answer=answer_stripped,
-            sources=[],
-            grounded=False
-        )
+    if is_refusal(answer_stripped, chunks):
+        return ChatResponse(answer=answer_stripped, sources=[], grounded=False)
 
     # Format sources (this is a grounded answer)
     sources = [

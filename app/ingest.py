@@ -255,6 +255,137 @@ def chunk_text(text: str, chunk_size: int, overlap: int) -> List[str]:
     
     return chunks
 
+def chunk_text_with_section_metadata(
+    text: str, 
+    chunk_size: int, 
+    overlap: int,
+    base_metadata: Dict
+) -> List[Dict]:
+    """
+    Split text into chunks while extracting section information from markdown headers.
+    
+    FIX: Headers are now added to chunks AFTER updating section metadata,
+    so they get the correct section assignment.
+    
+    Args:
+        text: Raw markdown text to chunk
+        chunk_size: Target maximum size of each chunk
+        overlap: Number of characters to overlap
+        base_metadata: Base metadata from YAML frontmatter
+    
+    Returns:
+        List of dicts with 'text' and 'metadata' keys
+    """
+    if not text.strip():
+        return []
+    
+    # Split into paragraphs
+    paragraphs = re.split(r"\n\s*\n", text)
+    
+    chunks = []
+    current_chunk = ""
+    current_section = None  # Track current section
+    section_stack = []  # Stack for nested headers
+    
+    for para in paragraphs:
+        para = para.strip()
+        if not para:
+            continue
+        
+        # Check if this paragraph is a markdown header
+        header_match = re.match(r'^(#{1,6})\s+(.+)$', para)
+        
+        if header_match:
+            # Save current chunk BEFORE changing section
+            if current_chunk.strip():
+                chunk_metadata = base_metadata.copy()
+                if current_section:
+                    chunk_metadata["section"] = current_section
+                
+                chunks.append({
+                    "text": current_chunk.strip(),
+                    "metadata": chunk_metadata
+                })
+                current_chunk = ""  # Start fresh
+            
+            # NOW update section for the new header
+            level = len(header_match.group(1))  # Number of #
+            title = header_match.group(2).strip()
+            
+            # Update section stack based on header level
+            if level == 1:
+                section_stack = [title]
+            elif level == 2:
+                section_stack = section_stack[:1] + [title]
+            elif level == 3:
+                section_stack = section_stack[:2] + [title]
+            else:
+                section_stack = section_stack[:level-1] + [title]
+            
+            current_section = " > ".join(section_stack)
+            
+            # Add header to new chunk with correct section
+            current_chunk = para + "\n\n"
+            continue
+        
+        # Add paragraph to current chunk
+        if len(current_chunk) + len(para) + 2 > chunk_size:
+            # Save current chunk if not empty
+            if current_chunk.strip():
+                chunk_metadata = base_metadata.copy()
+                if current_section:
+                    chunk_metadata["section"] = current_section
+                
+                chunks.append({
+                    "text": current_chunk.strip(),
+                    "metadata": chunk_metadata
+                })
+            
+            # If paragraph itself is too large, split by sentences
+            if len(para) > chunk_size:
+                sentences = re.split(r'(?<=[.!?])\s+', para)
+                temp_chunk = ""
+                
+                for sent in sentences:
+                    if len(temp_chunk) + len(sent) + 1 > chunk_size:
+                        if temp_chunk.strip():
+                            chunk_metadata = base_metadata.copy()
+                            if current_section:
+                                chunk_metadata["section"] = current_section
+                            
+                            chunks.append({
+                                "text": temp_chunk.strip(),
+                                "metadata": chunk_metadata
+                            })
+                        temp_chunk = sent + " "
+                    else:
+                        temp_chunk += sent + " "
+                
+                # Overlap for continuity
+                if temp_chunk.strip():
+                    current_chunk = temp_chunk[-overlap:] if len(temp_chunk) > overlap else temp_chunk
+                else:
+                    current_chunk = ""
+            else:
+                # Start new chunk with this paragraph
+                current_chunk = para + "\n\n"
+        else:
+            # Add paragraph to current chunk
+            current_chunk += para + "\n\n"
+    
+    # Don't forget last chunk
+    if current_chunk.strip():
+        chunk_metadata = base_metadata.copy()
+        if current_section:
+            chunk_metadata["section"] = current_section
+        
+        chunks.append({
+            "text": current_chunk.strip(),
+            "metadata": chunk_metadata
+        })
+    
+    return chunks
+
 
 def ingest_paths(paths: Optional[List[str]] = None) -> int:
     """
@@ -316,10 +447,15 @@ def ingest_paths(paths: Optional[List[str]] = None) -> int:
         # Ensure source is always in metadata
         metadata["source"] = fp
 
-        # Chunk the body (not the YAML header)
-        chunks = chunk_text(body, settings.chunk_size, settings.chunk_overlap)
-        
-        if not chunks:
+        # Chunk the body with section metadata extraction
+        chunk_dicts = chunk_text_with_section_metadata(
+            body, 
+            settings.chunk_size, 
+            settings.chunk_overlap,
+            metadata
+        )
+
+        if not chunk_dicts:
             logger.info(f"{fp}: produced no valid chunks (empty or whitespace)")
             continue
 
@@ -328,9 +464,9 @@ def ingest_paths(paths: Optional[List[str]] = None) -> int:
         file_dupes = 0
 
         # Add chunks with metadata
-        for idx, text_chunk in enumerate(chunks):
+        for idx, chunk_dict in enumerate(chunk_dicts):
             # Normalize and hash for deduplication
-            normalized = text_chunk.strip()
+            normalized = chunk_dict["text"].strip()
             if not normalized:
                 continue
             
@@ -344,11 +480,11 @@ def ingest_paths(paths: Optional[List[str]] = None) -> int:
 
             seen_hashes.add(chunk_hash)
             
-            # Create chunk record with full metadata
+            # Create chunk record with section-enriched metadata
             docs_batch.append({
                 "id": f"{fp}:{idx}",
                 "text": normalized,
-                "metadata": metadata.copy()  # Each chunk gets full file metadata
+                "metadata": chunk_dict["metadata"]  # Now includes section info!
             })
             
             file_added += 1

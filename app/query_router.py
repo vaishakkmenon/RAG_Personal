@@ -9,7 +9,7 @@ Analyzes user questions and automatically selects optimal retrieval parameters:
 """
 
 import re
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, Tuple
 import logging
 
 logger = logging.getLogger(__name__)
@@ -33,10 +33,13 @@ class QueryRouter:
         "resume": [
             r"\b(work|job|employment|position)\s+(experience|history)\b",
             r"\bcompan(y|ies)\b.*\bworked\b",
-            r"\binternship",
+            r"\bintern(ship|ed)?\b",  # Changed: Now matches intern, interned, internship
             r"\b(current|previous|recent)\s+(role|job|position)\b",
             r"\bskills?\b",
+            r"\bpersonal\s+project",  # Added: Matches "personal project(s)" queries
             r"\bproject",
+            r"\bcompan(y|ies)\b",  # Added: Match "companies" alone
+            r"\bmaven\s+wave\b",    # Added: Company name
         ],
         # NEW: transcript_analysis for OVERALL/CUMULATIVE stats
         # This should match BEFORE "term" for overall queries
@@ -56,16 +59,14 @@ class QueryRouter:
             r"\bsemester\s+gpa\b",
             r"\bacademic\s+(record|standing)\b",
             r"\bhonors?\b",
-            # Generic patterns that should match terms if not already matched above
             r"\bgpa\b",
             r"\bgrade\s+point\s+average\b",
             r"\bcredit(s)?\b.*\b(earned|completed)\b",
-        ],
-        "course": [
+            # Course-related patterns
             r"\bcourse(s)?\b",
             r"\bclass(es)?\b",
-            r"\b(cs|ee|ma|ph|eh)\s*\d{3}",  # Course codes like CS 660, MA 125
-            r"\b(spring|fall|summer|winter)\s+\d{4}\b",  # Terms like Fall 2023
+            r"\b(cs|ee|ma|ph|eh)\s*\d{3}",
+            r"\b(spring|fall|summer|winter)\s+\d{4}\b",
             r"\bsemester",
             r"\bstudy|studied|took",
         ],
@@ -180,6 +181,39 @@ class QueryRouter:
         """Check if question is specific/narrow."""
         return any(pattern.search(question) for pattern in self.specific_regexes)
     
+    def extract_term_info(self, question: str) -> Tuple[Optional[str], bool]:
+        """
+        Extract term_id from questions like 'Fall 2022'.
+        
+        Returns:
+            (term_id, has_course_code) tuple
+        """
+        question_lower = question.lower()
+        
+        # Pattern 1: "Fall 2022" or "Spring 2023"
+        # MUST have season + space + 4-digit year together
+        match = re.search(r'\b(fall|spring|summer|winter)\s+(\d{4})\b', question_lower)
+        if match:
+            season, year = match.groups()
+            term_id = f"{year}-{season}"
+            has_course = bool(re.search(r'\b[A-Z]{2,4}\s*\d{3,4}\b', question))
+            return term_id, has_course
+        
+        # Pattern 2: "2022 Fall" (reversed)
+        match = re.search(r'\b(\d{4})\s+(fall|spring|summer|winter)\b', question_lower)
+        if match:
+            year, season = match.groups()
+            term_id = f"{year}-{season}"
+            has_course = bool(re.search(r'\b[A-Z]{2,4}\s*\d{3,4}\b', question))
+            return term_id, has_course
+        
+        # Pattern 3: Course code without term
+        has_course = bool(re.search(r'\b[A-Z]{2,4}\s*\d{3,4}\b', question))
+        if has_course:
+            return None, True
+        
+        return None, False
+    
     def route(self, question: str) -> Dict[str, Any]:
         """
         Analyze question and return optimal retrieval parameters.
@@ -192,6 +226,8 @@ class QueryRouter:
         """
         question = question.strip()
         
+        term_id, has_course_code = self.extract_term_info(question)
+        
         # Detect document type
         doc_type = self.detect_doc_type(question)
         
@@ -203,6 +239,7 @@ class QueryRouter:
         # Default parameters
         params = {
             "doc_type": doc_type,
+            "term_id": term_id, 
             "top_k": 5,
             "null_threshold": 0.50,
             "max_distance": 0.50,
@@ -216,6 +253,17 @@ class QueryRouter:
             params["null_threshold"] = 0.55  # Slightly more lenient
             params["max_distance"] = 0.55
             logger.info("Cumulative query detected: increasing top_k to ensure summary retrieval")
+        
+        # Special handling for "personal projects" queries
+        elif "personal" in question.lower() and "project" in question.lower():
+            params["top_k"] = 15  # Cast wider net, filter in Python
+            params["rerank"] = True
+            params["rerank_lex_weight"] = 0.6
+            params["null_threshold"] = 0.65
+            params["max_distance"] = 0.65
+            params["post_filter_section_prefix"] = "Personal Projects"  # Filter after retrieval
+            logger.info("Personal projects query detected: will filter by section prefix after retrieval")
+            logger.info("Personal projects query detected: increasing top_k to 15, enabling rerank, and expanding query")
         
         # Broad questions need more chunks
         elif is_broad:
@@ -233,10 +281,11 @@ class QueryRouter:
             logger.info("Specific question detected: using default tight parameters")
         
         # If doc_type detected, can be more confident with fewer chunks
+        # BUT don't override special handling (cumulative, personal projects, broad)
         if doc_type:
-            # When filtering by doc_type, we can use fewer chunks
-            # UNLESS it's a cumulative query (already handled above)
-            if not is_broad and not is_cumulative:
+            # Only reduce top_k if we haven't already set it higher for a special case
+            is_personal_projects = "personal" in question.lower() and "project" in question.lower()
+            if not is_broad and not is_cumulative and not is_personal_projects:
                 params["top_k"] = 5
             logger.info(f"Doc type filter: {doc_type}")
         

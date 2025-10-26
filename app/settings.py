@@ -95,12 +95,12 @@ class Settings(BaseModel):
     # ==================== Chunking Settings ====================
     
     chunk_size: int = Field(
-        default=int(os.getenv("CHUNK_SIZE", "200")),
+        default=int(os.getenv("CHUNK_SIZE", "800")),
         description="Target chunk size in characters"
     )
     
     chunk_overlap: int = Field(
-        default=int(os.getenv("CHUNK_OVERLAP", "75")),
+        default=int(os.getenv("CHUNK_OVERLAP", "200")),
         description="Overlap between consecutive chunks in characters"
     )
     
