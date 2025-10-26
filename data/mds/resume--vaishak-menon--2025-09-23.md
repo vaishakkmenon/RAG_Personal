@@ -22,23 +22,23 @@ Graduate student in Computer Science with hands-on experience deploying cloud-ba
 
 # Work Experience
 
-## Computer Science Teaching Assistant — University of Alabama at Birmingham (Aug 2022–May 2025) · Birmingham, AL
+## Computer Science Teaching Assistant — University of Alabama at Birmingham (Aug 2022 – May 2025) · Birmingham, AL
 
 - Assisted professors in teaching Data Structure and Algorithms in Python and Java and Systems Programming in C.
 - Evaluated and provided feedback on more than 400 assignments each semester, achieving a turnaround time of under 72 hours.
 - Mentored students in core programming concepts, guided them through assignment completion, and delivered in-depth code feedback to accelerate skill development.
 
-## Infrastructure Intern — Maven Wave Partners (Jun 2023–Aug 2023) · Chicago, IL
+## Infrastructure Intern — Maven Wave Partners (Jun 2023 – Aug 2023) · Chicago, IL
 
 - Authored comprehensive training documentation on YAML configuration and Terraform provisioning, ensuring new employees could quickly adopt and deploy Infrastructure as Code within the organization.
 - Created interactive demos embodying real-world deployment scenarios and best practices for cloud technologies, offering hands-on learning experiences that accelerated onboarding.
 
-## Infrastructure Intern — Maven Wave Partners (Jun 2022–Aug 2022)
+## Infrastructure Intern — Maven Wave Partners (Jun 2022 – Aug 2022) · Chicago, IL
 
 - Refined Terraform configurations to finalize a scalable Google Cloud Platform environment, ensuring reliable deployment practices and adherence to best practices.
 - Streamlined documentation on deployment procedures and introduced standardized processes to maintain consistent, efficient infrastructure management across the organization.
 
-## Infrastructure Intern — Maven Wave Partners (Jun 2021–Aug 2021)
+## Infrastructure Intern — Maven Wave Partners (Jun 2021 – Aug 2021) · Chicago, IL
 
 - Integrated with the Infrastructure team on the progressive implementation of a Google Cloud Platform environment using Kubernetes.
 - Engineered a secure data-sharing microservice using Kubernetes, enabling seamless data exchange between provider and third-party companies.
@@ -46,8 +46,8 @@ Graduate student in Computer Science with hands-on experience deploying cloud-ba
 # Education
 
 - **University of Alabama at Birmingham**, Birmingham, Alabama
-  - **B.S. in Computer Science** — Graduation Date: Apr 2024
-  - **M.S. in Computer Science** — Graduation Date: May 2025
+  - **B.S. in Computer Science** — Graduation Date: Apr 27, 2024
+  - **M.S. in Computer Science** — Graduation Date: May 1, 2025
 
 # Personal Projects
 
