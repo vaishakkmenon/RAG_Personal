@@ -42,11 +42,12 @@ class ChatRequest(BaseModel):
     
     @field_validator('question')
     @classmethod
-    def question_not_empty(cls, v: str) -> str:
-        """Ensure question is not just whitespace."""
-        if not v.strip():
+    def strip_and_validate(cls, v: str) -> str:
+        """Strip whitespace and ensure question has content."""
+        v = v.strip()
+        if not v:
             raise ValueError('Question cannot be empty or whitespace only')
-        return v.strip()
+        return v
 
 
 class ChatSource(BaseModel):

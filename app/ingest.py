@@ -36,8 +36,40 @@ try:
 except ImportError:
     METRICS_ENABLED = False
     logger.info("Prometheus metrics not available (metrics.py not found)")
+    
+# ------------------------------
+# Helper functions
+# ------------------------------
+def _record_metric(metric_func, value=1):
+    """Record metric if metrics are enabled."""
+    if METRICS_ENABLED:
+        metric_func(value)
+        
+def _process_file(fp: str) -> Optional[List[Dict]]:
+    """Process a single file, return chunks or None if failed."""
+    try:
+        # Check size
+        file_size = os.path.getsize(fp)
+        if file_size > MAX_FILE_SIZE:
+            logger.warning(f"Skipping {fp}: too large ({file_size} bytes)")
+            _record_metric(lambda: rag_ingest_skipped_files_total.labels(reason="too_large").inc())
+            return None
+        
+        # Read file
+        text = read_text(fp)
+        metadata, body = extract_frontmatter(text)
+        metadata["source"] = fp
+        
+        return chunk_text_with_section_metadata(body, settings.chunk_size, settings.chunk_overlap, metadata)
+        
+    except Exception as e:
+        logger.warning(f"Failed to process {fp}: {e}")
+        _record_metric(lambda: rag_ingest_skipped_files_total.labels(reason="error").inc())
+        return None
 
-
+# ------------------------------
+# Core functionality
+# ------------------------------
 def extract_frontmatter(text: str) -> Tuple[Dict, str]:
     """
     Extract YAML front-matter from Markdown and normalize for ChromaDB.
@@ -148,8 +180,7 @@ def find_files(base_paths: List[str]) -> List[str]:
         # Security: Only allow files within docs_dir
         if not abs_base.startswith(base_docs_dir):
             logger.warning(f"Skipping {base}: outside docs_dir {base_docs_dir}")
-            if METRICS_ENABLED:
-                rag_ingest_skipped_files_total.labels(reason="outside_docs_dir").inc()
+            _record_metric(lambda: rag_ingest_skipped_files_total.labels(reason="outside_docs_dir").inc())
             continue
 
         if os.path.isfile(abs_base):
@@ -159,8 +190,7 @@ def find_files(base_paths: List[str]) -> List[str]:
                 logger.debug(f"Found file: {abs_base}")
             else:
                 logger.warning(f"Skipping {abs_base}: invalid extension {ext}")
-                if METRICS_ENABLED:
-                    rag_ingest_skipped_files_total.labels(reason="invalid_ext").inc()
+                _record_metric(lambda: rag_ingest_skipped_files_total.labels(reason="invalid_ext").inc())
         
         elif os.path.isdir(abs_base):
             for root, _, filenames in os.walk(abs_base):
@@ -419,44 +449,8 @@ def ingest_paths(paths: Optional[List[str]] = None) -> int:
     logger.info(f"Starting ingestion of {len(files)} files")
 
     for fp in files:
-        # Check file size
-        try:
-            file_size = os.path.getsize(fp)
-        except Exception as e:
-            logger.warning(f"Could not stat file {fp}: {e}")
-            continue
-
-        if file_size > MAX_FILE_SIZE:
-            logger.warning(f"Skipping {fp}: file too large ({file_size} bytes)")
-            if METRICS_ENABLED:
-                rag_ingest_skipped_files_total.labels(reason="too_large").inc()
-            continue
-
-        # Read file
-        try:
-            text = read_text(fp)
-        except Exception as e:
-            logger.warning(f"Could not read {fp}: {e}")
-            if METRICS_ENABLED:
-                rag_ingest_skipped_files_total.labels(reason="read_error").inc()
-            continue
-
-        # Extract YAML front-matter
-        metadata, body = extract_frontmatter(text)
-        
-        # Ensure source is always in metadata
-        metadata["source"] = fp
-
-        # Chunk the body with section metadata extraction
-        chunk_dicts = chunk_text_with_section_metadata(
-            body, 
-            settings.chunk_size, 
-            settings.chunk_overlap,
-            metadata
-        )
-
+        chunk_dicts = _process_file(fp)
         if not chunk_dicts:
-            logger.info(f"{fp}: produced no valid chunks (empty or whitespace)")
             continue
 
         # Per-file counters
@@ -492,8 +486,7 @@ def ingest_paths(paths: Optional[List[str]] = None) -> int:
             # Flush batch to ChromaDB
             if len(docs_batch) >= BATCH_SIZE:
                 add_documents(docs_batch)
-                if METRICS_ENABLED:
-                    rag_ingested_chunks_total.inc(len(docs_batch))
+                _record_metric(lambda: rag_ingested_chunks_total.inc(len(docs_batch)))
                 added_total += len(docs_batch)
                 logger.info(f"Added batch of {len(docs_batch)} chunks to ChromaDB")
                 docs_batch.clear()
@@ -503,8 +496,7 @@ def ingest_paths(paths: Optional[List[str]] = None) -> int:
     # Flush any remaining chunks
     if docs_batch:
         add_documents(docs_batch)
-        if METRICS_ENABLED:
-            rag_ingested_chunks_total.inc(len(docs_batch))
+        _record_metric(lambda: rag_ingested_chunks_total.inc(len(docs_batch)))
         added_total += len(docs_batch)
         logger.info(f"Added final batch of {len(docs_batch)} chunks to ChromaDB")
 

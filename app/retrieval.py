@@ -51,6 +51,14 @@ _collection = _client.get_or_create_collection(
 logger.info(f"Collection '{COLLECTION_NAME}' ready with {_collection.count()} documents")
 
 # ------------------------------
+# Helpers
+# ------------------------------
+
+def _get_source(metadata: Any) -> str:
+    """Safely extract source from metadata."""
+    return metadata.get("source", "unknown") if isinstance(metadata, dict) else "unknown"
+
+# ------------------------------
 # Public API
 # ------------------------------
 
@@ -179,12 +187,11 @@ def search(
     output: List[dict] = []
     for chunk_id, text, metadata, distance in zip(ids, docs, metas, dists):
         try:
-            if distance is not None and float(distance) <= float(max_dist):
-                source = metadata.get("source", "unknown") if isinstance(metadata, dict) else "unknown"
+            if distance is not None and distance <= max_dist:
                 output.append({
                     "id": chunk_id,
                     "text": text,
-                    "source": source,
+                    "source": _get_source(metadata),
                     "distance": distance,
                     "metadata": metadata  # Include full metadata for inspection
                 })
@@ -197,11 +204,6 @@ def search(
     )
     
     return output
-
-
-# Alias for compatibility with main.py
-retrieve = search
-
 
 def get_sample_chunks(n: int = 10) -> List[dict]:
     """
@@ -239,11 +241,10 @@ def get_sample_chunks(n: int = 10) -> List[dict]:
     
     output: List[dict] = []
     for chunk_id, text, metadata in zip(ids, docs, metas):
-        source = metadata.get("source", "unknown") if isinstance(metadata, dict) else "unknown"
         output.append({
             "id": chunk_id,
             "text": text,
-            "source": source,
+            "source": _get_source(metadata),
             "distance": None,  # No distance for random samples
             "metadata": metadata
         })
@@ -318,7 +319,6 @@ def reset_collection() -> None:
 __all__ = [
     "add_documents",
     "search",
-    "retrieve",
     "get_sample_chunks",
     "get_collection_stats",
     "reset_collection",

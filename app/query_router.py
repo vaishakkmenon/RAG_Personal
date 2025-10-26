@@ -14,6 +14,10 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# ------------------------------
+# Configuration
+# ------------------------------
+CUMULATIVE_QUERY_BOOST = 2
 
 class QueryRouter:
     """
@@ -145,13 +149,13 @@ class QueryRouter:
         Returns:
             Document type string or None if no clear match
         """
-        scores = {}
         
-        # Score all doc types
-        for doc_type, patterns in self.doc_type_regexes.items():
-            score = sum(1 for pattern in patterns if pattern.search(question))
-            if score > 0:
-                scores[doc_type] = score
+        # Score all doc types and filter zeros in one pass
+        scores = {
+            doc_type: score
+            for doc_type, patterns in self.doc_type_regexes.items()
+            if (score := sum(1 for pattern in patterns if pattern.search(question))) > 0
+        }
         
         if not scores:
             return None
@@ -161,7 +165,7 @@ class QueryRouter:
         if "transcript_analysis" in scores and "term" in scores:
             if self.is_cumulative_query(question):
                 logger.info("Cumulative query detected: preferring transcript_analysis over term")
-                scores["transcript_analysis"] += 2  # Boost transcript_analysis
+                scores["transcript_analysis"] += CUMULATIVE_QUERY_BOOST
         
         # Return doc type with highest score
         best_match = max(scores.items(), key=lambda x: x[1])
@@ -302,6 +306,14 @@ class QueryRouter:
 
 # Global router instance
 _router = QueryRouter()
+
+DEFAULT_ROUTING_PARAMS = {
+    "top_k": 5,
+    "null_threshold": 0.50,
+    "max_distance": 0.50,
+    "rerank": False,
+    "rerank_lex_weight": 0.5,
+}
 
 
 def route_query(question: str) -> Dict[str, Any]:
