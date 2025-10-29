@@ -42,35 +42,26 @@ from .metrics import (
 logger = logging.getLogger(__name__)
 
 # Ollama client & core settings
-_CLIENT = ollama.Client(host=settings.ollama_host)
+_CLIENT = ollama.Client(host=settings.ollama_host, timeout=settings.ollama_timeout)
 _MODEL = settings.ollama_model
 _NUM_CTX = settings.num_ctx
 REQUEST_TIMEOUT_S = settings.ollama_timeout
 MAX_BYTES = settings.max_bytes
 
-RETRIEVAL_DEFAULTS = {
-    'top_k': 5,
-    'null_threshold': 0.50,
-    'max_distance': 0.50,
-    'rerank': False,
-    'rerank_lex_weight': 0.5,
-    'temperature': 0.0
-}
-
 # ------------------------------------------------------------------------------
 # FastAPI app & middleware wiring
 # ------------------------------------------------------------------------------
 app = FastAPI(
-    title="RAGChatBot (Local $0)",
-    description="Self-hosted RAG chatbot using Ollama, SentenceTransformers, and ChromaDB.",
-    version="0.3.0",
-    summary="Local RAG + Resume-style RC.",
+    title=settings.api.title,
+    description=settings.api.description,
+    version=settings.api.version,
+    summary=settings.api.summary,
 )
 
 # CORS for local frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=settings.api.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -107,8 +98,21 @@ def check_api_key(x_api_key: str = Header(...)):
     
     return x_api_key
 
-def generate_with_ollama(prompt: str, temperature: float = 0.0, max_tokens: int = 300) -> str:
-    """Generate text using Ollama."""
+def generate_with_ollama(
+    prompt: str, 
+    temperature: Optional[float] = None, 
+    max_tokens: Optional[int] = None
+):
+    """Generate text using Ollama with configurable parameters.
+    
+    Args:
+        prompt: The input prompt to generate text from
+        temperature: Sampling temperature (None uses default from settings)
+        max_tokens: Maximum number of tokens to generate (None uses default from settings)
+    """
+    temperature = temperature if temperature is not None else settings.retrieval.temperature
+    max_tokens = max_tokens if max_tokens is not None else settings.retrieval.max_tokens
+    
     import time
     start = time.time()
     try:
@@ -224,7 +228,7 @@ def chat(
     null_threshold: Optional[float] = None,
     max_distance: Optional[float] = None,
     top_k: Optional[int] = None,
-    temperature: float = 0.0,
+    temperature: Optional[float] = None,
     rerank: Optional[bool] = None,
     rerank_lex_weight: Optional[float] = None,
     doc_type: Optional[str] = None,
@@ -233,30 +237,22 @@ def chat(
     use_router: bool = True,
     api_key: str = Depends(check_api_key)
 ):
-    """
-    Answer questions with intelligent query routing.
+    # Apply defaults from settings if not provided
+    temperature = temperature if temperature is not None else settings.retrieval.temperature
     
-    The system automatically analyzes the question and selects optimal
-    retrieval parameters. You can override any parameter manually.
+    # Default parameters (can be overridden by router or explicitly)
+    params = {
+        'top_k': top_k if top_k is not None else settings.retrieval.top_k,
+        'max_distance': max_distance if max_distance is not None else settings.retrieval.max_distance,
+        'null_threshold': null_threshold if null_threshold is not None else settings.retrieval.null_threshold,
+        'rerank': rerank if rerank is not None else settings.retrieval.rerank,
+        'rerank_lex_weight': rerank_lex_weight if rerank_lex_weight is not None else settings.retrieval.rerank_lex_weight,
+        'temperature': temperature,
+        'doc_type': doc_type,
+        'term_id': term_id,
+        'level': level,
+    }
     
-    Args:
-        request: ChatRequest with question
-        use_router: If True, automatically route query (default: True)
-        grounded_only: Override grounding behavior
-        null_threshold: Override confidence threshold
-        max_distance: Override retrieval threshold
-        top_k: Override number of chunks
-        temperature: LLM sampling temperature
-        rerank: Override reranking
-        rerank_lex_weight: Lexical weight for reranking
-        doc_type: Override document type filter
-        term_id: Filter by term
-        level: Filter by academic level
-        api_key: Validated API key
-    
-    Returns:
-        ChatResponse with answer, sources, and grounding status
-    """
     logger.info(f"Question: {request.question}")
     
     if use_router:
@@ -274,22 +270,13 @@ def chat(
                 'temperature': temperature
             },
             routed=routed_params,
-            defaults=RETRIEVAL_DEFAULTS
+            defaults=params
         )
         
         logger.info(f"Routed parameters: doc_type={params.get('doc_type')}, top_k={params.get('top_k')}")
     else:
-        params = {
-            'doc_type': doc_type,
-            'term_id': term_id,
-            'top_k': top_k or RETRIEVAL_DEFAULTS['top_k'],
-            'null_threshold': null_threshold or RETRIEVAL_DEFAULTS['null_threshold'],
-            'max_distance': max_distance or RETRIEVAL_DEFAULTS['max_distance'],
-            'rerank': rerank if rerank is not None else RETRIEVAL_DEFAULTS['rerank'],
-            'rerank_lex_weight': rerank_lex_weight or RETRIEVAL_DEFAULTS['rerank_lex_weight'],
-            'temperature': temperature or RETRIEVAL_DEFAULTS['temperature']
-        }
-        
+        logger.info(f"Using default parameters: {params}")
+    
     # Build metadata filter
     metadata_filter = {
         k: v for k, v in {
@@ -423,9 +410,29 @@ Answer (read directly from the excerpts):"""
 
 # --- Debug routes ---
 @app.get("/debug/search")
-async def debug_search(q: str, k: int = 5, max_distance: float = 0.45):
-    return search(q, k, max_distance)
+async def debug_search(
+    q: str, 
+    k: Optional[int] = None, 
+    max_distance: Optional[float] = None
+):
+    """Debug endpoint for testing search functionality.
+    
+    Args:
+        q: Search query
+        k: Number of results to return (defaults to settings.retrieval.top_k)
+        max_distance: Maximum cosine distance (defaults to settings.retrieval.max_distance)
+    """
+    return search(
+        q, 
+        k=k if k is not None else settings.retrieval.top_k, 
+        max_distance=max_distance if max_distance is not None else settings.retrieval.max_distance
+    )
 
 @app.get("/debug/samples")
 async def debug_samples(n: int = 4):
-    return get_sample_chunks(n)
+    """Debug endpoint to retrieve sample chunks from the vector store.
+    
+    Args:
+        n: Number of samples to return (capped at 20)
+    """
+    return get_sample_chunks(min(n, 20))  # Cap at 20 samples for safety
