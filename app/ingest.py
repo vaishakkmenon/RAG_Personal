@@ -20,14 +20,14 @@ import yaml
 from fastapi import HTTPException
 
 from .retrieval import add_documents
-from .settings import settings
+from .settings import settings, ingest_settings
 
 logger = logging.getLogger(__name__)
 
-# Configuration
-ALLOWED_EXT = {".txt", ".md"}
-MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB max per file
-BATCH_SIZE = 500
+# Configuration - using settings from ingest_settings
+ALLOWED_EXT = ingest_settings.allowed_extensions
+MAX_FILE_SIZE = ingest_settings.max_file_size
+BATCH_SIZE = ingest_settings.batch_size
 
 # Optional: Import Prometheus metrics if available
 try:
@@ -60,7 +60,7 @@ def _process_file(fp: str) -> Optional[List[Dict]]:
         metadata, body = extract_frontmatter(text)
         metadata["source"] = fp
         
-        return chunk_text_with_section_metadata(body, settings.chunk_size, settings.chunk_overlap, metadata)
+        return chunk_text_with_section_metadata(body, ingest_settings.chunk_size, ingest_settings.chunk_overlap, metadata)
         
     except Exception as e:
         logger.warning(f"Failed to process {fp}: {e}")
@@ -217,23 +217,17 @@ def find_files(base_paths: List[str]) -> List[str]:
     return files
 
 
-def chunk_text(text: str, chunk_size: int, overlap: int) -> List[str]:
+def chunk_text(text: str, chunk_size: int = None, overlap: int = None) -> List[str]:
     """
     Split text into overlapping chunks, preferring natural boundaries (paragraphs/sentences).
     
-    Strategy:
-    1. Split by paragraphs (\\n\\n)
-    2. If paragraph > chunk_size, split by sentences
-    3. Pack into chunks with overlap
-    
-    Args:
-        text: Raw text to chunk
-        chunk_size: Target maximum size of each chunk (in characters)
-        overlap: Number of characters to overlap between consecutive chunks
-    
-    Returns:
-        List of non-empty text chunks
+    If chunk_size or overlap are not provided, they will be taken from the configuration.
     """
+    if chunk_size is None:
+        chunk_size = ingest_settings.chunk_size
+    if overlap is None:
+        overlap = ingest_settings.chunk_overlap
+    
     if not text.strip():
         return []
 
@@ -287,25 +281,22 @@ def chunk_text(text: str, chunk_size: int, overlap: int) -> List[str]:
 
 def chunk_text_with_section_metadata(
     text: str, 
-    chunk_size: int, 
-    overlap: int,
-    base_metadata: Dict
-) -> List[Dict]:
+    chunk_size: int = None, 
+    overlap: int = None,
+    base_metadata: Optional[Dict] = None
+):
     """
     Split text into chunks while extracting section information from markdown headers.
     
-    FIX: Headers are now added to chunks AFTER updating section metadata,
-    so they get the correct section assignment.
-    
-    Args:
-        text: Raw markdown text to chunk
-        chunk_size: Target maximum size of each chunk
-        overlap: Number of characters to overlap
-        base_metadata: Base metadata from YAML frontmatter
-    
-    Returns:
-        List of dicts with 'text' and 'metadata' keys
+    If chunk_size or overlap are not provided, they will be taken from the configuration.
     """
+    if chunk_size is None:
+        chunk_size = ingest_settings.chunk_size
+    if overlap is None:
+        overlap = ingest_settings.chunk_overlap
+    if base_metadata is None:
+        base_metadata = {}
+    
     if not text.strip():
         return []
     
@@ -417,27 +408,19 @@ def chunk_text_with_section_metadata(
     return chunks
 
 
-def ingest_paths(paths: Optional[List[str]] = None) -> int:
+def ingest_paths(paths: Optional[List[str]] = None, batch_size: int = None) -> int:
     """
     Ingest text files from the given paths, chunking them and adding to the retrieval database.
     
-    Process:
-    1. Find all .md/.txt files in paths
-    2. Extract YAML front-matter from each file
-    3. Chunk the body text
-    4. Deduplicate chunks via SHA-256
-    5. Batch insert to ChromaDB with full metadata
-    
     Args:
         paths: List of file or directory paths to ingest.
-                Defaults to [settings.docs_dir] if None.
-    
-    Returns:
-        Total number of text chunks successfully ingested
-    
-    Raises:
-        HTTPException: If no valid files found
+              Defaults to [settings.docs_dir] if None.
+        batch_size: Number of documents to process in a batch.
+                   If None, uses the value from configuration.
     """
+    if batch_size is None:
+        batch_size = ingest_settings.batch_size
+    
     base_paths = paths or [settings.docs_dir]
     files = find_files(base_paths)
 
@@ -483,8 +466,8 @@ def ingest_paths(paths: Optional[List[str]] = None) -> int:
             
             file_added += 1
 
-            # Flush batch to ChromaDB
-            if len(docs_batch) >= BATCH_SIZE:
+            # Process files in batches
+            if len(docs_batch) >= batch_size:
                 add_documents(docs_batch)
                 _record_metric(lambda: rag_ingested_chunks_total.inc(len(docs_batch)))
                 added_total += len(docs_batch)
