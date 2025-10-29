@@ -9,123 +9,51 @@ Analyzes user questions and automatically selects optimal retrieval parameters:
 """
 
 import re
-from typing import Dict, Optional, Any, Tuple
+from typing import Dict, Optional, Any, Tuple, List, Set
 import logging
+from .settings import query_router_settings
 
 logger = logging.getLogger(__name__)
-
-# ------------------------------
-# Configuration
-# ------------------------------
-CUMULATIVE_QUERY_BOOST = 2
 
 class QueryRouter:
     """
     Routes queries to optimal retrieval settings based on question content.
+    
+    Configuration is loaded from settings.query_router_settings.
     """
     
-    # Keyword patterns for document types
-    # ORDER MATTERS: More specific patterns should come first
-    DOC_TYPE_PATTERNS = {
-        "certificate": [
-            r"\bcertificat(e|ion)s?\b",
-            r"\bcertified\b",
-            r"\bcka\b",
-            r"\baws\b.*\b(ccp|practitioner)\b",
-            r"\bprofessional\s+credential",
-        ],
-        "resume": [
-            r"\b(work|job|employment|position)\s+(experience|history)\b",
-            r"\bcompan(y|ies)\b.*\bworked\b",
-            r"\bintern(ship|ed)?\b",  # Changed: Now matches intern, interned, internship
-            r"\b(current|previous|recent)\s+(role|job|position)\b",
-            r"\bskills?\b",
-            r"\bpersonal\s+project",  # Added: Matches "personal project(s)" queries
-            r"\bproject",
-            r"\bcompan(y|ies)\b",  # Added: Match "companies" alone
-            r"\bmaven\s+wave\b",    # Added: Company name
-        ],
-        # NEW: transcript_analysis for OVERALL/CUMULATIVE stats
-        # This should match BEFORE "term" for overall queries
-        "transcript_analysis": [
-            r"\b(overall|cumulative|total|complete)\b.*\b(gpa|credit|grade|academic)\b",
-            r"\b(undergraduate|graduate)\b.*\b(gpa|cumulative)\b",
-            r"\bhow\s+many\s+(total\s+)?credits?\b",
-            r"\btotal\s+credits?\s+(earned|completed)\b",
-            r"\bacademic\s+(summary|overview)\b",
-            r"\bwhat\s+degrees?\s+(did|have)\b",
-            r"\bgraduation\s+date\b",
-            r"\bwhen\s+did.*graduate\b",
-            r"\bsumma\s+cum\s+laude\b",
-        ],
-        "term": [
-            r"\bterm\s+gpa\b",
-            r"\bsemester\s+gpa\b",
-            r"\bacademic\s+(record|standing)\b",
-            r"\bhonors?\b",
-            r"\bgpa\b",
-            r"\bgrade\s+point\s+average\b",
-            r"\bcredit(s)?\b.*\b(earned|completed)\b",
-            # Course-related patterns
-            r"\bcourse(s)?\b",
-            r"\bclass(es)?\b",
-            r"\b(cs|ee|ma|ph|eh)\s*\d{3}",
-            r"\b(spring|fall|summer|winter)\s+\d{4}\b",
-            r"\bsemester",
-            r"\bstudy|studied|took",
-        ],
-    }
+    def __init__(self, config=None):
+        """
+        Initialize the query router with configuration.
+        
+        Args:
+            config: Optional QueryRouterSettings instance. If None, uses the global settings.
+        """
+        self.config = config or query_router_settings
+        self._compile_patterns()
     
-    # Question type patterns
-    BROAD_QUESTION_PATTERNS = [
-        r"\bsummar(y|ize|ization)\b",
-        r"\boverall\b",
-        r"\beverything\b",
-        r"\ball\b.*\b(about|my)\b",
-        r"\bbackground\b",
-        r"\bprofile\b",
-        r"\bqualifications?\b",
-    ]
-    
-    SPECIFIC_QUESTION_PATTERNS = [
-        r"\bwhat\s+was\b",
-        r"\bwhen\s+did\b",
-        r"\bwhere\b",
-        r"\bhow\s+many\b",
-        r"\bwhich\b",
-        r"\blist\b",
-        r"\bwhat\s+is\b",
-    ]
-    
-    # Patterns that indicate need for cumulative/summary information
-    CUMULATIVE_PATTERNS = [
-        r"\b(overall|cumulative|total|complete|entire)\b",
-        r"\b(undergraduate|graduate)\b.*\bgpa\b",
-        r"\bhow\s+many\s+total\b",
-        r"\bacademic\s+(summary|overview|performance)\b",
-    ]
-    
-    def __init__(self):
-        """Initialize the query router."""
-        # Compile patterns for efficiency
+    def _compile_patterns(self):
+        """Compile all regex patterns for better performance."""
+        # Document type patterns
         self.doc_type_regexes = {
             doc_type: [re.compile(pattern, re.IGNORECASE) for pattern in patterns]
-            for doc_type, patterns in self.DOC_TYPE_PATTERNS.items()
+            for doc_type, patterns in self.config.doc_type_patterns.items()
         }
         
+        # Question type patterns
         self.broad_regexes = [
-            re.compile(pattern, re.IGNORECASE) 
-            for pattern in self.BROAD_QUESTION_PATTERNS
+            re.compile(pattern, re.IGNORECASE)
+            for pattern in self.config.broad_question_patterns
         ]
         
         self.specific_regexes = [
             re.compile(pattern, re.IGNORECASE)
-            for pattern in self.SPECIFIC_QUESTION_PATTERNS
+            for pattern in self.config.specific_question_patterns
         ]
         
         self.cumulative_regexes = [
             re.compile(pattern, re.IGNORECASE)
-            for pattern in self.CUMULATIVE_PATTERNS
+            for pattern in self.config.cumulative_patterns
         ]
     
     def is_cumulative_query(self, question: str) -> bool:
@@ -149,7 +77,6 @@ class QueryRouter:
         Returns:
             Document type string or None if no clear match
         """
-        
         # Score all doc types and filter zeros in one pass
         scores = {
             doc_type: score
@@ -165,7 +92,7 @@ class QueryRouter:
         if "transcript_analysis" in scores and "term" in scores:
             if self.is_cumulative_query(question):
                 logger.info("Cumulative query detected: preferring transcript_analysis over term")
-                scores["transcript_analysis"] += CUMULATIVE_QUERY_BOOST
+                scores["transcript_analysis"] += self.config.cumulative_query_boost
         
         # Return doc type with highest score
         best_match = max(scores.items(), key=lambda x: x[1])
@@ -240,13 +167,13 @@ class QueryRouter:
         is_specific = self.is_specific_question(question)
         is_cumulative = self.is_cumulative_query(question)
         
-        # Default parameters
+        # Default parameters from config
         params = {
             "doc_type": doc_type,
-            "term_id": term_id, 
-            "top_k": 5,
-            "null_threshold": 0.50,
-            "max_distance": 0.50,
+            "term_id": term_id,
+            "top_k": self.config.default_top_k,
+            "null_threshold": self.config.default_null_threshold,
+            "max_distance": self.config.default_max_distance,
             "rerank": False,
             "rerank_lex_weight": 0.5,
         }
@@ -304,17 +231,17 @@ class QueryRouter:
         
         return params
 
-# Global router instance
+# Global router instance with default configuration
 _router = QueryRouter()
 
+# Default routing parameters (for backward compatibility)
 DEFAULT_ROUTING_PARAMS = {
-    "top_k": 5,
-    "null_threshold": 0.50,
-    "max_distance": 0.50,
+    "top_k": query_router_settings.default_top_k,
+    "null_threshold": query_router_settings.default_null_threshold,
+    "max_distance": query_router_settings.default_max_distance,
     "rerank": False,
     "rerank_lex_weight": 0.5,
 }
-
 
 def route_query(question: str) -> Dict[str, Any]:
     """
