@@ -13,6 +13,8 @@ from typing import Dict, Optional, Any, Tuple, List, Set
 import logging
 from .settings import query_router_settings
 
+AmbiguityResult = Tuple[bool, float]
+
 logger = logging.getLogger(__name__)
 
 class QueryRouter:
@@ -55,6 +57,41 @@ class QueryRouter:
             re.compile(pattern, re.IGNORECASE)
             for pattern in self.config.cumulative_patterns
         ]
+
+    def detect_ambiguity(self, question: str) -> AmbiguityResult:
+        """Return (is_ambiguous, confidence score) for a question."""
+        cleaned = (question or "").strip()
+        if not cleaned:
+            return False, 0.0
+
+        words = cleaned.split()
+        word_count = len(words)
+        char_count = len(cleaned)
+
+        confidence = 0.0
+
+        if word_count == 1 and char_count <= self.config.single_word_char_limit:
+            confidence = 1.0
+        elif word_count <= self.config.short_query_word_limit:
+            confidence = 0.8
+
+        lowered = cleaned.lower()
+        if any(keyword in lowered for keyword in self.config.ambiguous_keywords):
+            confidence = min(1.0, confidence + 0.3)
+
+        is_ambiguous = confidence >= self.config.ambiguity_threshold
+        logger.debug(
+            "Ambiguity detection",
+            extra={
+                "question": cleaned,
+                "word_count": word_count,
+                "char_count": char_count,
+                "confidence": confidence,
+                "threshold": self.config.ambiguity_threshold,
+                "is_ambiguous": is_ambiguous,
+            },
+        )
+        return is_ambiguous, confidence
     
     def is_cumulative_query(self, question: str) -> bool:
         """Check if query is asking for cumulative/overall statistics."""
@@ -156,7 +193,9 @@ class QueryRouter:
             Dict with: doc_type, top_k, null_threshold, max_distance, rerank, etc.
         """
         question = question.strip()
-        
+
+        is_ambiguous, ambiguity_score = self.detect_ambiguity(question)
+
         term_id, has_course_code = self.extract_term_info(question)
         
         # Detect document type
@@ -176,6 +215,8 @@ class QueryRouter:
             "max_distance": self.config.default_max_distance,
             "rerank": False,
             "rerank_lex_weight": 0.5,
+            "is_ambiguous": is_ambiguous,
+            "ambiguity_score": ambiguity_score,
         }
         
         # Special handling for cumulative queries
@@ -239,6 +280,8 @@ DEFAULT_ROUTING_PARAMS = {
     "top_k": query_router_settings.default_top_k,
     "null_threshold": query_router_settings.default_null_threshold,
     "max_distance": query_router_settings.default_max_distance,
+    "is_ambiguous": False,
+    "ambiguity_score": 0.0,
     "rerank": False,
     "rerank_lex_weight": 0.5,
 }

@@ -40,6 +40,33 @@ class QueryRouterSettings(BaseModel):
         description="Boost factor for cumulative queries",
     )
 
+    ambiguity_threshold: float = Field(
+        default=float(os.getenv("QUERY_ROUTER_AMBIGUITY_THRESHOLD", "0.7")),
+        description="Confidence score threshold above which a query is considered ambiguous (0-1)",
+    )
+
+    short_query_word_limit: int = Field(
+        default=int(os.getenv("QUERY_ROUTER_SHORT_QUERY_WORD_LIMIT", "3")),
+        description="Word count at or below which a query is treated as short",
+    )
+
+    single_word_char_limit: int = Field(
+        default=int(os.getenv("QUERY_ROUTER_SINGLE_WORD_CHAR_LIMIT", "15")),
+        description="Maximum character length for a single-word query to be treated as highly ambiguous",
+    )
+
+    ambiguous_keywords: List[str] = Field(
+        default_factory=lambda: [
+            "experience",
+            "background",
+            "qualifications",
+            "overview",
+            "summary",
+            "about",
+        ],
+        description="Keywords that increase ambiguity confidence when present in the query",
+    )
+
     # Document type patterns
     doc_type_patterns: Dict[str, List[str]] = Field(
         default_factory=lambda: {
@@ -145,6 +172,18 @@ class QueryRouterSettings(BaseModel):
     )
 
     # Validation
+    @validator("ambiguity_threshold")
+    def validate_ambiguity_threshold(cls, v: float) -> float:
+        if not 0 <= v <= 1:
+            raise ValueError("Ambiguity threshold must be between 0 and 1")
+        return v
+
+    @validator("short_query_word_limit", "single_word_char_limit")
+    def validate_positive_ints(cls, v: int) -> int:
+        if v <= 0:
+            raise ValueError("Value must be positive")
+        return v
+
     @validator("default_null_threshold", "default_max_distance")
     def validate_thresholds(cls, v):
         if not 0 <= v <= 1:

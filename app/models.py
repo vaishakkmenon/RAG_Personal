@@ -74,6 +74,25 @@ class ChatSource(BaseModel):
     )
 
 
+class AmbiguityMetadata(BaseModel):
+    """Metadata describing ambiguity detection for a query."""
+
+    is_ambiguous: bool = Field(
+        description="Whether the router classified the question as ambiguous",
+        json_schema_extra={"example": True}
+    )
+
+    score: float = Field(
+        description="Confidence score (0-1) indicating ambiguity strength",
+        json_schema_extra={"example": 0.85}
+    )
+
+    clarification_requested: bool = Field(
+        description="Whether the system asked the user for clarification",
+        json_schema_extra={"example": True}
+    )
+
+
 class ChatResponse(BaseModel):
     """Response containing the answer and supporting sources."""
     
@@ -103,6 +122,18 @@ class ChatResponse(BaseModel):
         json_schema_extra={"example": True}
     )
 
+    ambiguity: Optional[AmbiguityMetadata] = Field(
+        default=None,
+        description="Details about ambiguity detection for this request",
+        json_schema_extra={
+            "example": {
+                "is_ambiguous": True,
+                "score": 0.85,
+                "clarification_requested": True
+            }
+        }
+    )
+
 
 class ErrorResponse(BaseModel):
     """Standard error response format."""
@@ -119,6 +150,7 @@ __all__ = [
     "IngestResponse",
     "ChatRequest",
     "ChatSource",
+    "AmbiguityMetadata",
     "ChatResponse",
     "ErrorResponse",
 ]
