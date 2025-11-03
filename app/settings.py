@@ -195,21 +195,32 @@ class IngestSettings(BaseModel):
     """Configuration for document ingestion."""
 
     allowed_extensions: Set[str] = Field(
-        default={"txt", "md"}, description="File extensions allowed for ingestion"
+        default_factory=lambda: {
+            ext.strip().lower()
+            for ext in os.getenv("INGEST_ALLOWED_EXTENSIONS", "txt,md").split(",")
+            if ext.strip()
+        },
+        description="File extensions allowed for ingestion",
     )
 
     max_file_size: int = Field(
-        default=10 * 1024 * 1024, description="Maximum file size in bytes"  # 10MB
+        default=int(os.getenv("INGEST_MAX_FILE_SIZE", str(10 * 1024 * 1024))),
+        description="Maximum file size in bytes",  # 10MB
     )
 
     batch_size: int = Field(
-        default=100, description="Number of documents to process in a single batch"
+        default=int(os.getenv("INGEST_BATCH_SIZE", "100")),
+        description="Number of documents to process in a single batch",
     )
 
-    chunk_size: int = Field(default=600, description="Number of characters per chunk")
+    chunk_size: int = Field(
+        default=int(os.getenv("CHUNK_SIZE", "450")),
+        description="Number of characters per chunk",
+    )
 
     chunk_overlap: int = Field(
-        default=120, description="Number of characters to overlap between chunks"
+        default=int(os.getenv("CHUNK_OVERLAP", "90")),
+        description="Number of characters to overlap between chunks",
     )
 
     # Validation
@@ -331,11 +342,11 @@ class Settings(BaseModel):
         description="Distance threshold for grounding check (refuse if distance > threshold)",
     )
     chunk_size: int = Field(
-        default=int(os.getenv("CHUNK_SIZE", "800")),
+        default=int(os.getenv("CHUNK_SIZE", "450")),
         description="Target chunk size in characters",
     )
     chunk_overlap: int = Field(
-        default=int(os.getenv("CHUNK_OVERLAP", "200")),
+        default=int(os.getenv("CHUNK_OVERLAP", "90")),
         description="Overlap between consecutive chunks in characters",
     )
 

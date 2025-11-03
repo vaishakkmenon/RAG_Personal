@@ -34,7 +34,7 @@ from .models import (
 from .metrics import (
     rag_retrieval_chunks,
     rag_llm_request_total,
-    rag_llm_latency_seconds
+    rag_llm_latency_seconds,
 )
 
 # ------------------------------------------------------------------------------
@@ -76,45 +76,47 @@ app.add_middleware(LoggingMiddleware)
 # Prometheus /metrics
 Instrumentator().instrument(app).expose(app)
 
+
 def check_api_key(x_api_key: str = Header(...)):
     """
     Verify the API key from the X-API-Key header.
-    
+
     Args:
         x_api_key: Value from X-API-Key header (automatically extracted by FastAPI)
-    
+
     Returns:
         The API key if valid
-        
+
     Raises:
         HTTPException: If API key is missing or invalid
     """
     expected_key = settings.api_key  # From .env file
-    
+
     if x_api_key != expected_key:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid API key"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key"
         )
-    
+
     return x_api_key
 
+
 def generate_with_ollama(
-    prompt: str, 
-    temperature: Optional[float] = None, 
-    max_tokens: Optional[int] = None
+    prompt: str, temperature: Optional[float] = None, max_tokens: Optional[int] = None
 ):
     """Generate text using Ollama with configurable parameters.
-    
+
     Args:
         prompt: The input prompt to generate text from
         temperature: Sampling temperature (None uses default from settings)
         max_tokens: Maximum number of tokens to generate (None uses default from settings)
     """
-    temperature = temperature if temperature is not None else settings.retrieval.temperature
+    temperature = (
+        temperature if temperature is not None else settings.retrieval.temperature
+    )
     max_tokens = max_tokens if max_tokens is not None else settings.retrieval.max_tokens
-    
+
     import time
+
     start = time.time()
     try:
         response = _CLIENT.generate(
@@ -124,10 +126,10 @@ def generate_with_ollama(
                 "temperature": temperature,
                 "num_predict": max_tokens,
                 "num_ctx": _NUM_CTX,
-            }
+            },
         )
         rag_llm_request_total.labels(status="success", model=_MODEL).inc()
-        return response['response']
+        return response["response"]
     except Exception as e:
         rag_llm_request_total.labels(status="error", model=_MODEL).inc()
         raise
@@ -135,43 +137,82 @@ def generate_with_ollama(
         duration = time.time() - start
         rag_llm_latency_seconds.labels(status="success", model=_MODEL).observe(duration)
 
+
 # ==============================================================================
 # Helpers — Overlap scoring & Reranker + sentence/window support
 # ==============================================================================
 
 # Tiny stopword set + tokenization for lexical overlap
 _STOPWORDS = {
-    "the","a","an","of","to","in","on","at","for","and","or","if","is","are","was","were",
-    "by","with","from","as","that","this","these","those","it","its","be","been","being",
-    "which","who","whom","what","when","where","why","how"
+    "the",
+    "a",
+    "an",
+    "of",
+    "to",
+    "in",
+    "on",
+    "at",
+    "for",
+    "and",
+    "or",
+    "if",
+    "is",
+    "are",
+    "was",
+    "were",
+    "by",
+    "with",
+    "from",
+    "as",
+    "that",
+    "this",
+    "these",
+    "those",
+    "it",
+    "its",
+    "be",
+    "been",
+    "being",
+    "which",
+    "who",
+    "whom",
+    "what",
+    "when",
+    "where",
+    "why",
+    "how",
 }
 _WORD_RE = re.compile(r"[A-Za-z0-9]+")
+
 
 def _tokset(s: str) -> set[str]:
     return {w.lower() for w in _WORD_RE.findall(s or "") if w.lower() not in _STOPWORDS}
 
-def rerank_chunks(question: str, chunks: List[dict], lex_weight: float = 0.5) -> List[dict]:
+
+def rerank_chunks(
+    question: str, chunks: List[dict], lex_weight: float = 0.5
+) -> List[dict]:
     """
     Hybrid reranking: lexical overlap + semantic similarity.
-    
+
     Score = lex_weight * overlap + (1 - lex_weight) * (1 - distance)
     """
     lex_weight = max(0.0, min(1.0, lex_weight))
-    
+
     def compute_score(chunk: dict) -> float:
         text = chunk.get("text", "")
         distance = chunk.get("distance", 1.0)
-        
+
         # Lexical overlap
         q_tokens = _tokset(question)
         c_tokens = _tokset(text)
         overlap = len(q_tokens & c_tokens) / max(1, len(q_tokens)) if q_tokens else 0.0
-        
+
         # Semantic similarity (inverse of distance)
         similarity = 1.0 - max(0.0, min(1.0, distance))
-        
+
         return lex_weight * overlap + (1.0 - lex_weight) * similarity
-    
+
     # Create new list with scores, sort, return
     scored = [(chunk, compute_score(chunk)) for chunk in chunks]
     scored.sort(key=lambda x: x[1], reverse=True)
@@ -254,7 +295,9 @@ def _build_ambiguity_clarification(question: str) -> str:
         "qualifications",
     ]
     # Ensure domains contains phrases that include the core words
-    domain_set = list(dict.fromkeys(domains + [f"your {word}" for word in core_domains]))
+    domain_set = list(
+        dict.fromkeys(domains + [f"your {word}" for word in core_domains])
+    )
 
     if len(domain_set) == 1:
         examples_text = domain_set[0]
@@ -280,26 +323,36 @@ def merge_params(manual, routed, defaults):
     result.update({k: v for k, v in manual.items() if v is not None})
     return result
 
+
 def is_refusal(answer: str, chunks: list) -> bool:
     """Check if answer is a refusal/ungrounded response"""
     if not chunks:
         return True
-    
+
     answer_lower = answer.lower()
-    
+
     # Check explicit refusals
     refusal_patterns = [
-        "i don't know", "i do not know", "i couldn't find",
-        "there is no mention", "there is no information",
-        "not mentioned in", "not mentioned", "not listed",
-        "not specified", "not provided", "not included"
+        "i don't know",
+        "i do not know",
+        "i couldn't find",
+        "there is no mention",
+        "there is no information",
+        "not mentioned in",
+        "not mentioned",
+        "not listed",
+        "not specified",
+        "not provided",
+        "not included",
     ]
-    
+
     return any(pattern in answer_lower for pattern in refusal_patterns)
+
 
 # ==============================================================================
 # Routes
 # ==============================================================================
+
 
 @app.get("/health")
 async def health():
@@ -310,11 +363,13 @@ async def health():
         "socket": socket.gethostname(),
     }
 
+
 @app.post("/ingest", response_model=IngestResponse)
 async def ingest(req: IngestRequest):
     paths = req.paths or [settings.docs_dir]
     added = ingest_paths(paths)
     return IngestResponse(ingested_chunks=added)
+
 
 # --- RAG chat with distance-based abstention ---
 @app.post("/chat")
@@ -332,56 +387,72 @@ def chat(
     term_id: Optional[str] = None,
     level: Optional[str] = None,
     use_router: bool = True,
-    api_key: str = Depends(check_api_key)
+    api_key: str = Depends(check_api_key),
 ):
     # Apply defaults from settings if not provided
-    temperature = temperature if temperature is not None else settings.retrieval.temperature
-    
+    temperature = (
+        temperature if temperature is not None else settings.retrieval.temperature
+    )
+
     # Default parameters (can be overridden by router or explicitly)
     params = {
-        'top_k': top_k if top_k is not None else settings.retrieval.top_k,
-        'max_distance': max_distance if max_distance is not None else settings.retrieval.max_distance,
-        'null_threshold': null_threshold if null_threshold is not None else settings.retrieval.null_threshold,
-        'rerank': rerank if rerank is not None else settings.retrieval.rerank,
-        'rerank_lex_weight': rerank_lex_weight if rerank_lex_weight is not None else settings.retrieval.rerank_lex_weight,
-        'temperature': temperature,
-        'doc_type': doc_type,
-        'term_id': term_id,
-        'level': level,
-        'is_ambiguous': False,
-        'ambiguity_score': 0.0,
+        "top_k": top_k if top_k is not None else settings.retrieval.top_k,
+        "max_distance": (
+            max_distance
+            if max_distance is not None
+            else settings.retrieval.max_distance
+        ),
+        "null_threshold": (
+            null_threshold
+            if null_threshold is not None
+            else settings.retrieval.null_threshold
+        ),
+        "rerank": rerank if rerank is not None else settings.retrieval.rerank,
+        "rerank_lex_weight": (
+            rerank_lex_weight
+            if rerank_lex_weight is not None
+            else settings.retrieval.rerank_lex_weight
+        ),
+        "temperature": temperature,
+        "doc_type": doc_type,
+        "term_id": term_id,
+        "level": level,
+        "is_ambiguous": False,
+        "ambiguity_score": 0.0,
     }
-    
+
     logger.info(f"Question: {request.question}")
-    
+
     if use_router:
         routed_params = route_query(request.question)
-        
+
         params = merge_params(
             manual={
-                'doc_type': doc_type,
-                'term_id': term_id,
-                'top_k': top_k,
-                'null_threshold': null_threshold,
-                'max_distance': max_distance,
-                'rerank': rerank,
-                'rerank_lex_weight': rerank_lex_weight,
-                'temperature': temperature
+                "doc_type": doc_type,
+                "term_id": term_id,
+                "top_k": top_k,
+                "null_threshold": null_threshold,
+                "max_distance": max_distance,
+                "rerank": rerank,
+                "rerank_lex_weight": rerank_lex_weight,
+                "temperature": temperature,
             },
             routed=routed_params,
-            defaults=params
+            defaults=params,
         )
-        
-        logger.info(f"Routed parameters: doc_type={params.get('doc_type')}, top_k={params.get('top_k')}")
+
+        logger.info(
+            f"Routed parameters: doc_type={params.get('doc_type')}, top_k={params.get('top_k')}"
+        )
     else:
         logger.info(f"Using default parameters: {params}")
 
-    if use_router and params.get('is_ambiguous'):
+    if use_router and params.get("is_ambiguous"):
         logger.info(
             "Ambiguous query detected; prompting user for clarification",
             extra={
                 "question": request.question,
-                "ambiguity_score": params.get('ambiguity_score'),
+                "ambiguity_score": params.get("ambiguity_score"),
             },
         )
         clarification = _build_ambiguity_clarification(request.question)
@@ -391,52 +462,59 @@ def chat(
             grounded=False,
             ambiguity=AmbiguityMetadata(
                 is_ambiguous=True,
-                score=max(params.get('ambiguity_score', 0.0), 0.8),
+                score=max(params.get("ambiguity_score", 0.0), 0.8),
                 clarification_requested=True,
             ),
         )
 
     # Build metadata filter
     metadata_filter = {
-        k: v for k, v in {
+        k: v
+        for k, v in {
             "doc_type": params.get("doc_type"),
             "term_id": params.get("term_id"),
-            "level": level
-        }.items() if v is not None
+            "level": level,
+        }.items()
+        if v is not None
     }
-    
+
     # Retrieve chunks
     try:
         chunks = search(
             query=request.question,
-            k=params['top_k'],
-            max_distance=params['max_distance'],
-            metadata_filter=metadata_filter if metadata_filter else None
+            k=params["top_k"],
+            max_distance=params["max_distance"],
+            metadata_filter=metadata_filter if metadata_filter else None,
         )
     except Exception as e:
         logger.error(f"Retrieval failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve documents"
+            detail="Failed to retrieve documents",
         )
-    
+
     # Post-filter by section prefix if requested
     if use_router and routed_params.get("post_filter_section_prefix"):
         section_prefix = routed_params["post_filter_section_prefix"]
         original_count = len(chunks)
         chunks = [
-            c for c in chunks 
+            c
+            for c in chunks
             if c.get("metadata", {}).get("section", "").startswith(section_prefix)
         ]
-        logger.info(f"Section prefix filter '{section_prefix}': {original_count} → {len(chunks)} chunks")
-    
+        logger.info(
+            f"Section prefix filter '{section_prefix}': {original_count} → {len(chunks)} chunks"
+        )
+
     # Optional reranking
-    if params['rerank'] and chunks:
-        chunks = rerank_chunks(request.question, chunks, lex_weight=params['rerank_lex_weight'])
+    if params["rerank"] and chunks:
+        chunks = rerank_chunks(
+            request.question, chunks, lex_weight=params["rerank_lex_weight"]
+        )
         logger.info(f"Reranked {len(chunks)} chunks")
-    
+
     rag_retrieval_chunks.observe(len(chunks))
-    
+
     # Grounding check
     if not chunks:
         logger.warning("No chunks retrieved")
@@ -445,49 +523,86 @@ def chat(
             sources=[],
             grounded=False,
             ambiguity=AmbiguityMetadata(
-                is_ambiguous=params.get('is_ambiguous', False),
-                score=params.get('ambiguity_score', 0.0),
+                is_ambiguous=params.get("is_ambiguous", False),
+                score=params.get("ambiguity_score", 0.0),
                 clarification_requested=False,
             ),
         )
-    
+
     best_distance = chunks[0]["distance"]
-    logger.info(f"Best chunk distance: {best_distance:.3f}, threshold: {params['null_threshold']}")
-    
-    if best_distance > params['null_threshold']:
-        logger.info(f"Refusing: best distance {best_distance:.3f} > threshold {params['null_threshold']}")
+    logger.info(
+        f"Best chunk distance: {best_distance:.3f}, threshold: {params['null_threshold']}"
+    )
+
+    if best_distance > params["null_threshold"]:
+        logger.info(
+            f"Refusing: best distance {best_distance:.3f} > threshold {params['null_threshold']}"
+        )
         return ChatResponse(
             answer="I don't know. I couldn't find sufficiently relevant information in my documents to answer this question confidently.",
             sources=[],
             grounded=False,
             ambiguity=AmbiguityMetadata(
-                is_ambiguous=params.get('is_ambiguous', False),
-                score=params.get('ambiguity_score', 0.0),
+                is_ambiguous=params.get("is_ambiguous", False),
+                score=params.get("ambiguity_score", 0.0),
                 clarification_requested=False,
             ),
         )
-    
+
     # Build context
-    context = "\n\n".join([
-        f"[Source: {c['source']}]\n{c['text']}"
-        for c in chunks
-    ])
-    
+    context = "\n\n".join([f"[Source: {c['source']}]\n{c['text']}" for c in chunks])
+
     # Generate answer
     # Build base rules
-    base_rules = """CRITICAL RULES:
-    1. READ values directly - DO NOT calculate or compute.
-    2. For course questions, look for tables with format: | Course | Title | Credits | Grade |
-    3. If you see a section header (like "## Coursework") without details, CHECK THE NEXT EXCERPTS.
-    4. Each excerpt has a [Source: ...] label showing which document it's from - all excerpts from the same source are related.
-    5. For "undergraduate/graduate GPA", look for "Overall GPA: X.XX" or "Cumulative GPA: X.XX"
-    6. "IMPORTANT: 'Graduate credits' or 'Master's degree' does NOT mean PhD. Only say 'PhD' if explicitly mentioned."
-    7. If answer not in excerpts, say "I don't know."
-    """
+    base_rules = """You are an assistant that answers questions strictly using the provided document excerpts.
+Follow these rules:
+1. Faithfulness - quote or restate facts exactly as they appear in the excerpts. Do not guess, calculate, or invent numbers.
+2. Keyword echoes - whenever the excerpts mention important terms (e.g., Computer Science, Kubernetes, AWS, 4.00, 2024-06-26), repeat them verbatim in the answer.
+3. Ambiguity handling - if the user's question is vague, extremely short, or has multiple possible interpretations, do not answer. Instead, ask a clarifying question that contains cues such as "Which specific...?" or "Could you clarify...?".
+4. Unknown facts - if the excerpts do not contain the requested information, respond: "I don't know. It isn't mentioned in the provided documents." Do not speculate.
+5. Tone - be concise and factual. Prefer bullet lists for multi-item answers. Mention the source document titles or labels only if asked.
+6. Course lookups - when the question is about courses, read values directly from tables formatted like | Course | Title | Credits | Grade | and copy grades verbatim.
+
+EXAMPLE 1 - Fact Recall
+Question: What certifications do I have?
+Excerpts:
+[Source: resume.md]
+Certifications:
+- AWS Certified Cloud Practitioner (valid through 2028-05-26)
+- AWS Certified AI Practitioner (valid through 2028-06-01)
+[Source: resume.md]
+Certifications:
+- Certified Kubernetes Administrator (CKA) - 2024-06-26
+
+Answer: You hold three certifications: AWS Certified Cloud Practitioner (valid through 2028-05-26), AWS Certified AI Practitioner (valid through 2028-06-01), and the Certified Kubernetes Administrator (CKA) earned on 2024-06-26.
+
+---
+
+EXAMPLE 2 - Ambiguous Prompt
+Question: Experience?
+Excerpts:
+[Source: resume.md]
+Professional Experience:
+- Infrastructure Intern - Maven Wave Partners
+- Teaching Assistant - UAB Department of Computer Science
+
+Answer: Your request is broad. Could you clarify which aspect of your experience you'd like to know about (e.g., teaching roles, internships, or technical skills)?
+
+---
+
+EXAMPLE 3 - Unknown / Impossible
+Question: What high school did I attend?
+Excerpts:
+[Source: resume.md]
+Education:
+- University of Alabama at Birmingham - B.S. Computer Science
+
+Answer: I don't know. It isn't mentioned in the provided documents.
+"""
 
     # Add counting rule only for "how many" questions
     if "how many" in request.question.lower():
-        base_rules += "8. Count ALL separate entries with different date ranges.\n"
+        base_rules += "7. Count ALL separate entries with different date ranges.\n"
 
     prompt = f"""Based on the following excerpts from my personal documents, answer the question concisely and accurately.
 
@@ -499,22 +614,20 @@ Excerpts:
 {context}
 
 Answer (read directly from the excerpts):"""
-    
+
     try:
         answer = generate_with_ollama(
-            prompt=prompt,
-            temperature=params['temperature'],
-            max_tokens=300
+            prompt=prompt, temperature=params["temperature"], max_tokens=300
         )
     except Exception as e:
         logger.error(f"Generation failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to generate answer"
+            detail="Failed to generate answer",
         )
-    
+
     logger.info(f"Generated answer: {answer[:100]}...")
-    
+
     answer_stripped = answer.strip()
 
     if is_refusal(answer_stripped, chunks):
@@ -523,8 +636,8 @@ Answer (read directly from the excerpts):"""
             sources=[],
             grounded=False,
             ambiguity=AmbiguityMetadata(
-                is_ambiguous=params.get('is_ambiguous', False),
-                score=params.get('ambiguity_score', 0.0),
+                is_ambiguous=params.get("is_ambiguous", False),
+                score=params.get("ambiguity_score", 0.0),
                 clarification_requested=False,
             ),
         )
@@ -534,8 +647,12 @@ Answer (read directly from the excerpts):"""
         ChatSource(
             id=c.get("id", ""),
             source=c.get("source", ""),
-            text=c.get("text", "")[:200] + "..." if len(c.get("text", "")) > 200 else c.get("text", ""),
-            distance=c.get("distance", 1.0)
+            text=(
+                c.get("text", "")[:200] + "..."
+                if len(c.get("text", "")) > 200
+                else c.get("text", "")
+            ),
+            distance=c.get("distance", 1.0),
         )
         for c in chunks
     ]
@@ -545,36 +662,40 @@ Answer (read directly from the excerpts):"""
         sources=sources,
         grounded=True,
         ambiguity=AmbiguityMetadata(
-            is_ambiguous=params.get('is_ambiguous', False),
-            score=params.get('ambiguity_score', 0.0),
+            is_ambiguous=params.get("is_ambiguous", False),
+            score=params.get("ambiguity_score", 0.0),
             clarification_requested=False,
         ),
     )
 
+
 # --- Debug routes ---
 @app.get("/debug/search")
 async def debug_search(
-    q: str, 
-    k: Optional[int] = None, 
-    max_distance: Optional[float] = None
+    q: str, k: Optional[int] = None, max_distance: Optional[float] = None
 ):
     """Debug endpoint for testing search functionality.
-    
+
     Args:
         q: Search query
         k: Number of results to return (defaults to settings.retrieval.top_k)
         max_distance: Maximum cosine distance (defaults to settings.retrieval.max_distance)
     """
     return search(
-        q, 
-        k=k if k is not None else settings.retrieval.top_k, 
-        max_distance=max_distance if max_distance is not None else settings.retrieval.max_distance
+        q,
+        k=k if k is not None else settings.retrieval.top_k,
+        max_distance=(
+            max_distance
+            if max_distance is not None
+            else settings.retrieval.max_distance
+        ),
     )
+
 
 @app.get("/debug/samples")
 async def debug_samples(n: int = 4):
     """Debug endpoint to retrieve sample chunks from the vector store.
-    
+
     Args:
         n: Number of samples to return (capped at 20)
     """
