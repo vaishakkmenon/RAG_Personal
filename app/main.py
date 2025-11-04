@@ -7,7 +7,7 @@
 import logging
 import socket
 import re
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 import ollama
 from fastapi import FastAPI, HTTPException, Depends, Header, status
@@ -21,6 +21,7 @@ from .ingest import ingest_paths
 from .query_router import route_query
 from .retrieval import search, get_sample_chunks
 from .settings import settings
+from .certifications import get_registry
 
 from .models import (
     IngestRequest,
@@ -101,7 +102,10 @@ def check_api_key(x_api_key: str = Header(...)):
 
 
 def generate_with_ollama(
-    prompt: str, temperature: Optional[float] = None, max_tokens: Optional[int] = None
+    prompt: str,
+    temperature: Optional[float] = None,
+    max_tokens: Optional[int] = None,
+    model: Optional[str] = None,
 ):
     """Generate text using Ollama with configurable parameters.
 
@@ -109,18 +113,20 @@ def generate_with_ollama(
         prompt: The input prompt to generate text from
         temperature: Sampling temperature (None uses default from settings)
         max_tokens: Maximum number of tokens to generate (None uses default from settings)
+        model: Optional override for the Ollama model name
     """
     temperature = (
         temperature if temperature is not None else settings.retrieval.temperature
     )
     max_tokens = max_tokens if max_tokens is not None else settings.retrieval.max_tokens
+    model_name = model or _MODEL
 
     import time
 
     start = time.time()
     try:
         response = _CLIENT.generate(
-            model=_MODEL,
+            model=model_name,
             prompt=prompt,
             options={
                 "temperature": temperature,
@@ -128,14 +134,14 @@ def generate_with_ollama(
                 "num_ctx": _NUM_CTX,
             },
         )
-        rag_llm_request_total.labels(status="success", model=_MODEL).inc()
+        rag_llm_request_total.labels(status="success", model=model_name).inc()
         return response["response"]
     except Exception as e:
-        rag_llm_request_total.labels(status="error", model=_MODEL).inc()
+        rag_llm_request_total.labels(status="error", model=model_name).inc()
         raise
     finally:
         duration = time.time() - start
-        rag_llm_latency_seconds.labels(status="success", model=_MODEL).observe(duration)
+        rag_llm_latency_seconds.labels(status="success", model=model_name).observe(duration)
 
 
 # ==============================================================================
@@ -184,7 +190,6 @@ _STOPWORDS = {
 }
 _WORD_RE = re.compile(r"[A-Za-z0-9]+")
 
-
 def _tokset(s: str) -> set[str]:
     return {w.lower() for w in _WORD_RE.findall(s or "") if w.lower() not in _STOPWORDS}
 
@@ -219,103 +224,6 @@ def rerank_chunks(
     return [chunk for chunk, score in scored]
 
 
-def _clarification_domains(question: str) -> tuple[str, List[str]]:
-    """Infer topic and example domains for clarification prompts."""
-    cleaned = (question or "").strip()
-    lowered = cleaned.lower()
-
-    default_domains = [
-        "your education",
-        "your work experience",
-        "your certifications",
-        "your skills",
-    ]
-
-    if "gpa" in lowered:
-        return (
-            "your academic performance",
-            [
-                "your undergraduate GPA",
-                "your graduate GPA",
-                "your overall GPA",
-            ],
-        )
-    if "experience" in lowered:
-        return (
-            "your experience",
-            [
-                "your professional roles",
-                "projects you've completed",
-                "your technical skills",
-            ],
-        )
-    if any(word in lowered for word in ["background", "qualifications"]):
-        return (
-            "your background and qualifications",
-            [
-                "your education",
-                "your work experience",
-                "your certifications",
-            ],
-        )
-    if "history" in lowered:
-        return (
-            "your history",
-            [
-                "your education history",
-                "your work history",
-                "key milestones",
-            ],
-        )
-    if "kubernetes" in lowered:
-        return (
-            "Kubernetes",
-            [
-                "projects that used Kubernetes",
-                "certifications like the CKA",
-                "work experience involving Kubernetes",
-            ],
-        )
-    if cleaned == "?":
-        return ("your profile", default_domains)
-
-    return ("your profile", default_domains)
-
-
-def _build_ambiguity_clarification(question: str) -> str:
-    """Create a clarifying prompt that aligns with test expectations."""
-    topic, domains = _clarification_domains(question)
-
-    # Guarantee core domains are always mentioned
-    core_domains = [
-        "education",
-        "work experience",
-        "certifications",
-        "skills",
-        "qualifications",
-    ]
-    # Ensure domains contains phrases that include the core words
-    domain_set = list(
-        dict.fromkeys(domains + [f"your {word}" for word in core_domains])
-    )
-
-    if len(domain_set) == 1:
-        examples_text = domain_set[0]
-    elif len(domain_set) == 2:
-        examples_text = " or ".join(domain_set)
-    else:
-        examples_text = ", ".join(domain_set[:-1]) + ", or " + domain_set[-1]
-
-    message = (
-        f"Your question seems a bit broad. Could you clarify which specific details you're looking for about {topic}? "
-        f"For example, I can share information about {examples_text}. "
-        "Typical areas I can cover include education, work experience, certifications, skills, and other qualifications. "
-        "Please let me know which detail to focus on so I can reference the right documents."
-    )
-
-    return message
-
-
 def merge_params(manual, routed, defaults):
     """Merge manual overrides with routed params and defaults"""
     result = defaults.copy()
@@ -324,29 +232,20 @@ def merge_params(manual, routed, defaults):
     return result
 
 
-def is_refusal(answer: str, chunks: list) -> bool:
-    """Check if answer is a refusal/ungrounded response"""
-    if not chunks:
-        return True
+from .prompting import create_default_prompt_builder, build_clarification_message
 
-    answer_lower = answer.lower()
+# Initialize prompt builder and certification registry
+prompt_builder = create_default_prompt_builder()
+cert_registry = get_registry()
 
-    # Check explicit refusals
-    refusal_patterns = [
-        "i don't know",
-        "i do not know",
-        "i couldn't find",
-        "there is no mention",
-        "there is no information",
-        "not mentioned in",
-        "not mentioned",
-        "not listed",
-        "not specified",
-        "not provided",
-        "not included",
+
+def _format_sources(chunks: List[dict]) -> List[Dict[str, str]]:
+    """Format chunks for the prompt builder."""
+    return [
+        {"source": c.get("source", "unknown"), "text": c.get("text", "")}
+        for c in chunks
+        if c.get("text", "").strip()
     ]
-
-    return any(pattern in answer_lower for pattern in refusal_patterns)
 
 
 # ==============================================================================
@@ -368,6 +267,10 @@ async def health():
 async def ingest(req: IngestRequest):
     paths = req.paths or [settings.docs_dir]
     added = ingest_paths(paths)
+    try:
+        cert_registry.reload()
+    except Exception as exc:  # pragma: no cover - diagnostic logging only
+        logger.warning("Failed to reload certification registry: %s", exc)
     return IngestResponse(ingested_chunks=added)
 
 
@@ -381,11 +284,13 @@ def chat(
     max_distance: Optional[float] = None,
     top_k: Optional[int] = None,
     temperature: Optional[float] = None,
+    max_tokens: Optional[int] = None,
     rerank: Optional[bool] = None,
     rerank_lex_weight: Optional[float] = None,
     doc_type: Optional[str] = None,
     term_id: Optional[str] = None,
     level: Optional[str] = None,
+    model: Optional[str] = None,
     use_router: bool = True,
     api_key: str = Depends(check_api_key),
 ):
@@ -393,9 +298,12 @@ def chat(
     temperature = (
         temperature if temperature is not None else settings.retrieval.temperature
     )
+    max_tokens = max_tokens if max_tokens is not None else settings.retrieval.max_tokens
+    model_name = model or settings.ollama_model
 
     # Default parameters (can be overridden by router or explicitly)
     params = {
+        "model": model_name,
         "top_k": top_k if top_k is not None else settings.retrieval.top_k,
         "max_distance": (
             max_distance
@@ -414,6 +322,7 @@ def chat(
             else settings.retrieval.rerank_lex_weight
         ),
         "temperature": temperature,
+        "max_tokens": max_tokens,
         "doc_type": doc_type,
         "term_id": term_id,
         "level": level,
@@ -436,6 +345,7 @@ def chat(
                 "rerank": rerank,
                 "rerank_lex_weight": rerank_lex_weight,
                 "temperature": temperature,
+                "max_tokens": max_tokens,
             },
             routed=routed_params,
             defaults=params,
@@ -445,6 +355,7 @@ def chat(
             f"Routed parameters: doc_type={params.get('doc_type')}, top_k={params.get('top_k')}"
         )
     else:
+        routed_params = {}
         logger.info(f"Using default parameters: {params}")
 
     if use_router and params.get("is_ambiguous"):
@@ -455,7 +366,7 @@ def chat(
                 "ambiguity_score": params.get("ambiguity_score"),
             },
         )
-        clarification = _build_ambiguity_clarification(request.question)
+        clarification = build_clarification_message(request.question, prompt_builder.config)
         return ChatResponse(
             answer=clarification,
             sources=[],
@@ -463,6 +374,22 @@ def chat(
             ambiguity=AmbiguityMetadata(
                 is_ambiguous=True,
                 score=max(params.get("ambiguity_score", 0.0), 0.8),
+                clarification_requested=True,
+            ),
+        )
+
+    heuristic_ambiguous, _ = prompt_builder.is_ambiguous(request.question)
+    if heuristic_ambiguous:
+        logger.info("Heuristic ambiguity detected; prompting user for clarification")
+        params["is_ambiguous"] = True
+        clarification = build_clarification_message(request.question, prompt_builder.config)
+        return ChatResponse(
+            answer=clarification,
+            sources=[],
+            grounded=False,
+            ambiguity=AmbiguityMetadata(
+                is_ambiguous=True,
+                score=0.9,
                 clarification_requested=True,
             ),
         )
@@ -549,90 +476,35 @@ def chat(
             ),
         )
 
-    # Build context
-    context = "\n\n".join([f"[Source: {c['source']}]\n{c['text']}" for c in chunks])
+    # Prepare context for prompt builder
+    formatted_chunks = _format_sources(chunks)
 
-    # Generate answer
-    # Build base rules
-    base_rules = """You are an assistant that answers questions strictly using the provided document excerpts.
-Follow these rules:
-1. Faithfulness - quote or restate facts exactly as they appear in the excerpts. Do not guess, calculate, or invent numbers.
-2. Keyword echoes - whenever the excerpts mention important terms (e.g., Computer Science, Kubernetes, AWS, 4.00, 2024-06-26), repeat them verbatim in the answer.
-3. Ambiguity handling - if the user's question is vague, extremely short, or has multiple possible interpretations, do not answer. Instead, ask a clarifying question that contains cues such as "Which specific...?" or "Could you clarify...?".
-4. Unknown facts - if the excerpts do not contain the requested information, respond: "I don't know. It isn't mentioned in the provided documents." Do not speculate.
-5. Tone - be concise and factual. Prefer bullet lists for multi-item answers. Mention the source document titles or labels only if asked.
-6. Course lookups - when the question is about courses, read values directly from tables formatted like | Course | Title | Credits | Grade | and copy grades verbatim.
+    # Build and validate prompt
+    prompt_result = prompt_builder.build_prompt(
+        question=request.question, context_chunks=formatted_chunks
+    )
 
-EXAMPLE 1 - Fact Recall
-Question: What certifications do I have?
-Excerpts:
-[Source: resume.md]
-Certifications:
-- AWS Certified Cloud Practitioner (valid through 2028-05-26)
-- AWS Certified AI Practitioner (valid through 2028-06-01)
-[Source: resume.md]
-Certifications:
-- Certified Kubernetes Administrator (CKA) - 2024-06-26
-
-Answer: You hold three certifications: AWS Certified Cloud Practitioner (valid through 2028-05-26), AWS Certified AI Practitioner (valid through 2028-06-01), and the Certified Kubernetes Administrator (CKA) earned on 2024-06-26.
-
----
-
-EXAMPLE 2 - Ambiguous Prompt
-Question: Experience?
-Excerpts:
-[Source: resume.md]
-Professional Experience:
-- Infrastructure Intern - Maven Wave Partners
-- Teaching Assistant - UAB Department of Computer Science
-
-Answer: Your request is broad. Could you clarify which aspect of your experience you'd like to know about (e.g., teaching roles, internships, or technical skills)?
-
----
-
-EXAMPLE 3 - Unknown / Impossible
-Question: What high school did I attend?
-Excerpts:
-[Source: resume.md]
-Education:
-- University of Alabama at Birmingham - B.S. Computer Science
-
-Answer: I don't know. It isn't mentioned in the provided documents.
-"""
-
-    # Add counting rule only for "how many" questions
-    if "how many" in request.question.lower():
-        base_rules += "7. Count ALL separate entries with different date ranges.\n"
-
-    prompt = f"""Based on the following excerpts from my personal documents, answer the question concisely and accurately.
-
-{base_rules}
-
-Question: {request.question}
-
-Excerpts:
-{context}
-
-Answer (read directly from the excerpts):"""
-
-    try:
-        answer = generate_with_ollama(
-            prompt=prompt, temperature=params["temperature"], max_tokens=300
+    # Handle ambiguous questions or missing context
+    if prompt_result.status == "ambiguous":
+        params["is_ambiguous"] = True
+        clarification = prompt_result.message or build_clarification_message(
+            request.question, prompt_builder.config
         )
-    except Exception as e:
-        logger.error(f"Generation failed: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to generate answer",
-        )
-
-    logger.info(f"Generated answer: {answer[:100]}...")
-
-    answer_stripped = answer.strip()
-
-    if is_refusal(answer_stripped, chunks):
         return ChatResponse(
-            answer=answer_stripped,
+            answer=clarification,
+            sources=[],
+            grounded=False,
+            ambiguity=AmbiguityMetadata(
+                is_ambiguous=True,
+                score=max(params.get("ambiguity_score", 0.0), 0.85),
+                clarification_requested=True,
+            ),
+        )
+
+    if prompt_result.status == "no_context":
+        logger.info("Prompt builder reported no context; issuing refusal")
+        return ChatResponse(
+            answer="I don't know. I couldn't find sufficiently relevant information in my documents to answer this question confidently.",
             sources=[],
             grounded=False,
             ambiguity=AmbiguityMetadata(
@@ -642,15 +514,54 @@ Answer (read directly from the excerpts):"""
             ),
         )
 
+    # Generate response using the validated prompt
+    response_text = generate_with_ollama(
+        prompt=prompt_result.prompt,
+        temperature=params.get("temperature", 0.1),
+        max_tokens=params.get("max_tokens", 1000),
+        model=params.get("model"),
+    )
+
+    answer = (response_text or "").strip()
+    logger.info(f"Generated answer: {answer[:100]}...")
+    if prompt_builder.is_refusal(answer):
+        return ChatResponse(
+            answer=answer,
+            sources=[],
+            grounded=False,
+            ambiguity=AmbiguityMetadata(
+                is_ambiguous=params.get("is_ambiguous", False),
+                score=params.get("ambiguity_score", 0.0),
+                clarification_requested=False,
+            ),
+        )
+
+    if params.get("is_ambiguous"):
+        if prompt_builder.needs_clarification(answer):
+            logger.info(
+                "Ambiguity flagged but answer lacked clarification; returning clarification prompt"
+            )
+            clarification = build_clarification_message(
+                request.question, prompt_builder.config
+            )
+            return ChatResponse(
+                answer=clarification,
+                sources=[],
+                grounded=False,
+                ambiguity=AmbiguityMetadata(
+                    is_ambiguous=True,
+                    score=max(params.get("ambiguity_score", 0.0), 0.8),
+                    clarification_requested=True,
+                ),
+            )
+
     # Format sources (this is a grounded answer)
     sources = [
         ChatSource(
             id=c.get("id", ""),
             source=c.get("source", ""),
             text=(
-                c.get("text", "")[:200] + "..."
-                if len(c.get("text", "")) > 200
-                else c.get("text", "")
+                c_text[:200] + "..." if len(c_text := c.get("text", "")) > 200 else c_text
             ),
             distance=c.get("distance", 1.0),
         )
@@ -658,7 +569,7 @@ Answer (read directly from the excerpts):"""
     ]
 
     return ChatResponse(
-        answer=answer_stripped,
+        answer=answer,
         sources=sources,
         grounded=True,
         ambiguity=AmbiguityMetadata(
