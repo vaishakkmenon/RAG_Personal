@@ -30,3 +30,6 @@ logs/
 
 # Ignore Archive
 archive/
+
+# Ignore Claude
+.claude/
