@@ -9,11 +9,13 @@ verify_url: null
 pii_sanitized: false
 tags: [certificate, kubernetes, cncf, devops]
 source_file: "/mnt/data/CKA_Cert.pdf"
-notes: "Add verification URL if available (Credly or LF verification)."
 ---
 
 # Summary
 - Earned **CKA** on **2024-06-26**.
+
+# Full Name:
+- Certified Kubernetes Administrator
 
 # Coverage
 - Cluster lifecycle; scheduling; logging & monitoring
