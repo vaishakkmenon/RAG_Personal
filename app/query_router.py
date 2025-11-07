@@ -9,9 +9,12 @@ Analyzes user questions and automatically selects optimal retrieval parameters:
 """
 
 import re
-from typing import Dict, Optional, Any, Tuple, List, Set
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 import logging
 from .settings import query_router_settings
+
+if TYPE_CHECKING:  # pragma: no cover - import for type checking only
+    from .certifications import CertificationRegistry
 
 AmbiguityResult = Tuple[bool, float]
 
@@ -24,18 +27,26 @@ class QueryRouter:
     Configuration is loaded from settings.query_router_settings.
     """
     
-    def __init__(self, config=None):
+    def __init__(
+        self,
+        config=None,
+        cert_registry: Optional["CertificationRegistry"] = None,
+    ):
         """
         Initialize the query router with configuration.
-        
+
         Args:
             config: Optional QueryRouterSettings instance. If None, uses the global settings.
         """
         self.config = config or query_router_settings
+        self.cert_registry = cert_registry
+        self._certificate_regexes: List[Tuple[re.Pattern, str, str]] = []
         self._compile_patterns()
-    
+        self._build_certificate_terms()
+
     def _compile_patterns(self):
         """Compile all regex patterns for better performance."""
+        
         # Document type patterns
         self.doc_type_regexes = {
             doc_type: [re.compile(pattern, re.IGNORECASE) for pattern in patterns]
@@ -57,6 +68,37 @@ class QueryRouter:
             re.compile(pattern, re.IGNORECASE)
             for pattern in self.config.cumulative_patterns
         ]
+
+    def set_cert_registry(
+        self, cert_registry: Optional["CertificationRegistry"]
+    ) -> None:
+        """Attach (or detach) the certification registry at runtime."""
+
+        self.cert_registry = cert_registry
+        self._build_certificate_terms()
+
+    def _build_certificate_terms(self) -> None:
+        """Precompute certification name patterns for fast registry matching."""
+
+        self._certificate_regexes = []
+        if not self.cert_registry:
+            return
+
+        seen_terms: Set[str] = set()
+        for cert_id, certification in self.cert_registry.certifications.items():
+            names = [certification.official_name, *getattr(certification, "aliases", [])]
+            for raw_name in names:
+                if not raw_name:
+                    continue
+                normalized = raw_name.strip()
+                if not normalized:
+                    continue
+                key = normalized.lower()
+                if key in seen_terms:
+                    continue
+                seen_terms.add(key)
+                pattern = re.compile(rf"\\b{re.escape(normalized)}\\b", re.IGNORECASE)
+                self._certificate_regexes.append((pattern, cert_id, normalized))
 
     def detect_ambiguity(self, question: str) -> AmbiguityResult:
         """Return (is_ambiguous, confidence score) for a question."""
@@ -182,6 +224,28 @@ class QueryRouter:
         
         return None, False
     
+    def detect_certification(self, question: str) -> Optional[Dict[str, str]]:
+        """Detect certification intent using registry-backed patterns only."""
+
+        cleaned = (question or "").strip()
+        if not cleaned or not self._certificate_regexes:
+            return None
+
+        for pattern, cert_id, term in self._certificate_regexes:
+            if pattern.search(cleaned):
+                logger.info(
+                    "Certification detected via registry",
+                    extra={"term": term, "cert_id": cert_id},
+                )
+                return {
+                    "doc_type": "certificate",
+                    "cert_id": cert_id,
+                    "match_term": term,
+                    "source": "registry",
+                }
+
+        return None
+    
     def route(self, question: str) -> Dict[str, Any]:
         """
         Analyze question and return optimal retrieval parameters.
@@ -195,6 +259,26 @@ class QueryRouter:
         question = question.strip()
 
         is_ambiguous, ambiguity_score = self.detect_ambiguity(question)
+
+        cert_detection = self.detect_certification(question)
+        if cert_detection:
+            params = {
+                "doc_type": "certificate",
+                "term_id": None,
+                "top_k": self.config.default_top_k,
+                "null_threshold": self.config.default_null_threshold,
+                "max_distance": self.config.default_max_distance,
+                "rerank": False,
+                "rerank_lex_weight": 0.5,
+                "is_ambiguous": is_ambiguous,
+                "ambiguity_score": ambiguity_score,
+            }
+            if cert_detection.get("cert_id"):
+                params["cert_id"] = cert_detection["cert_id"]
+            params["certification_match_source"] = cert_detection.get("source")
+
+            logger.info("Query routing decision (certificate): %s", params)
+            return params
 
         term_id, has_course_code = self.extract_term_info(question)
         
@@ -286,14 +370,18 @@ DEFAULT_ROUTING_PARAMS = {
     "rerank_lex_weight": 0.5,
 }
 
-def route_query(question: str) -> Dict[str, Any]:
+def route_query(
+    question: str,
+    cert_registry: Optional["CertificationRegistry"] = None,
+) -> Dict[str, Any]:
     """
     Convenience function to route a query.
     
     Args:
         question: User's question
-    
+
     Returns:
         Dict of retrieval parameters
     """
+    _router.set_cert_registry(cert_registry)
     return _router.route(question)
