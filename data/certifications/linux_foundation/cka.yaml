@@ -10,6 +10,22 @@ certifications:
       - "Kubernetes"
       - "Container Orchestration"
       - "DevOps"
+    technologies:
+      - "Kubernetes"
+      - "Docker"
+      - "Container Runtimes"
+      - "etcd"
+    categories:
+      - "kubernetes"
+      - "container_orchestration"
+      - "devops"
+      - "cloud_native"
+    related_skills:
+      - "Cluster Architecture"
+      - "Networking"
+      - "Security"
+      - "Troubleshooting"
+      - "Cluster Maintenance"
     description: >-
       Validates the skills required to be a Kubernetes administrator responsible for
       maintaining production-grade Kubernetes clusters.

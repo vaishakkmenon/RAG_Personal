@@ -8,7 +8,31 @@ expires: 2026-06-26
 credential_id: "LF-qel6snk7io"
 verify_url: null
 pii_sanitized: false
-tags: [certificate, kubernetes, cncf, devops]
+tags: 
+  - certificate
+  - kubernetes
+  - cncf
+  - devops
+  - container_orchestration
+  - cloud_native
+  - kubernetes_administration
+  - cka_certified
+technologies:
+  - Kubernetes
+  - Docker
+  - Container Runtimes
+  - etcd
+categories:
+  - kubernetes
+  - container_orchestration
+  - devops
+  - cloud_native
+related_skills:
+  - Cluster Architecture
+  - Networking
+  - Security
+  - Troubleshooting
+  - Cluster Maintenance
 source_file: "/mnt/data/CKA_Cert.pdf"
 ---
 

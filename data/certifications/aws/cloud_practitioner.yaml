@@ -9,6 +9,20 @@ certifications:
     domains:
       - "AWS"
       - "Cloud Computing"
+    technologies:
+      - "AWS Core Services"
+      - "Cloud Computing"
+      - "AWS Global Infrastructure"
+    categories:
+      - "cloud_fundamentals"
+      - "aws_certifications"
+      - "cloud_platforms"
+    related_skills:
+      - "Cloud Concepts"
+      - "AWS Services"
+      - "Cloud Security"
+      - "Cloud Architecture"
+      - "Billing and Pricing"
     description: >-
       Demonstrates foundational knowledge of AWS cloud concepts, services,
       security, architecture, pricing, and support.

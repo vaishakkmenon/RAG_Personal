@@ -8,7 +8,31 @@ expires: 2028-06-01
 credential_id: "dc53d66c1c1d46a18e76f862c9a07bdb"
 verify_url: "https://aws.amazon.com/verification"
 pii_sanitized: false
-tags: [certificate, aws, ai, practitioner]
+tags: 
+  - certificate
+  - aws
+  - ai
+  - practitioner
+  - aws_certified
+  - artificial_intelligence
+  - machine_learning
+  - aws_ai_practitioner
+technologies:
+  - AWS AI/ML Services
+  - Amazon SageMaker
+  - Amazon Bedrock
+  - Generative AI
+categories:
+  - artificial_intelligence
+  - machine_learning
+  - cloud_ai
+  - aws_certifications
+related_skills:
+  - AI/ML concepts
+  - Responsible AI
+  - AWS AI services
+  - Prompt engineering
+  - Model evaluation
 source_file: "/mnt/data/AWS-CAP-Cert.pdf"
 ---
 

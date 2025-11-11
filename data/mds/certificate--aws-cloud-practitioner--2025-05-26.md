@@ -8,7 +8,29 @@ expires: 2028-05-26
 credential_id: "713c45fb6a6341fca45facfc74fabcaa"
 verify_url: "https://aws.amazon.com/verification"
 pii_sanitized: false
-tags: [certificate, aws, cloud, practitioner]
+tags: 
+  - certificate
+  - aws
+  - cloud
+  - practitioner
+  - aws_certified
+  - cloud_fundamentals
+  - cloud_platforms
+  - aws_cloud_practitioner
+technologies:
+  - AWS Core Services
+  - Cloud Computing
+  - AWS Global Infrastructure
+categories:
+  - cloud_fundamentals
+  - aws_certifications
+  - cloud_platforms
+related_skills:
+  - Cloud Concepts
+  - AWS Services
+  - Cloud Security
+  - Cloud Architecture
+  - Billing and Pricing
 source_file: "/mnt/data/AWS_CCP_Cert.pdf"
 ---
 
