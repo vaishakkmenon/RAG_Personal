@@ -20,7 +20,7 @@ from .middleware.api_key import APIKeyMiddleware
 from .middleware.logging import LoggingMiddleware
 from .middleware.max_size import MaxSizeMiddleware
 from .ingest import ingest_paths
-from .query_router import route_query
+from .query_processor import route_query
 from .retrieval import search, get_sample_chunks
 from .settings import settings
 from .certifications import Certification, get_registry
@@ -146,7 +146,9 @@ def generate_with_ollama(
         raise
     finally:
         duration = time.time() - start
-        rag_llm_latency_seconds.labels(status="success", model=model_name).observe(duration)
+        rag_llm_latency_seconds.labels(status="success", model=model_name).observe(
+            duration
+        )
 
 
 # ==============================================================================
@@ -194,6 +196,7 @@ _STOPWORDS = {
     "how",
 }
 _WORD_RE = re.compile(r"[A-Za-z0-9]+")
+
 
 def _tokset(s: str) -> set[str]:
     return {w.lower() for w in _WORD_RE.findall(s or "") if w.lower() not in _STOPWORDS}
@@ -351,7 +354,9 @@ def _collect_certifications(
     collected: List[Certification] = []
     overrides: Dict[str, Dict[str, Any]] = {}
 
-    def add_cert_by_id(candidate: Optional[str], source_metadata: Optional[Dict[str, Any]] = None) -> None:
+    def add_cert_by_id(
+        candidate: Optional[str], source_metadata: Optional[Dict[str, Any]] = None
+    ) -> None:
         if not candidate:
             return
         cert = registry.certifications.get(str(candidate).lower())
@@ -386,20 +391,28 @@ def _collect_certifications(
         domain_matches: set[str] = set()
         for cert in registry.certifications.values():
             names = [cert.official_name, *cert.aliases, cert.id]
-            if any(name and name.strip() and name.lower() in question_lower for name in names):
+            if any(
+                name and name.strip() and name.lower() in question_lower
+                for name in names
+            ):
                 add_cert_by_id(cert.id)
                 name_matches.add(cert.id.lower())
                 continue
 
             domains = getattr(cert, "domains", [])
-            if any(domain and domain.strip() and domain.lower() in question_lower for domain in domains):
+            if any(
+                domain and domain.strip() and domain.lower() in question_lower
+                for domain in domains
+            ):
                 add_cert_by_id(cert.id)
                 domain_matches.add(cert.id.lower())
 
         if name_matches:
             collected = [cert for cert in collected if cert.id.lower() in name_matches]
         elif domain_matches:
-            collected = [cert for cert in collected if cert.id.lower() in domain_matches]
+            collected = [
+                cert for cert in collected if cert.id.lower() in domain_matches
+            ]
 
     if not collected:
         if params.get("cert_id"):
@@ -452,7 +465,9 @@ def _format_certification_answer(
     multiple = len(certs) > 1
 
     def display_name(cert: Certification) -> str:
-        alias = next((alias for alias in cert.aliases if alias and len(alias) <= 5), None)
+        alias = next(
+            (alias for alias in cert.aliases if alias and len(alias) <= 5), None
+        )
         if alias:
             return f"{cert.official_name} ({alias})"
         return cert.official_name
@@ -490,7 +505,9 @@ def _format_certification_answer(
                     details.append(f"Expires: {expiry_phrase}")
                 sentence += " " + "; ".join(details) + "."
             lines.append(sentence)
-        elif "when" in question_lower and ("earn" in question_lower or "get" in question_lower):
+        elif "when" in question_lower and (
+            "earn" in question_lower or "get" in question_lower
+        ):
             if earned_phrase:
                 lines.append(
                     f"You earned the **{name}** certification ({cert.issuer}) on {earned_phrase}."
@@ -505,7 +522,9 @@ def _format_certification_answer(
                     f"Your **{name}** certification ({cert.issuer}) expires on {expiry_phrase}."
                 )
             else:
-                lines.append(f"Your **{name}** certification ({cert.issuer}) is currently active.")
+                lines.append(
+                    f"Your **{name}** certification ({cert.issuer}) is currently active."
+                )
             if status_text:
                 lines.append(status_text)
         else:
@@ -684,7 +703,9 @@ def chat(
                 "ambiguity_score": params.get("ambiguity_score"),
             },
         )
-        clarification = build_clarification_message(request.question, prompt_builder.config)
+        clarification = build_clarification_message(
+            request.question, prompt_builder.config
+        )
         return ChatResponse(
             answer=clarification,
             sources=[],
@@ -700,7 +721,9 @@ def chat(
     if heuristic_ambiguous:
         logger.info("Heuristic ambiguity detected; prompting user for clarification")
         params["is_ambiguous"] = True
-        clarification = build_clarification_message(request.question, prompt_builder.config)
+        clarification = build_clarification_message(
+            request.question, prompt_builder.config
+        )
         return ChatResponse(
             answer=clarification,
             sources=[],

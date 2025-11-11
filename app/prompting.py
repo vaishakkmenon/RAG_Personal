@@ -1,6 +1,8 @@
 from typing import List, Dict, Optional, Tuple
 import re
 from dataclasses import dataclass, field
+from app.query_router.patterns import PatternMatcher
+from app.settings import QueryRouterSettings
 
 
 @dataclass
@@ -199,6 +201,23 @@ class PromptBuilder:
 
     def __init__(self, config: Optional[PromptConfig] = None):
         self.config = config or PromptConfig()
+        # Initialize pattern matchers for ambiguity detection
+        router_settings = QueryRouterSettings()
+        self.tech_matcher = PatternMatcher(router_settings.technology_terms)
+        self.category_matcher = PatternMatcher(router_settings.categories)
+        self.question_matcher = PatternMatcher(router_settings.question_patterns)
+
+    def _contains_technology(self, question: str) -> bool:
+        """Check if question mentions specific technologies."""
+        return len(self.tech_matcher.find_matches(question)) > 0
+
+    def _matches_concrete_category(self, question: str) -> bool:
+        """Check if question matches concrete categories."""
+        return len(self.category_matcher.find_matches(question)) > 0
+
+    def _is_specific_question_type(self, question: str) -> bool:
+        """Check if question follows specific question patterns."""
+        return len(self.question_matcher.find_matches(question)) > 0
 
     def is_ambiguous(self, question: str) -> Tuple[bool, str]:
         """Check if a question is ambiguous or too vague."""
@@ -210,6 +229,16 @@ class PromptBuilder:
 
         if len(question.split()) < self.config.min_question_length:
             return True, "Question is too short"
+
+        # Early exit: Check for disambiguating signals
+        if self._contains_technology(question):
+            return False, ""  # Question mentions specific technology
+
+        if self._matches_concrete_category(question):
+            return False, ""  # Question asks about concrete category
+
+        if self._is_specific_question_type(question):
+            return False, ""  # Question follows specific pattern
 
         # Check for ambiguous phrases
         lower_question = question.lower()

@@ -40,6 +40,49 @@ class QueryRouterSettings(BaseModel):
         description="Boost factor for cumulative queries",
     )
 
+    # Technology terms and patterns
+    technology_terms: Dict[str, List[str]] = Field(
+        default_factory=lambda: {
+            "kubernetes": ["kubernetes", "k8s", "kube"],
+            "docker": ["docker", "containers"],
+            "aws": ["aws", "amazon web services"],
+            "gcp": ["gcp", "google cloud", "google cloud platform"],
+            "python": ["python", "python3", "python 3"],
+            "terraform": ["terraform", "iac", "infrastructure as code"],
+            "kubernetes_administration": ["cka", "certified kubernetes administrator"],
+            "aws_cloud": ["aws cloud", "amazon cloud"],
+        },
+        description="Technology terms and their common aliases"
+    )
+
+    # Categories and their related terms
+    categories: Dict[str, List[str]] = Field(
+        default_factory=lambda: {
+            "technical_skills": ["technical", "skills", "programming", "coding"],
+            "cloud_platforms": ["cloud", "aws", "gcp", "azure"],
+            "programming_languages": ["python", "javascript", "java", "go", "typescript"],
+            "certifications": ["certification", "certificate", "certified"],
+            "devops": ["devops", "ci/cd", "continuous", "deployment"],
+            "data_science": ["data science", "machine learning", "ml", "ai", "pandas", "numpy"],
+            "cloud_certifications": ["aws certified", "azure certified", "gcp certified"],
+        },
+        description="Categories and their related terms"
+    )
+
+    # Question type patterns
+    question_patterns: Dict[str, List[str]] = Field(
+        default_factory=lambda: {
+            "do_i_have": [r"do\s+i\s+have\s+(a\s+)?(.*?)(\?|$)"],
+            "what_do_i_know": [r"what\s+(.*?)\s+do\s+i\s+(know|have)\??"],
+            "list_my": [r"list\s+(my\s+)?(.*?)(\?|$)"],
+            "which": [r"which\s+(.*?)\s+(do|have)\s+i\s+(.*?)\??"],
+            "compare": [r"compare\s+my\s+(.*?)\s+to\s+(.*?)\??"],
+            "what_is_my": [r"what('s| is) my (.*?)\??"],
+            "how_much": [r"how (much|many) (.*?) (do|have) i"],
+        },
+        description="Patterns for different question types"
+    )
+
     ambiguity_threshold: float = Field(
         default=float(os.getenv("QUERY_ROUTER_AMBIGUITY_THRESHOLD", "0.7")),
         description="Confidence score threshold above which a query is considered ambiguous (0-1)",

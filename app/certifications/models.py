@@ -21,6 +21,9 @@ class Certification:
     issuer: str
     domains: List[str] = field(default_factory=list)
     aliases: List[str] = field(default_factory=list)
+    technologies: List[str] = field(default_factory=list)
+    categories: List[str] = field(default_factory=list)
+    related_skills: List[str] = field(default_factory=list)
     description: str = ""
     url: str = ""
     earned_date: Optional[date] = None
@@ -34,6 +37,9 @@ class Certification:
         self.issuer = self.issuer.strip()
         self.domains = _dedupe_preserve(self.domains)
         self.aliases = _dedupe_preserve(self.aliases)
+        self.technologies = _dedupe_preserve(self.technologies)
+        self.categories = _dedupe_preserve(self.categories)
+        self.related_skills = _dedupe_preserve(self.related_skills)
 
     @classmethod
     def from_dict(cls, cert_id: str, data: Dict[str, Any]) -> "Certification":
@@ -57,6 +63,9 @@ class Certification:
             "issuer": self.issuer,
             "domains": list(self.domains),
             "aliases": list(self.aliases),
+            "technologies": list(self.technologies),
+            "categories": list(self.categories),
+            "related_skills": list(self.related_skills),
         }
         if self.description:
             result["description"] = self.description
