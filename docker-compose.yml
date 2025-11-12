@@ -56,5 +56,32 @@ services:
       - "11434:11434"
     restart: unless-stopped
 
+  test:
+    build:
+      context: .
+      target: test
+    container_name: ragchatbot_test
+    working_dir: /workspace
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - API_URL=http://api:8000
+    env_file:
+      - .env
+    volumes:
+      - ./:/workspace
+      - ./hf_cache:/home/nonroot/.cache/huggingface
+    depends_on:
+      api:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: ["ALL"]
+    tmpfs:
+      - /tmp
+    user: "65532:65532"
+    command: ["/opt/venv/bin/python", "/workspace/run_tests.py", "--api-url", "http://api:8000", "--api-key", "${API_KEY}"]
+
 volumes:
   ollama_models:

@@ -1,24 +1,31 @@
 """Query analysis functionality for the query router."""
 
+import re
 from typing import Dict, Any, List, Optional
 import logging
+from ..patterns import detect_technologies, categorize_text, get_question_type
 
 logger = logging.getLogger(__name__)
 
 class QueryAnalyzer:
     """Analyzes queries to extract metadata and determine routing."""
-    
-    def __init__(self, pattern_matcher, cert_registry=None):
-        """Initialize with a pattern matcher and optional certification registry."""
-        self.pattern_matcher = pattern_matcher
+
+    def __init__(self, config, cert_registry=None):
+        """Initialize with configuration and optional certification registry.
+
+        Args:
+            config: Configuration object with technology_terms, categories, and question_patterns
+            cert_registry: Optional certification registry
+        """
+        self.config = config
         self.cert_registry = cert_registry
         self._certificate_regexes = self._compile_certificate_patterns()
-    
+
     def _compile_certificate_patterns(self):
         """Compile regex patterns for certificate detection."""
         if not self.cert_registry:
             return []
-            
+
         patterns = []
         for cert in self.cert_registry.certifications.values():
             # Add patterns for official name and aliases
@@ -29,45 +36,49 @@ class QueryAnalyzer:
                 except re.error as e:
                     logger.warning(f"Failed to compile pattern for {name}: {e}")
         return patterns
-    
+
     def analyze(self, question: str) -> Dict[str, Any]:
         """
         Analyze a question and extract relevant metadata.
-        
+
         Args:
             question: The user's question
-            
+
         Returns:
             Dictionary containing analysis results
         """
         question_lower = question.lower()
-        
-        # Basic analysis
+
+        # Basic analysis using standalone functions
+        tech_patterns = getattr(self.config, 'technology_terms', {})
+        category_patterns = getattr(self.config, 'categories', {})
+        question_patterns = getattr(self.config, 'question_patterns', {})
+
         analysis = {
             'question': question,
-            'technologies': self.pattern_matcher.detect_technologies(question_lower),
-            'categories': self.pattern_matcher.categorize_text(question_lower),
-            'question_type': self.pattern_matcher.get_question_type(question_lower),
+            'technologies': list(detect_technologies(question_lower, tech_patterns)),
+            'categories': list(categorize_text(question_lower, category_patterns)),
+            'question_type': get_question_type(question_lower, question_patterns),
             'certificates': self._find_certificate_matches(question_lower),
             'is_ambiguous': False,
             'needs_clarification': False,
             'confidence': 1.0
         }
-        
+
         # Determine if the query is ambiguous
         self._check_ambiguity(analysis)
-        
+
         return analysis
     
     def _find_certificate_matches(self, question: str) -> List[Dict[str, Any]]:
         """Find certificate matches in the question."""
         if not self.cert_registry:
             return []
-            
+
         matches = []
         for pattern, cert_id, name in self._certificate_regexes:
             if pattern.search(question):
-                cert = self.cert_registry.get(cert_id)
+                cert = self.cert_registry.certifications.get(cert_id)
                 if cert:
                     matches.append({
                         'id': cert_id,
