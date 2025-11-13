@@ -6,12 +6,9 @@ Implements singleton pattern with pre-initialization for optimal performance.
 """
 
 import logging
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import Any, Dict, Optional
 
 from .router import QueryRouter
-
-if TYPE_CHECKING:  # pragma: no cover - import for typing only
-    from ..certifications import CertificationRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +19,7 @@ _router_initialized: bool = False
 
 def _initialize_router() -> QueryRouter:
     """Initialize the global router instance once at module load.
-    
+
     Returns:
         Initialized QueryRouter instance
     """
@@ -38,50 +35,36 @@ def _initialize_router() -> QueryRouter:
     return _router
 
 
-def get_router(cert_registry: Optional["CertificationRegistry"] = None) -> QueryRouter:
-    """Get the global router instance with optional registry update.
-
-    Args:
-        cert_registry: Optional certification registry to update with
+def get_router() -> QueryRouter:
+    """Get the global router instance.
 
     Returns:
         Global QueryRouter instance
 
     Note:
-        Router is pre-initialized at module load. This function provides
-        optional registry updates for runtime configuration.
+        Router is pre-initialized at module load.
     """
     global _router
-    
+
     # Ensure router is initialized
     if _router is None:
         _initialize_router()
-    
-    # Update registry if provided and not already set
-    if cert_registry is not None and _router.cert_registry is None:
-        _router.cert_registry = cert_registry
-        _router.analyzer.cert_registry = cert_registry
-        # Recompile certificate patterns with the new registry
-        _router.analyzer._certificate_regexes = _router.analyzer._compile_certificate_patterns()
-        logger.debug("Updated QueryRouter with certification registry")
-    
+
     return _router
 
 
 def route_query(
     question: str,
-    cert_registry: Optional["CertificationRegistry"] = None,
 ) -> Dict[str, Any]:
     """Convenience function to route a query using the global router.
 
     Args:
         question: The user's question
-        cert_registry: Optional certification registry
 
     Returns:
         Dictionary of routing parameters
     """
-    router = get_router(cert_registry=cert_registry)
+    router = get_router()
     return router.route(question)
 
 

@@ -5,14 +5,12 @@ Coordinates query analysis and response building for routing decisions.
 """
 
 import logging
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import Any, Dict, Optional
 
 from .route_helpers.query_analyzer import QueryAnalyzer
 from .route_helpers.response_builder import ResponseBuilder
 from ..settings import query_router_settings
 
-if TYPE_CHECKING:  # pragma: no cover - import for typing only
-    from ..certifications import CertificationRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -20,18 +18,16 @@ logger = logging.getLogger(__name__)
 class QueryRouter:
     """Main query router that coordinates analysis and routing."""
 
-    def __init__(self, config=None, cert_registry: Optional["CertificationRegistry"] = None):
-        """Initialize the query router with configuration and optional registry.
+    def __init__(self, config=None):
+        """Initialize the query router with configuration.
 
         Args:
             config: Configuration settings (defaults to query_router_settings)
-            cert_registry: Optional certification registry for certificate lookups
         """
         self.config = config or query_router_settings
-        self.cert_registry = cert_registry
 
         # Initialize components
-        self.analyzer = QueryAnalyzer(self.config, cert_registry)
+        self.analyzer = QueryAnalyzer(self.config)
         self.response_builder = ResponseBuilder(self.config)
 
     def route(self, question: str) -> Dict[str, Any]:

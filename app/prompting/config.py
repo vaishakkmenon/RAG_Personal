@@ -31,23 +31,6 @@ GUIDELINES:
 - Highlight current status when relevant and keep the answer tightly focused on the question.
 - When multiple certifications are relevant, format the answer as a short bullet list (one bullet per certification).
 - If no certification information is present in the context, respond with the standard refusal template."""
-    use_certification_examples: bool = False
-    certification_examples: List[Tuple[str, str]] = field(
-        default_factory=lambda: [
-            (
-                "Do you hold the AWS CCP certification?",
-                "- **AWS Certified Cloud Practitioner** (Amazon Web Services) — Earned: 2024-05-26 (May 26, 2024); Expires: 2028-05-26 (May 26, 2028); Status: Active.\n  Source: AWS Cloud Practitioner profile.",
-            ),
-            (
-                "When did you earn your CKA certification?",
-                "You earned the **Certified Kubernetes Administrator (CKA)** certification on 2024-06-26 (June 26, 2024).\nSource: Linux Foundation CKA certificate.",
-            ),
-            (
-                "When does your AWS Cloud Practitioner certification expire?",
-                "Your **AWS Certified Cloud Practitioner** credential (Amazon Web Services) expires on 2028-05-26 (May 26, 2028).\nStatus: Active.\nSource: AWS Cloud Practitioner profile.",
-            ),
-        ]
-    )
 
     # Common ambiguous phrases and patterns
     ambiguous_phrases: List[str] = field(

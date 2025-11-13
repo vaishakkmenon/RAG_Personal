@@ -5,25 +5,18 @@ Contains FastAPI dependencies for authentication, services, etc.
 """
 
 import logging
-from typing import TYPE_CHECKING
-
 from fastapi import Header, HTTPException, status
 
-from ..certifications import get_registry
 from ..core import ChatService
 from ..settings import settings
-
-if TYPE_CHECKING:  # pragma: no cover - import for typing only
-    from ..certifications import CertificationRegistry
 
 logger = logging.getLogger(__name__)
 
 # Initialize services at module level for better performance
 # This ensures they're created once at startup, not on every request
-_cert_registry = get_registry()
-_chat_service = ChatService(cert_registry=_cert_registry)
+_chat_service = ChatService()
 
-logger.info("Initialized chat service and certification registry at module load")
+logger.info("Initialized chat service at module load")
 
 
 def check_api_key(x_api_key: str = Header(...)) -> str:

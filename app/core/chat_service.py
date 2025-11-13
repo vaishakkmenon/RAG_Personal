@@ -2,11 +2,11 @@
 Chat service for Personal RAG system.
 
 Main business logic for handling chat requests, orchestrating retrieval,
-certification handling, prompt building, and LLM generation.
+prompt building, and LLM generation.
 """
 
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException, status
 
@@ -18,10 +18,6 @@ from ..retrieval import search
 from ..services.llm import generate_with_ollama
 from ..services.reranker import rerank_chunks
 from ..settings import settings
-from .certification_handler import CertificationHandler
-
-if TYPE_CHECKING:  # pragma: no cover - import for typing only
-    from ..certifications import CertificationRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -38,15 +34,9 @@ except ImportError:
 class ChatService:
     """Service for handling RAG chat requests."""
 
-    def __init__(self, cert_registry: Optional["CertificationRegistry"] = None):
-        """Initialize chat service.
-
-        Args:
-            cert_registry: Optional certification registry
-        """
-        self.cert_handler = CertificationHandler(registry=cert_registry)
+    def __init__(self):
+        """Initialize chat service."""
         self.prompt_builder = create_default_prompt_builder()
-        self.cert_registry = cert_registry
 
     def _merge_params(
         self, manual: Dict[str, Any], routed: Dict[str, Any], defaults: Dict[str, Any]
@@ -185,9 +175,7 @@ class ChatService:
 
         # Route query if enabled
         if use_router:
-            routed_params = route_query(
-                request.question, cert_registry=self.cert_registry
-            )
+            routed_params = route_query(request.question)
 
             params = self._merge_params(
                 manual={
@@ -211,11 +199,6 @@ class ChatService:
         else:
             routed_params = {}
             logger.info(f"Using default parameters: {params}")
-
-        # Enable concise certification examples only when answering certificate queries
-        self.prompt_builder.config.use_certification_examples = (
-            params.get("doc_type") == "certificate"
-        )
 
         # Check for ambiguity from router
         if use_router and params.get("is_ambiguous"):
@@ -345,39 +328,8 @@ class ChatService:
                 ),
             )
 
-        # Handle certification queries specially
-        if params.get("doc_type") == "certificate":
-            return self._handle_certification_query(request.question, params, chunks)
-
         # Standard RAG flow
         return self._handle_standard_query(request.question, params, chunks)
-
-    def _handle_certification_query(
-        self, question: str, params: Dict[str, Any], chunks: List[dict]
-    ) -> ChatResponse:
-        """Handle certification-specific queries.
-
-        Args:
-            question: User's question
-            params: Query parameters
-            chunks: Retrieved chunks
-
-        Returns:
-            ChatResponse
-        """
-        certifications, overrides = self.cert_handler.collect_certifications(
-            params, chunks, question=question
-        )
-
-        if certifications:  # If we have certs
-            # Add cert context to chunks
-            cert_context = self.cert_handler.build_certification_context(
-                certifications, overrides
-            )
-            enhanced_chunks = [cert_context] + chunks  # Add cert context as first chunk
-            return self._handle_standard_query(question, params, enhanced_chunks)
-        else:
-            return self._handle_standard_query(question, params, chunks)
 
     def _handle_standard_query(
         self, question: str, params: Dict[str, Any], chunks: List[dict]

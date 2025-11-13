@@ -125,14 +125,6 @@ class PromptBuilder:
 
         prompt_sections = [self.config.system_prompt.strip()]
 
-        guidelines = (self.config.certification_guidelines or "").strip()
-        if guidelines:
-            prompt_sections.append(guidelines)
-
-        examples_block = self._render_examples_block()
-        if examples_block:
-            prompt_sections.append(examples_block)
-
         prompt_sections.append(
             """CONTEXT:
 {context}
@@ -181,23 +173,20 @@ ANSWER:""".format(
             return False
         return not any(cue in text for cue in self.config.clarification_cues)
 
-    def _render_examples_block(self) -> str:
-        """Render few-shot examples block.
+    def is_refusal(self, answer: str) -> bool:
+        """Check if answer needs clarification.
+
+        Args:
+            answer: The generated answer
 
         Returns:
-            Formatted examples string or empty string
+            True if answer lacks clarification
         """
-        if not self.config.use_certification_examples:
-            return ""
-
-        examples = self.config.certification_examples
-        if not examples:
-            return ""
-
-        lines: List[str] = ["FEW-SHOT EXAMPLES:"]
-        for idx, (question, answer) in enumerate(examples, start=1):
-            lines.append(f"Example {idx}:")
-            lines.append(f"Q: {question}")
-            lines.append("A:")
-            lines.extend(f"  {line}" for line in answer.strip().splitlines())
-        return "\n".join(lines)
+        text = (answer or "").strip().lower()
+        if not text:
+            return True
+        if any(cue in text for cue in self.config.refusal_cues):
+            return True
+        if not any(ch.isalnum() for ch in text):
+            return True
+        return False
