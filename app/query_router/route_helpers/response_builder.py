@@ -91,14 +91,5 @@ class ResponseBuilder:
                 'max_distance': 0.5
             })
         
-        # Adjust for personal projects
-        if 'personal project' in analysis.get('question', '').lower():
-            params.update({
-                'top_k': 15,
-                'rerank': True,
-                'doc_type': 'project',
-                'confidence': min(1.0, params.get('confidence', 1.0) * 1.1)
-            })
-        
         # Cap confidence at 1.0
         params['confidence'] = min(1.0, params.get('confidence', 1.0))
