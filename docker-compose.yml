@@ -81,7 +81,7 @@ services:
     tmpfs:
       - /tmp
     user: "65532:65532"
-    command: ["/opt/venv/bin/python", "/workspace/run_tests.py", "--api-url", "http://api:8000", "--api-key", "${API_KEY}"]
+    # command: ["/opt/venv/bin/python", "/workspace/run_tests.py", "--api-url", "http://api:8000", "--api-key", "${API_KEY}"]
 
 volumes:
   ollama_models:
