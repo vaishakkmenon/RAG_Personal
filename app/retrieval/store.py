@@ -38,13 +38,17 @@ _collection = _client.get_or_create_collection(
     embedding_function=_embed,
 )
 
-logger.info(f"Collection '{COLLECTION_NAME}' ready with {_collection.count()} documents")
+logger.info(
+    f"Collection '{COLLECTION_NAME}' ready with {_collection.count()} documents"
+)
 
 
 # Helpers
 def _get_source(metadata: Any) -> str:
     """Safely extract source from metadata."""
-    return metadata.get("source", "unknown") if isinstance(metadata, dict) else "unknown"
+    return (
+        metadata.get("source", "unknown") if isinstance(metadata, dict) else "unknown"
+    )
 
 
 # BGE v1.5 models benefit from query instruction prefix
@@ -121,6 +125,9 @@ def search(
             where_clause = {"$and": where_conditions}
 
         logger.debug(f"Using metadata filter: {where_clause}")
+
+    if "transcript" in query.lower() or "course" in query.lower():
+        k = 10
 
     # Query ChromaDB
     try:

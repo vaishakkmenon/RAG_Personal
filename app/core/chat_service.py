@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from fastapi import HTTPException, status
 
 from ..models import ChatRequest, ChatResponse, ChatSource, AmbiguityMetadata
+from ..monitoring import time_execution_info
 from ..prompting import build_clarification_message, create_default_prompt_builder
 from ..query_router import route_query
 from ..retrieval import search
@@ -103,6 +104,7 @@ class ChatService:
             )
         return sources
 
+    @time_execution_info
     def handle_chat(
         self,
         request: ChatRequest,
