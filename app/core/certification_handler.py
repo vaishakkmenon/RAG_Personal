@@ -198,7 +198,9 @@ class CertificationHandler:
 
             # Filter to most specific matches
             if name_matches:
-                collected = [cert for cert in collected if cert.id.lower() in name_matches]
+                collected = [
+                    cert for cert in collected if cert.id.lower() in name_matches
+                ]
             elif domain_matches:
                 collected = [
                     cert for cert in collected if cert.id.lower() in domain_matches
@@ -270,151 +272,29 @@ class CertificationHandler:
         Returns:
             Display name like "AWS Certified Cloud Practitioner (CCP)"
         """
-        alias = next((alias for alias in cert.aliases if alias and len(alias) <= 5), None)
+        alias = next(
+            (alias for alias in cert.aliases if alias and len(alias) <= 5), None
+        )
         if alias:
             return f"{cert.official_name} ({alias})"
         return cert.official_name
 
-    def format_certification_answer(
-        self,
-        certs: List["Certification"],
-        overrides: Dict[str, Dict[str, Any]],
-        question: Optional[str],
-    ) -> str:
-        """Produce a deterministic certification answer block tailored to the query.
-
-        Args:
-            certs: List of certifications to format
-            overrides: Metadata overrides for each cert
-            question: The user's question
-
-        Returns:
-            Formatted answer string
-        """
-        if not certs:
-            return "I couldn't find any certifications in your records."
-
-        question_lower = (question or "").strip().lower()
-        multiple = len(certs) > 1
-
-        # Single certification response
-        if not multiple:
-            return self._format_single_certification(
-                certs[0], overrides.get(certs[0].id.lower(), {}), question_lower
-            )
-
-        # Multiple certifications response
-        return self._format_multiple_certifications(certs, overrides, question_lower)
-
-    def _format_single_certification(
-        self,
-        cert: "Certification",
-        override: Dict[str, Any],
-        question_lower: str,
-    ) -> str:
-        """Format answer for a single certification.
-
-        Args:
-            cert: Certification object
-            override: Metadata overrides
-            question_lower: Lowercased question
-
-        Returns:
-            Formatted answer
-        """
-        # Parse dates
-        earned_date = override.get("earned_date") or cert.earned_date
-        if isinstance(earned_date, str):
-            parsed = self.parse_date(earned_date)
-            if parsed:
-                override["earned_date"] = parsed
-                earned_date = parsed
-
-        expiry_date = override.get("expiry_date") or cert.expiry_date
-        if isinstance(expiry_date, str):
-            parsed = self.parse_date(expiry_date)
-            if parsed:
-                override["expiry_date"] = parsed
-                expiry_date = parsed
-
-        earned_phrase = self.format_date_phrase(earned_date)
-        expiry_phrase = self.format_date_phrase(expiry_date)
-        status_text = self.determine_status(cert, override)
-        name = self.display_name(cert)
-
-        lines: List[str] = []
-
-        # Tailor response based on question type
-        if "do i have" in question_lower or "have any" in question_lower:
-            sentence = f"Yes — you hold the **{name}** certification ({cert.issuer})."
-            if earned_phrase or expiry_phrase:
-                details = []
-                if earned_phrase:
-                    details.append(f"Earned: {earned_phrase}")
-                if expiry_phrase:
-                    details.append(f"Expires: {expiry_phrase}")
-                sentence += " " + "; ".join(details) + "."
-            lines.append(sentence)
-
-        elif "when" in question_lower and (
-            "earn" in question_lower or "get" in question_lower
-        ):
-            if earned_phrase:
-                lines.append(
-                    f"You earned the **{name}** certification ({cert.issuer}) on {earned_phrase}."
-                )
-            else:
-                lines.append(f"You hold the **{name}** certification ({cert.issuer}).")
-            if expiry_phrase:
-                lines.append(f"It expires on {expiry_phrase}.")
-
-        elif "expire" in question_lower:
-            if expiry_phrase:
-                lines.append(
-                    f"Your **{name}** certification ({cert.issuer}) expires on {expiry_phrase}."
-                )
-            else:
-                lines.append(
-                    f"Your **{name}** certification ({cert.issuer}) is currently active."
-                )
-            if status_text:
-                lines.append(status_text)
-
-        else:
-            # Default comprehensive answer
-            sentence = f"Your **{name}** certification ({cert.issuer})"
-            detail_parts = []
-            if earned_phrase:
-                detail_parts.append(f"Earned: {earned_phrase}")
-            if expiry_phrase:
-                detail_parts.append(f"Expires: {expiry_phrase}")
-            if status_text:
-                detail_parts.append(status_text)
-            if detail_parts:
-                sentence += " — " + "; ".join(detail_parts)
-            lines.append(sentence)
-
-        return "\n".join(lines)
-
-    def _format_multiple_certifications(
-        self,
-        certs: List["Certification"],
-        overrides: Dict[str, Dict[str, Any]],
-        question_lower: str,
-    ) -> str:
-        """Format answer for multiple certifications.
+    def build_certification_context(
+        self, certs: List["Certification"], overrides: Dict[str, Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """Build structured certification context for LLM to use.
 
         Args:
             certs: List of certifications
-            overrides: Metadata overrides
-            question_lower: Lowercased question
+            overrides: Metadata overrides for each cert
 
         Returns:
-            Formatted answer
+            Dictionary with structured certification data
         """
-        lines = []
-        if "what certifications" in question_lower or "list" in question_lower:
-            lines.append("You hold the following certifications:")
+        if not certs:
+            return {}
+
+        context = {"type": "certification_context", "certifications": []}
 
         for cert in certs:
             override = overrides.get(cert.id.lower(), {})
@@ -422,35 +302,40 @@ class CertificationHandler:
             # Parse dates
             earned_date = override.get("earned_date") or cert.earned_date
             if isinstance(earned_date, str):
-                parsed = self.parse_date(earned_date)
-                if parsed:
-                    override["earned_date"] = parsed
-                    earned_date = parsed
+                earned_date = self.parse_date(earned_date) or earned_date
 
             expiry_date = override.get("expiry_date") or cert.expiry_date
             if isinstance(expiry_date, str):
-                parsed = self.parse_date(expiry_date)
-                if parsed:
-                    override["expiry_date"] = parsed
-                    expiry_date = parsed
+                expiry_date = self.parse_date(expiry_date) or expiry_date
 
-            earned_phrase = self.format_date_phrase(earned_date)
-            expiry_phrase = self.format_date_phrase(expiry_date)
-            status_text = self.determine_status(cert, override)
-            name = self.display_name(cert)
+            # Build structured cert data
+            cert_data = {
+                "id": cert.id,
+                "name": cert.official_name,
+                "issuer": cert.issuer,
+                "aliases": cert.aliases,
+                "earned_date": (
+                    earned_date.isoformat()
+                    if hasattr(earned_date, "isoformat")
+                    else earned_date
+                ),
+                "expiry_date": (
+                    expiry_date.isoformat()
+                    if hasattr(expiry_date, "isoformat")
+                    else expiry_date
+                ),
+                "status": self.determine_status(cert, override),
+                "display_name": self.display_name(cert),
+            }
 
-            detail_parts: List[str] = []
-            if earned_phrase:
-                detail_parts.append(f"Earned: {earned_phrase}")
-            if expiry_phrase:
-                detail_parts.append(f"Expires: {expiry_phrase}")
-            if status_text:
-                detail_parts.append(status_text)
+            # Add any additional override fields
+            for key, value in override.items():
+                if key not in cert_data:  # Don't override standard fields
+                    cert_data[key] = value
 
-            detail_text = " — " + "; ".join(detail_parts) if detail_parts else ""
-            lines.append(f"- **{name}** ({cert.issuer}){detail_text}")
+            context["certifications"].append(cert_data)
 
-        return "\n".join(lines)
+        return context
 
 
 __all__ = ["CertificationHandler"]

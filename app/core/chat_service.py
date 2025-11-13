@@ -369,32 +369,15 @@ class ChatService:
             params, chunks, question=question
         )
 
-        formatted_answer = self.cert_handler.format_certification_answer(
-            certifications, overrides, question
-        )
-
-        if formatted_answer:
-            sources = self._build_chat_sources(chunks)
-            logger.info(
-                "Returning registry-formatted certification response",
-                extra={
-                    "cert_ids": [cert.id for cert in certifications],
-                    "source_count": len(sources),
-                },
+        if certifications:  # If we have certs
+            # Add cert context to chunks
+            cert_context = self.cert_handler.build_certification_context(
+                certifications, overrides
             )
-            return ChatResponse(
-                answer=formatted_answer,
-                sources=sources,
-                grounded=True,
-                ambiguity=AmbiguityMetadata(
-                    is_ambiguous=params.get("is_ambiguous", False),
-                    score=params.get("ambiguity_score", 0.0),
-                    clarification_requested=False,
-                ),
-            )
-
-        # Fallback to standard flow if formatting failed
-        return self._handle_standard_query(question, params, chunks)
+            enhanced_chunks = [cert_context] + chunks  # Add cert context as first chunk
+            return self._handle_standard_query(question, params, enhanced_chunks)
+        else:
+            return self._handle_standard_query(question, params, chunks)
 
     def _handle_standard_query(
         self, question: str, params: Dict[str, Any], chunks: List[dict]
