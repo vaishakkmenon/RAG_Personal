@@ -24,13 +24,15 @@ Thumbs.db
 data/chroma/
 hf_cache/
 
-# Docs (if not sharing actual docs, otherwise skip this block)
-data/docs/
-data/squad/
-
 # Logs (optional)
 *.log
 logs/
 
-# Project files
-Rag Chatbot Scaffold.pdf
+# Ignore Archive
+archive/
+
+# Ignore Claude
+.claude/
+
+# Ignore docs (Area to hold documents that are provided created by Claude)
+docs/

@@ -1,0 +1,32 @@
+certifications:
+  aws-ai-practitioner:
+    official_name: "AWS Certified AI Practitioner"
+    issuer: "Amazon Web Services"
+    aliases:
+      - "AWS AI Practitioner"
+      - "AI Practitioner"
+      - "CAP"
+    domains:
+      - "AWS"
+      - "Artificial Intelligence"
+      - "Machine Learning"
+    technologies:
+      - "AWS AI/ML Services"
+      - "Amazon SageMaker"
+      - "Amazon Bedrock"
+      - "Generative AI"
+    categories:
+      - "artificial_intelligence"
+      - "machine_learning"
+      - "cloud_ai"
+      - "aws_certifications"
+    related_skills:
+      - "AI/ML concepts"
+      - "Responsible AI"
+      - "AWS AI services"
+      - "Prompt engineering"
+      - "Model evaluation"
+    description: >-
+      Demonstrates foundational AI/ML knowledge, responsible AI principles,
+      and the ability to evaluate AWS AI services for common workloads.
+    url: "https://aws.amazon.com/certification/certified-ai-practitioner/"

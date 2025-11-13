@@ -1,0 +1,29 @@
+certifications:
+  aws-cloud-practitioner:
+    official_name: "AWS Certified Cloud Practitioner"
+    issuer: "Amazon Web Services"
+    aliases:
+      - "AWS Cloud Practitioner"
+      - "Cloud Practitioner"
+      - "CCP"
+    domains:
+      - "AWS"
+      - "Cloud Computing"
+    technologies:
+      - "AWS Core Services"
+      - "Cloud Computing"
+      - "AWS Global Infrastructure"
+    categories:
+      - "cloud_fundamentals"
+      - "aws_certifications"
+      - "cloud_platforms"
+    related_skills:
+      - "Cloud Concepts"
+      - "AWS Services"
+      - "Cloud Security"
+      - "Cloud Architecture"
+      - "Billing and Pricing"
+    description: >-
+      Demonstrates foundational knowledge of AWS cloud concepts, services,
+      security, architecture, pricing, and support.
+    url: "https://aws.amazon.com/certification/certified-cloud-practitioner/"

@@ -9,7 +9,6 @@ httpx==0.28.1
 # --- RAG stack ---
 chromadb==1.0.20
 sentence-transformers==5.1.0
-langgraph==0.6.5
 ollama==0.5.3
 
 # --- Core ML deps (pin for reproducibility) ---
@@ -17,10 +16,11 @@ torch==2.5.0
 transformers==4.55.2
 
 # --- Data / utils ---
-datasets==4.0.0
 tqdm==4.67.1
+pyyaml==6.0.2
 pydantic==2.11.7
 python-dotenv==1.1.1
+python-multipart==0.0.20
 
 # --- Metrics ---
 prometheus-client==0.22.1

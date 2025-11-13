@@ -1,0 +1,32 @@
+certifications:
+  cka:
+    official_name: "Certified Kubernetes Administrator"
+    issuer: "Linux Foundation"
+    aliases:
+      - "CKA"
+      - "Kubernetes Administrator"
+      - "Certified Kubernetes Administrator"
+    domains:
+      - "Kubernetes"
+      - "Container Orchestration"
+      - "DevOps"
+    technologies:
+      - "Kubernetes"
+      - "Docker"
+      - "Container Runtimes"
+      - "etcd"
+    categories:
+      - "kubernetes"
+      - "container_orchestration"
+      - "devops"
+      - "cloud_native"
+    related_skills:
+      - "Cluster Architecture"
+      - "Networking"
+      - "Security"
+      - "Troubleshooting"
+      - "Cluster Maintenance"
+    description: >-
+      Validates the skills required to be a Kubernetes administrator responsible for
+      maintaining production-grade Kubernetes clusters.
+    url: "https://www.cncf.io/certification/cka/"
