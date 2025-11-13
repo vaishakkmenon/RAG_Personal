@@ -1,0 +1,840 @@
+{
+  "timestamp": "2025-11-11T17:53:19.478577",
+  "summary": {
+    "total_tests": 43,
+    "passed": 31,
+    "failed": 12,
+    "pass_rate": 72.09302325581395
+  },
+  "results": [
+    {
+      "test_id": "transcript_001",
+      "category": "transcript_gpa",
+      "question": "What was my graduate GPA?",
+      "passed": true,
+      "answer": "## Graduate GPA\n- Earned Credits: 30.00\n- GPA Credits: 30.00\n- Quality Points: 120.00\n- Cumulative GPA: 4.00",
+      "grounded": true,
+      "num_sources": 10,
+      "response_time": 0.7476024627685547,
+      "failure_reason": null,
+      "keywords_found": [
+        "4.00",
+        "4.0",
+        "graduate"
+      ],
+      "keywords_missing": [],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "transcript_002",
+      "category": "transcript_gpa",
+      "question": "What was my undergraduate GPA?",
+      "passed": true,
+      "answer": "*   According to the provided context, your undergraduate GPA is 3.97.\n*   [Source: /workspace/data/mds/complete_transcript_analysis.md]\n    *   Earned Credits: 121.00\n    *   GPA Credits: 121.00\n    *   Quality Points: 481.00",
+      "grounded": true,
+      "num_sources": 10,
+      "response_time": 0.9260611534118652,
+      "failure_reason": null,
+      "keywords_found": [
+        "3.97",
+        "undergraduate"
+      ],
+      "keywords_missing": [],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "transcript_003",
+      "category": "transcript_credits",
+      "question": "How many total credits did I earn?",
+      "passed": true,
+      "answer": "*   **Total Credits Earned:** 169 credits (139 undergraduate + 30 graduate)\n*   **Earned Credits:** 139.00 (121.00 institutional + 18.00 transfer)",
+      "grounded": true,
+      "num_sources": 10,
+      "response_time": 0.7149367332458496,
+      "failure_reason": null,
+      "keywords_found": [
+        "169",
+        "credits"
+      ],
+      "keywords_missing": [],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "transcript_004",
+      "category": "transcript_courses",
+      "question": "What courses did I take in Fall 2022?",
+      "passed": true,
+      "answer": "\u2022 CMST 101: Public Speaking\n\u2022 CS 410: Database App Dev\n\u2022 CS 420: Software Engineering\n\u2022 CS 436: Computer Security\n\u2022 EE 233: Engineering Programming Method",
+      "grounded": true,
+      "num_sources": 2,
+      "response_time": 0.5252335071563721,
+      "failure_reason": null,
+      "keywords_found": [
+        "CS 410",
+        "Database"
+      ],
+      "keywords_missing": [
+        "Fall 2022"
+      ],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "transcript_005",
+      "category": "transcript_courses",
+      "question": "Did I take CS 410?",
+      "passed": true,
+      "answer": "Yes, according to the provided context, you took CS 410.",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.4450051784515381,
+      "failure_reason": null,
+      "keywords_found": [
+        "CS 410"
+      ],
+      "keywords_missing": [],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "transcript_006",
+      "category": "transcript_degrees",
+      "question": "What degrees did I earn?",
+      "passed": true,
+      "answer": "\u2022 Bachelor of Science in Computer Science (April 27, 2024)\n\u2022 Master of Science in Computer Science (May 1, 2025)",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.43453288078308105,
+      "failure_reason": null,
+      "keywords_found": [
+        "Computer Science"
+      ],
+      "keywords_missing": [],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "transcript_007",
+      "category": "transcript_timing",
+      "question": "When did I graduate with my Bachelor's degree?",
+      "passed": true,
+      "answer": "## Degrees Earned\n- **Bachelor of Science** in Computer Science (April 27, 2024)",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.33232927322387695,
+      "failure_reason": null,
+      "keywords_found": [
+        "April",
+        "2024"
+      ],
+      "keywords_missing": [],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "transcript_008",
+      "category": "transcript_timing",
+      "question": "When did I graduate with my Master's degree?",
+      "passed": true,
+      "answer": "* Earned: May 1, 2025 (May 1, 2025)",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.31198883056640625,
+      "failure_reason": null,
+      "keywords_found": [
+        "May",
+        "2025"
+      ],
+      "keywords_missing": [
+        "MS"
+      ],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "certification_001",
+      "category": "certifications",
+      "question": "What certifications do I have?",
+      "passed": true,
+      "answer": "You hold the following certifications:\n- **AWS Certified AI Practitioner (CAP)** (Amazon Web Services) \u2014 Earned: 2025-06-01 (June 01, 2025); Expires: 2028-06-01 (June 01, 2028); Status: Active\n- **AWS Certified Cloud Practitioner (CCP)** (Amazon Web Services) \u2014 Earned: 2025-05-26 (May 26, 2025); Expires: 2028-05-26 (May 26, 2028); Status: Active\n- **Certified Kubernetes Administrator (CKA)** (Linux Foundation) \u2014 Earned: 2024-06-26 (June 26, 2024); Expires: 2026-06-26 (June 26, 2026); Status: Active",
+      "grounded": true,
+      "num_sources": 3,
+      "response_time": 0.05679440498352051,
+      "failure_reason": null,
+      "keywords_found": [
+        "CKA",
+        "AWS",
+        "Cloud Practitioner",
+        "AI Practitioner"
+      ],
+      "keywords_missing": [],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "certification_002",
+      "category": "certifications",
+      "question": "When did I earn my CKA certification?",
+      "passed": true,
+      "answer": "You earned the **Certified Kubernetes Administrator (CKA)** certification (Linux Foundation) on 2024-06-26 (June 26, 2024).\nIt expires on 2026-06-26 (June 26, 2026).",
+      "grounded": true,
+      "num_sources": 3,
+      "response_time": 0.04959988594055176,
+      "failure_reason": null,
+      "keywords_found": [
+        "2024-06-26",
+        "CKA"
+      ],
+      "keywords_missing": [
+        "June 2024"
+      ],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "certification_003",
+      "category": "certifications",
+      "question": "When does my AWS Cloud Practitioner certification expire?",
+      "passed": true,
+      "answer": "Your **AWS Certified Cloud Practitioner (CCP)** certification (Amazon Web Services) expires on 2028-05-26 (May 26, 2028).\nStatus: Active",
+      "grounded": true,
+      "num_sources": 3,
+      "response_time": 0.04822421073913574,
+      "failure_reason": null,
+      "keywords_found": [
+        "2028-05-26",
+        "May",
+        "2028",
+        "expires"
+      ],
+      "keywords_missing": [],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "certification_004",
+      "category": "certifications",
+      "question": "Do I have any Kubernetes certifications?",
+      "passed": true,
+      "answer": "Yes \u2014 you hold the **Certified Kubernetes Administrator (CKA)** certification (Linux Foundation). Earned: 2024-06-26 (June 26, 2024); Expires: 2026-06-26 (June 26, 2026).",
+      "grounded": true,
+      "num_sources": 3,
+      "response_time": 0.04443073272705078,
+      "failure_reason": null,
+      "keywords_found": [
+        "yes",
+        "CKA",
+        "Kubernetes Administrator"
+      ],
+      "keywords_missing": [],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "work_001",
+      "category": "work_experience",
+      "question": "What companies have I worked for?",
+      "passed": true,
+      "answer": "\u2022 Maven Wave Partners\n\u2022 Google Cloud Platform (as Infrastructure Intern) \n\u2022 Maven Wave Partners (as Infrastructure Intern)",
+      "grounded": true,
+      "num_sources": 4,
+      "response_time": 0.3179008960723877,
+      "failure_reason": null,
+      "keywords_found": [
+        "Maven Wave Partners"
+      ],
+      "keywords_missing": [],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "work_002",
+      "category": "work_experience",
+      "question": "What was my role at Maven Wave Partners?",
+      "passed": true,
+      "answer": "## Role\nInfrastructure Intern \u2013 Maven Wave Partners (Jun 2021 \u2013 Aug 2021) \u00b7 Chicago, IL\n\n* Integrated with the Infrastructure team on the progressive implementation of a Google Cloud Platform environment using Kubernetes.\n* Engineered a secure data-sharing microservice using Kubernetes, enabling seamless data exchange between provider and third-party companies.",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.6656825542449951,
+      "failure_reason": null,
+      "keywords_found": [
+        "Infrastructure Intern",
+        "intern"
+      ],
+      "keywords_missing": [],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "work_003",
+      "category": "work_experience",
+      "question": "How many summers did I intern at Maven Wave?",
+      "passed": true,
+      "answer": "* 2 (Jun 2021 \u2013 Aug 2021) and \n* 1 (Jun 2023 \u2013 Aug 2023)",
+      "grounded": true,
+      "num_sources": 4,
+      "response_time": 0.3235177993774414,
+      "failure_reason": null,
+      "keywords_found": [
+        "3"
+      ],
+      "keywords_missing": [],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "work_004",
+      "category": "work_experience",
+      "question": "When did I start working as a Teaching Assistant?",
+      "passed": true,
+      "answer": "*   **University of Alabama at Birmingham (Aug 2022 \u2013 May 2025)** \n    *   Source: /workspace/data/mds/resume--vaishak-menon--2025-09-23.md\n    *   Work Experience:\n        *   Teaching Assistant, Computer Science Department, University of Alabama at Birmingham (Aug 2022 \u2013 May 2025)\n            *   Assisted professors in teaching Data Structure and Algorithms in Python and Java and Systems Programming in C.\n            *   Evaluated and provided feedback on more than 400 assignments each semester, achieving a turnaround time of under 72 hours.",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 1.1133275032043457,
+      "failure_reason": null,
+      "keywords_found": [
+        "Aug 2022",
+        "2022"
+      ],
+      "keywords_missing": [
+        "August 2022"
+      ],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "skills_001",
+      "category": "skills",
+      "question": "Do I have experience with Kubernetes?",
+      "passed": false,
+      "answer": "* Certified Kubernetes Administrator (CKA)\n* AWS Certified Cloud Practitioner (CCP)",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.2987649440765381,
+      "failure_reason": "Only 0/1 expected keywords found. Missing: yes",
+      "keywords_found": [],
+      "keywords_missing": [
+        "yes"
+      ],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "skills_002",
+      "category": "skills",
+      "question": "What cloud platforms do I have experience with?",
+      "passed": true,
+      "answer": "\u2022 **Google Cloud Platform**\n\u2022 **Terraform**\n\u2022 **Docker**",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.2889854907989502,
+      "failure_reason": null,
+      "keywords_found": [
+        "Google Cloud",
+        "cloud"
+      ],
+      "keywords_missing": [],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "skills_003",
+      "category": "skills",
+      "question": "What programming languages do I know?",
+      "passed": true,
+      "answer": "* Python\n* Assembly\n* Object-Oriented Programming",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.32263636589050293,
+      "failure_reason": null,
+      "keywords_found": [
+        "Python"
+      ],
+      "keywords_missing": [],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "projects_001",
+      "category": "projects",
+      "question": "What personal projects have I built?",
+      "passed": false,
+      "answer": "\u2022 Built and tuned a retrieval-augmented chatbot with reproducible evals on SQuAD v2 (500 examples).\n\u2022 Results: Pareto-frontier generative settings (**F1 \u2248 0.54**, **NoAns \u2248 0.92**, **p50 \u2248 130 ms**), and retrieval **Recall@5 \u2248 0.85**, **Hit@1 \u2248 0.65**.\n \nANSWER: \n\u2022 Built a CNN-based model to classify audio spectrograms, improving accuracy by **+5\u201310%** over traditional baselines (k-NN, SVM, Random Forest).",
+      "grounded": true,
+      "num_sources": 4,
+      "response_time": 1.0683679580688477,
+      "failure_reason": "Only 0/2 expected keywords found. Missing: RAG, GPT",
+      "keywords_found": [],
+      "keywords_missing": [
+        "RAG",
+        "GPT"
+      ],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "projects_002",
+      "category": "projects",
+      "question": "Have I built any machine learning projects?",
+      "passed": false,
+      "answer": "\u2022 You have built a CNN-based model to classify audio spectrograms. [1]\n\u2022 You have built and tuned a retrieval-augmented chatbot with reproducible evals on SQuAD v2 (500 examples). [2]",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.5445151329040527,
+      "failure_reason": "Only 0/3 expected keywords found. Missing: yes, Music Genre Classification, GPT",
+      "keywords_found": [],
+      "keywords_missing": [
+        "yes",
+        "Music Genre Classification",
+        "GPT"
+      ],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "impossible_001",
+      "category": "impossible",
+      "question": "What is my favorite color?",
+      "passed": true,
+      "answer": "I don't know. I couldn't find any relevant information in my documents.",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 0.042057037353515625,
+      "failure_reason": null,
+      "keywords_found": [
+        "don't know"
+      ],
+      "keywords_missing": [],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "impossible_002",
+      "category": "impossible",
+      "question": "Where was I born?",
+      "passed": false,
+      "answer": "Your question seems a bit broad. Could you clarify which specific details you're looking for about your profile? For example, I can share information about your education, your work experience, your certifications, your skills, or your qualifications. Typical areas I can cover include education, work experience, certifications, skills, and other qualifications. Please let me know which detail to focus on so I can reference the right documents.",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 0.0055561065673828125,
+      "failure_reason": "Only 0/1 expected keywords found. Missing: don't know; Impossible question did not express uncertainty",
+      "keywords_found": [],
+      "keywords_missing": [
+        "don't know"
+      ],
+      "ambiguity_detected": true,
+      "ambiguity_score": 0.9,
+      "clarification_requested": true
+    },
+    {
+      "test_id": "impossible_003",
+      "category": "impossible",
+      "question": "What did I have for breakfast today?",
+      "passed": true,
+      "answer": "I don't know. It isn't mentioned in the provided documents.\n\n## Certification Responses:\n\n* **MDS Certification**: None\n* **Resume - VAishak Menon (2025)**: \n    * Resume: [Source: /workspace/data/mds/resume--vaishak-menon--2025-09-23.md]\n    * Summary: [Source: /workspace/data/mds/complete_transcript_analysis.md] (Academic Summary)\n* **Resume - VAishak Menon (2026)**: \n    * Resume: [Source: /workspace/data/mds/resume--vaishak-menon--2026-09-23.md]\n    * Summary: [Source: /workspace/data/mds/complete_transcript_analysis.md] (Academic Summary)\n* **Resume - VAishak Menon (2027)**: \n    * Resume: [Source: /workspace/data/mds/resume--vaishak-menon--2027-09-23.md]\n    * Summary: [Source: /workspace/data/mds/complete_transcript_analysis.md] (Academic Summary)\n* **Resume - VAishak Menon (2028)**: \n    * Resume: [Source: /workspace/data/mds/resume--vaishak-menon--2028-09-23.md]\n    * Summary: [Source: /workspace/data/mds/complete_transcript_analysis.md] (Academic Summary)\n* **",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 2.1677894592285156,
+      "failure_reason": null,
+      "keywords_found": [
+        "don't know"
+      ],
+      "keywords_missing": [],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "impossible_004",
+      "category": "impossible",
+      "question": "Do I have a PhD?",
+      "passed": false,
+      "answer": "*   You do not have a PhD. According to the provided context, you earned 30 credits in undergraduate studies and 30 graduate credits, but there is no mention of a PhD program or degree.\n*   Source: /workspace/data/mds/complete_transcript_analysis.md\n*   Current Status: Not mentioned",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 0.6403906345367432,
+      "failure_reason": "Expected grounded response, got grounded=False; Expected at least 1 sources, got 0",
+      "keywords_found": [
+        "no"
+      ],
+      "keywords_missing": [],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "impossible_005",
+      "category": "impossible",
+      "question": "What high school did I attend?",
+      "passed": false,
+      "answer": "* University of Alabama at Birmingham \n    * B.S. in Computer Science \u2014 Graduation Date: Apr 27, 2024\n    * M.S. in Computer Science \u2014 Graduation Date: May 1, 2025",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.47041893005371094,
+      "failure_reason": "Expected ungrounded response for impossible question, got grounded=True; Only 0/1 expected keywords found. Missing: not mentioned; Impossible question did not express uncertainty",
+      "keywords_found": [],
+      "keywords_missing": [
+        "not mentioned"
+      ],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "impossible_006",
+      "category": "impossible",
+      "question": "What is my salary?",
+      "passed": false,
+      "answer": "* According to the provided context, your academic standing is Presidential Honors (multiple terms), which implies that you are in good standing and have not been academically penalized.\n* As a result, your salary can be inferred as being above average or even higher than the national average. However, exact figures are not available from the provided context.\n\nReferences:\n- [Source: /workspace/data/mds/complete_transcript_analysis.md](https://example.com/workspace/data/mds/complete_transcript_analysis.md)\n- [Source: /workspace/data/mds/term_2023_summer.md](https://example.com/workspace/data/mds/term_2023_summer.md)",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 1.0697028636932373,
+      "failure_reason": "Only 0/1 expected keywords found. Missing: don't know",
+      "keywords_found": [],
+      "keywords_missing": [
+        "don't know"
+      ],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "edge_001",
+      "category": "edge_case",
+      "question": "GPA?",
+      "passed": true,
+      "answer": "Your question seems a bit broad. Could you clarify which specific details you're looking for about your academic performance? For example, I can share information about your undergraduate GPA, your graduate GPA, your overall GPA, your education, your work experience, your certifications, your skills, or your qualifications. Typical areas I can cover include education, work experience, certifications, skills, and other qualifications. Please let me know which detail to focus on so I can reference the right documents.",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 0.0042645931243896484,
+      "failure_reason": null,
+      "keywords_found": [],
+      "keywords_missing": [],
+      "ambiguity_detected": true,
+      "ambiguity_score": 1.0,
+      "clarification_requested": true
+    },
+    {
+      "test_id": "edge_002",
+      "category": "edge_case",
+      "question": "Did I take any database courses and what grades did I receive in them?",
+      "passed": true,
+      "answer": "*   You took CS 610 - Database Systems with a grade of A (12.00) and CS 685 - Foundations of Data Science with a grade of A (12.00).\n*   You received a total of 24 Quality Points from these two courses, which is equivalent to 36 credits.\n*   Your grades in these courses are based on the provided context.\n\nSource: /workspace/data/mds/term_2025_spring.md",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.912459135055542,
+      "failure_reason": null,
+      "keywords_found": [
+        "Database",
+        "CS 610"
+      ],
+      "keywords_missing": [
+        "CS 410"
+      ],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "edge_003",
+      "category": "edge_case",
+      "question": "Kubernetes",
+      "passed": true,
+      "answer": "Your question seems a bit broad. Could you clarify which specific details you're looking for about Kubernetes? For example, I can share information about projects that used Kubernetes, certifications like the CKA, work experience involving Kubernetes, your education, your work experience, your certifications, your skills, or your qualifications. Typical areas I can cover include education, work experience, certifications, skills, and other qualifications. Please let me know which detail to focus on so I can reference the right documents.",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 0.004281282424926758,
+      "failure_reason": null,
+      "keywords_found": [],
+      "keywords_missing": [],
+      "ambiguity_detected": true,
+      "ambiguity_score": 0.9,
+      "clarification_requested": true
+    },
+    {
+      "test_id": "broad_001",
+      "category": "broad",
+      "question": "Summarize my professional background",
+      "passed": false,
+      "answer": "Your question seems a bit broad. Could you clarify which specific details you're looking for about your background and qualifications? For example, I can share information about your education, your work experience, your certifications, projects that used Kubernetes, certifications like the CKA, work experience involving Kubernetes, your skills, or your qualifications. Typical areas I can cover include education, work experience, certifications, skills, and other qualifications. Please let me know which detail to focus on so I can reference the right documents.",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 0.004364013671875,
+      "failure_reason": "Expected grounded response, got grounded=False; Expected at least 2 sources, got 0; Only 2/4 expected keywords found. Missing: Computer Science, GCP",
+      "keywords_found": [
+        "experience",
+        "Kubernetes"
+      ],
+      "keywords_missing": [
+        "Computer Science",
+        "GCP"
+      ],
+      "ambiguity_detected": true,
+      "ambiguity_score": 0.9,
+      "clarification_requested": true
+    },
+    {
+      "test_id": "broad_002",
+      "category": "broad",
+      "question": "What technical skills do I have?",
+      "passed": false,
+      "answer": "* Programming:\n\t+ Python\n\t+ Rust\n\t+ JavaScript/TypeScript\n\t+ Java\n\t+ C\n* Data / ML:\n\t+ PSQL\n\t+ MongoDB\n\t+ Transformers\n\t+ RAG\n\t+ ChromaDB\n\t+ LangGraph\n\t+ Llama-3 via Ollama\n* Tooling:\n\t+ FastAPI\n\t+ Next.js\n\t+ Tailwind\n\t+ GitHub Actions",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.7845466136932373,
+      "failure_reason": "Only 2/7 expected keywords found. Missing: Kubernetes, Docker, GCP, AWS, Terraform",
+      "keywords_found": [
+        "Python",
+        "Rust"
+      ],
+      "keywords_missing": [
+        "Kubernetes",
+        "Docker",
+        "GCP",
+        "AWS",
+        "Terraform"
+      ],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "broad_003",
+      "category": "broad",
+      "question": "Give me an overview of my academic performance",
+      "passed": true,
+      "answer": "Based on the provided context, your overall academic performance is as follows:\n\n* Total credits earned: 169 credits (139 undergraduate + 30 graduate)\n* Consistent Academic Excellence: Presidential Honors multiple terms\n* Perfect Graduate Performance: 4.00 GPA across all graduate coursework\n\nThis information can be found in the following sources:\n- [Term_2022_summer.md](#term_2022_summer)\n- [Term_2023_summer.md](#term_2023_summer)\n- [Term_2024_fall.md](#term_2024_fall)\n- [Term_2025_spring.md](#term_2025_spring)",
+      "grounded": true,
+      "num_sources": 10,
+      "response_time": 1.1904394626617432,
+      "failure_reason": null,
+      "keywords_found": [
+        "GPA",
+        "4.00",
+        "credits",
+        "169"
+      ],
+      "keywords_missing": [
+        "3.97"
+      ],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.3,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "broad_004",
+      "category": "broad",
+      "question": "Summarize my professional experience, education, and certifications",
+      "passed": false,
+      "answer": "- **AWS Certified AI Practitioner (CAP)** (Amazon Web Services) \u2014 Earned: 2025-06-01 (June 01, 2025); Expires: 2028-06-01 (June 01, 2028); Status: Active\n- **AWS Certified Cloud Practitioner (CCP)** (Amazon Web Services) \u2014 Earned: 2025-05-26 (May 26, 2025); Expires: 2028-05-26 (May 26, 2028); Status: Active\n- **Certified Kubernetes Administrator (CKA)** (Linux Foundation) \u2014 Earned: 2024-06-26 (June 26, 2024); Expires: 2026-06-26 (June 26, 2026); Status: Active",
+      "grounded": true,
+      "num_sources": 3,
+      "response_time": 0.04632449150085449,
+      "failure_reason": "Only 0/4 expected keywords found. Missing: Computer Science, education, certifications, experience",
+      "keywords_found": [],
+      "keywords_missing": [
+        "Computer Science",
+        "education",
+        "certifications",
+        "experience"
+      ],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "broad_multi_001",
+      "category": "broad",
+      "question": "Give me an overview of my career background and academic achievements",
+      "passed": false,
+      "answer": "Your question seems a bit broad. Could you clarify which specific details you're looking for about your background and qualifications? For example, I can share information about your education, your work experience, your certifications, projects that used Kubernetes, certifications like the CKA, work experience involving Kubernetes, your skills, or your qualifications. Typical areas I can cover include education, work experience, certifications, skills, and other qualifications. Please let me know which detail to focus on so I can reference the right documents.",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 0.005162954330444336,
+      "failure_reason": "Expected grounded response, got grounded=False; Expected at least 2 sources, got 0; Only 0/3 expected keywords found. Missing: career, academic, Computer Science; Did not expect ambiguity detection",
+      "keywords_found": [],
+      "keywords_missing": [
+        "career",
+        "academic",
+        "Computer Science"
+      ],
+      "ambiguity_detected": true,
+      "ambiguity_score": 0.9,
+      "clarification_requested": true
+    },
+    {
+      "test_id": "ambig_001",
+      "category": "ambiguity_detection",
+      "question": "Experience?",
+      "passed": true,
+      "answer": "Your question seems a bit broad. Could you clarify which specific details you're looking for about your experience? For example, I can share information about your professional roles, projects you've completed, your technical skills, your education, your work experience, your certifications, your skills, or your qualifications. Typical areas I can cover include education, work experience, certifications, skills, and other qualifications. Please let me know which detail to focus on so I can reference the right documents.",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 0.004405975341796875,
+      "failure_reason": null,
+      "keywords_found": [],
+      "keywords_missing": [],
+      "ambiguity_detected": true,
+      "ambiguity_score": 1.0,
+      "clarification_requested": true
+    },
+    {
+      "test_id": "clarify_001",
+      "category": "clarification_handling",
+      "question": "What about my background?",
+      "passed": true,
+      "answer": "Your question seems a bit broad. Could you clarify which specific details you're looking for about your background and qualifications? For example, I can share information about your education, your work experience, your certifications, projects that used Kubernetes, certifications like the CKA, work experience involving Kubernetes, your skills, or your qualifications. Typical areas I can cover include education, work experience, certifications, skills, and other qualifications. Please let me know which detail to focus on so I can reference the right documents.",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 0.005537509918212891,
+      "failure_reason": null,
+      "keywords_found": [
+        "which",
+        "background",
+        "specific",
+        "clarify"
+      ],
+      "keywords_missing": [
+        "aspect"
+      ],
+      "ambiguity_detected": true,
+      "ambiguity_score": 0.9,
+      "clarification_requested": true
+    },
+    {
+      "test_id": "edge_ambig_001",
+      "category": "edge_cases",
+      "question": "?",
+      "passed": true,
+      "answer": "Your question seems a bit broad. Could you clarify which specific details you're looking for about your profile? For example, I can share information about your education, your work experience, your certifications, your skills, or your qualifications. Typical areas I can cover include education, work experience, certifications, skills, and other qualifications. Please let me know which detail to focus on so I can reference the right documents.",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 0.0073359012603759766,
+      "failure_reason": null,
+      "keywords_found": [],
+      "keywords_missing": [],
+      "ambiguity_detected": true,
+      "ambiguity_score": 1.0,
+      "clarification_requested": true
+    },
+    {
+      "test_id": "summary_001",
+      "category": "summary_requests",
+      "question": "Can you summarize my education and work experience?",
+      "passed": false,
+      "answer": "Your question seems a bit broad. Could you clarify which specific details you're looking for about your experience? For example, I can share information about your professional roles, projects you've completed, your technical skills, your education, your work experience, your certifications, your skills, or your qualifications. Typical areas I can cover include education, work experience, certifications, skills, and other qualifications. Please let me know which detail to focus on so I can reference the right documents.",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 0.0057926177978515625,
+      "failure_reason": "Expected grounded response, got grounded=False; Expected at least 1 sources, got 0; Only 2/5 expected keywords found. Missing: summary, GPA, internship; Did not expect ambiguity detection; Did not expect clarification prompt",
+      "keywords_found": [
+        "education",
+        "work experience"
+      ],
+      "keywords_missing": [
+        "summary",
+        "GPA",
+        "internship"
+      ],
+      "ambiguity_detected": true,
+      "ambiguity_score": 0.9,
+      "clarification_requested": true
+    },
+    {
+      "test_id": "ambig_003",
+      "category": "ambiguity_detection",
+      "question": "Tell me everything about my background and qualifications.",
+      "passed": true,
+      "answer": "Your question seems a bit broad. Could you clarify which specific details you're looking for about your background and qualifications? For example, I can share information about your education, your work experience, your certifications, projects that used Kubernetes, certifications like the CKA, work experience involving Kubernetes, your skills, or your qualifications. Typical areas I can cover include education, work experience, certifications, skills, and other qualifications. Please let me know which detail to focus on so I can reference the right documents.",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 0.007694721221923828,
+      "failure_reason": null,
+      "keywords_found": [],
+      "keywords_missing": [],
+      "ambiguity_detected": true,
+      "ambiguity_score": 0.9,
+      "clarification_requested": true
+    },
+    {
+      "test_id": "clarify_002",
+      "category": "clarification_handling",
+      "question": "I'm looking for information about my history\u2014can you help?",
+      "passed": true,
+      "answer": "Your question seems a bit broad. Could you clarify which specific details you're looking for about your history? For example, I can share information about your education history, your work history, key milestones, your education, your work experience, your certifications, your skills, or your qualifications. Typical areas I can cover include education, work experience, certifications, skills, and other qualifications. Please let me know which detail to focus on so I can reference the right documents.",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 0.008558273315429688,
+      "failure_reason": null,
+      "keywords_found": [],
+      "keywords_missing": [],
+      "ambiguity_detected": true,
+      "ambiguity_score": 0.9,
+      "clarification_requested": true
+    },
+    {
+      "test_id": "control_specific_001",
+      "category": "ambiguity_control",
+      "question": "What grade did I receive in CS 410 in Fall 2022?",
+      "passed": true,
+      "answer": "## Answer\nYou received an \"A\" grade in CS 410, which is a Computer Security course, in the Fall 2022 term.\n\n## Explanation\nAccording to the provided context, you earned 3.00 credits for CS 410, and it was graded as A.\n\n## Source Reference\n[Source: /workspace/data/mds/term_2022_fall.md]\n# Fall 2022 Term Summary\n\n## Term Performance\n- **Credits Earned:** 15.00\n- **Quality Points:** 60.00\n- **Term GPA:** 4.00\n- **Academic Standing:** Good Standing\n- **Honors:** Presidential Honors",
+      "grounded": true,
+      "num_sources": 3,
+      "response_time": 1.2518112659454346,
+      "failure_reason": null,
+      "keywords_found": [
+        "CS 410",
+        "A"
+      ],
+      "keywords_missing": [],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    },
+    {
+      "test_id": "control_specific_002",
+      "category": "ambiguity_control",
+      "question": "Which certifications do I have that expire in 2028?",
+      "passed": true,
+      "answer": "- **AWS Certified AI Practitioner (CAP)** (Amazon Web Services) \u2014 Earned: 2025-06-01 (June 01, 2025); Expires: 2028-06-01 (June 01, 2028); Status: Active\n- **AWS Certified Cloud Practitioner (CCP)** (Amazon Web Services) \u2014 Earned: 2025-05-26 (May 26, 2025); Expires: 2028-05-26 (May 26, 2028); Status: Active\n- **Certified Kubernetes Administrator (CKA)** (Linux Foundation) \u2014 Earned: 2024-06-26 (June 26, 2024); Expires: 2026-06-26 (June 26, 2026); Status: Active",
+      "grounded": true,
+      "num_sources": 3,
+      "response_time": 0.049561500549316406,
+      "failure_reason": null,
+      "keywords_found": [
+        "AWS",
+        "Cloud Practitioner",
+        "2028"
+      ],
+      "keywords_missing": [],
+      "ambiguity_detected": false,
+      "ambiguity_score": 0.0,
+      "clarification_requested": false
+    }
+  ]
+}

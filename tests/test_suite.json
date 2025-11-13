@@ -1,0 +1,857 @@
+{
+  "metadata": {
+    "version": "1.0.0",
+    "created": "2025-10-24",
+    "description": "Comprehensive test suite for Personal RAG system",
+    "total_tests": 43,
+    "api_endpoint": "http://localhost:8000/chat",
+    "api_key": "dev-key-1"
+  },
+  "test_cases": [
+    {
+      "test_id": "transcript_001",
+      "category": "transcript_gpa",
+      "question": "What was my graduate GPA?",
+      "expected_keywords": [
+        "4.0"
+      ],
+      "expected_answer": "4.0",
+      "is_impossible": false,
+      "expected_doc_type": "term",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "easy"
+    },
+    {
+      "test_id": "transcript_002",
+      "category": "transcript_gpa",
+      "question": "What was my undergraduate GPA?",
+      "expected_keywords": [
+        "3.97"
+      ],
+      "expected_answer": "3.97",
+      "is_impossible": false,
+      "expected_doc_type": "term",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "easy"
+    },
+    {
+      "test_id": "transcript_003",
+      "category": "transcript_credits",
+      "question": "How many total credits did I earn?",
+      "expected_keywords": [
+        "169",
+        "credits"
+      ],
+      "expected_answer": "169 credits",
+      "is_impossible": false,
+      "expected_doc_type": "term",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "easy"
+    },
+    {
+      "test_id": "transcript_004",
+      "category": "transcript_courses",
+      "question": "What courses did I take in Fall 2022?",
+      "expected_keywords": [
+        "CS 410",
+        "CMST 101",
+        "CS 420",
+        "CS 436",
+        "EE 233"
+      ],
+      "expected_answer": "Should include all classes: 410, 101, 420, 436, 233",
+      "is_impossible": false,
+      "expected_doc_type": "term",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "medium"
+    },
+    {
+      "test_id": "transcript_005",
+      "category": "transcript_courses",
+      "question": "Did I take CS 410?",
+      "expected_keywords": [
+        "CS 410"
+      ],
+      "expected_answer": "Yes, CS 410 Database App Dev in Spring 2022",
+      "is_impossible": false,
+      "expected_doc_type": "term",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "easy"
+    },
+    {
+      "test_id": "transcript_006",
+      "category": "transcript_degrees",
+      "question": "What degrees did I earn?",
+      "expected_keywords": [
+        "Computer Science"
+      ],
+      "expected_answer": "BS and MS in Computer Science",
+      "is_impossible": false,
+      "expected_doc_type": "term",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "easy"
+    },
+    {
+      "test_id": "transcript_007",
+      "category": "transcript_timing",
+      "question": "When did I graduate with my Bachelor's degree?",
+      "expected_keywords": [
+        "April",
+        "2024"
+      ],
+      "expected_answer": "April 2024",
+      "is_impossible": false,
+      "expected_doc_type": "resume",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "medium"
+    },
+    {
+      "test_id": "transcript_008",
+      "category": "transcript_timing",
+      "question": "When did I graduate with my Master's degree?",
+      "expected_keywords": [
+        "May",
+        "2025",
+        "MS"
+      ],
+      "expected_answer": "May 2025",
+      "is_impossible": false,
+      "expected_doc_type": "resume",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "medium"
+    },
+    {
+      "test_id": "certification_001",
+      "category": "certifications",
+      "question": "What certifications do I have?",
+      "expected_keywords": [
+        "CKA",
+        "AWS",
+        "Cloud Practitioner",
+        "AI Practitioner"
+      ],
+      "expected_answer": "CKA, AWS Certified Cloud Practitioner, AWS Certified AI Practitioner",
+      "is_impossible": false,
+      "expected_doc_type": "certificate",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "easy"
+    },
+    {
+      "test_id": "certification_002",
+      "category": "certifications",
+      "question": "When did I earn my CKA certification?",
+      "expected_keywords": [
+        "2024-06-26",
+        "June 2024",
+        "CKA"
+      ],
+      "expected_answer": "June 26, 2024",
+      "is_impossible": false,
+      "expected_doc_type": "certificate",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "medium"
+    },
+    {
+      "test_id": "certification_003",
+      "category": "certifications",
+      "question": "When does my AWS Cloud Practitioner certification expire?",
+      "expected_keywords": [
+        "2028-05-26",
+        "May",
+        "2028",
+        "expires"
+      ],
+      "expected_answer": "May 26, 2028",
+      "is_impossible": false,
+      "expected_doc_type": "certificate",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "medium"
+    },
+    {
+      "test_id": "certification_004",
+      "category": "certifications",
+      "question": "Do I have any Kubernetes certifications?",
+      "expected_keywords": [
+        "yes",
+        "CKA",
+        "Kubernetes Administrator"
+      ],
+      "expected_answer": "Yes, Certified Kubernetes Administrator (CKA)",
+      "is_impossible": false,
+      "expected_doc_type": "certificate",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "easy"
+    },
+    {
+      "test_id": "work_001",
+      "category": "work_experience",
+      "question": "What companies have I worked for?",
+      "expected_keywords": [
+        "Maven Wave Partners"
+      ],
+      "expected_answer": "Maven Wave Partners and University of Alabama at Birmingham (as Teaching Assistant)",
+      "is_impossible": false,
+      "expected_doc_type": "resume",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "easy"
+    },
+    {
+      "test_id": "work_002",
+      "category": "work_experience",
+      "question": "What was my role at Maven Wave Partners?",
+      "expected_keywords": [
+        "Infrastructure Intern",
+        "intern"
+      ],
+      "expected_answer": "Infrastructure Intern",
+      "is_impossible": false,
+      "expected_doc_type": "resume",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "easy"
+    },
+    {
+      "test_id": "work_003",
+      "category": "work_experience",
+      "question": "How many summers did I intern at Maven Wave?",
+      "expected_keywords": [
+        "3"
+      ],
+      "expected_answer": "3 summers (2021, 2022, 2023)",
+      "is_impossible": false,
+      "expected_doc_type": "resume",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "medium"
+    },
+    {
+      "test_id": "work_004",
+      "category": "work_experience",
+      "question": "When did I start working as a Teaching Assistant?",
+      "expected_keywords": [
+        "August 2022",
+        "Aug 2022",
+        "2022"
+      ],
+      "expected_answer": "August 2022",
+      "is_impossible": false,
+      "expected_doc_type": "resume",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "medium"
+    },
+    {
+      "test_id": "skills_001",
+      "category": "skills",
+      "question": "Do I have experience with Kubernetes?",
+      "expected_keywords": [
+        "yes"
+      ],
+      "expected_answer": "Yes, Kubernetes experience and CKA certification",
+      "is_impossible": false,
+      "expected_doc_type": "resume",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "easy"
+    },
+    {
+      "test_id": "skills_002",
+      "category": "skills",
+      "question": "What cloud platforms do I have experience with?",
+      "expected_keywords": [
+        "Google Cloud",
+        "cloud"
+      ],
+      "expected_answer": "GCP and AWS",
+      "is_impossible": false,
+      "expected_doc_type": "resume",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "easy"
+    },
+    {
+      "test_id": "skills_003",
+      "category": "skills",
+      "question": "What programming languages do I know?",
+      "expected_keywords": [
+        "Python"
+      ],
+      "expected_answer": "Should include Python and Rust",
+      "is_impossible": false,
+      "expected_doc_type": "resume",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "easy"
+    },
+    {
+      "test_id": "projects_001",
+      "category": "projects",
+      "question": "What personal projects have I built?",
+      "expected_keywords": [
+        "RAG",
+        "GPT"
+      ],
+      "expected_answer": "FastAPI RAG Service, GPT From Scratch, Music Genre Classification",
+      "is_impossible": false,
+      "expected_doc_type": "resume",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "easy"
+    },
+    {
+      "test_id": "projects_002",
+      "category": "projects",
+      "question": "Have I built any machine learning projects?",
+      "expected_keywords": [
+        "yes",
+        "Music Genre Classification",
+        "GPT"
+      ],
+      "expected_answer": "Yes, including Music Genre Classification and GPT From Scratch",
+      "is_impossible": false,
+      "expected_doc_type": "resume",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "easy"
+    },
+    {
+      "test_id": "impossible_001",
+      "category": "impossible",
+      "question": "What is my favorite color?",
+      "expected_keywords": [
+        "don't know"
+      ],
+      "expected_answer": "I don't know",
+      "is_impossible": true,
+      "expected_doc_type": null,
+      "min_sources": 0,
+      "grounded_expected": false,
+      "difficulty": "easy"
+    },
+    {
+      "test_id": "impossible_002",
+      "category": "impossible",
+      "question": "Where was I born?",
+      "expected_keywords": [
+        "don't know"
+      ],
+      "expected_answer": "I don't know",
+      "is_impossible": true,
+      "expected_doc_type": null,
+      "min_sources": 0,
+      "grounded_expected": false,
+      "difficulty": "easy"
+    },
+    {
+      "test_id": "impossible_003",
+      "category": "impossible",
+      "question": "What did I have for breakfast today?",
+      "expected_keywords": [
+        "don't know"
+      ],
+      "expected_answer": "I don't know",
+      "is_impossible": true,
+      "expected_doc_type": null,
+      "min_sources": 0,
+      "grounded_expected": false,
+      "difficulty": "easy"
+    },
+    {
+      "test_id": "impossible_004",
+      "category": "impossible",
+      "question": "Do I have a PhD?",
+      "expected_keywords": [
+        "no"
+      ],
+      "expected_answer": "No, only BS and MS degrees",
+      "is_impossible": false,
+      "expected_doc_type": "term",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "medium",
+      "notes": "This is answerable as 'no' from the documents"
+    },
+    {
+      "test_id": "impossible_005",
+      "category": "impossible",
+      "question": "What high school did I attend?",
+      "expected_keywords": [
+        "not mentioned"
+      ],
+      "expected_answer": "I don't know",
+      "is_impossible": true,
+      "expected_doc_type": null,
+      "min_sources": 0,
+      "grounded_expected": false,
+      "difficulty": "easy"
+    },
+    {
+      "test_id": "impossible_006",
+      "category": "impossible",
+      "question": "What is my salary?",
+      "expected_keywords": [
+        "don't know"
+      ],
+      "expected_answer": "I don't know",
+      "is_impossible": true,
+      "expected_doc_type": null,
+      "min_sources": 0,
+      "grounded_expected": false,
+      "difficulty": "easy"
+    },
+    {
+      "test_id": "edge_001",
+      "category": "edge_case",
+      "question": "GPA?",
+      "expected_keywords": [],
+      "expected_answer": "Should prompt the user to clarify which GPA they need.",
+      "is_impossible": false,
+      "expected_doc_type": null,
+      "min_sources": 0,
+      "grounded_expected": false,
+      "difficulty": "medium",
+      "notes": "Very short query that should trigger an ambiguity clarification",
+      "expected_behavior": {
+        "should_detect_ambiguity": true,
+        "expected_response": {
+          "should_ask_clarification": true,
+          "allowed_keywords": [
+            "clarify",
+            "which",
+            "specific",
+            "detail",
+            "type",
+            "education",
+            "work experience",
+            "certifications",
+            "background",
+            "qualifications",
+            "focus",
+            "documents",
+            "broad"
+          ]
+        }
+      }
+    },
+    {
+      "test_id": "edge_002",
+      "category": "edge_case",
+      "question": "Did I take any database courses and what grades did I receive in them?",
+      "expected_keywords": [
+        "CS 410",
+        "Database",
+        "CS 610"
+      ],
+      "expected_answer": "Should mention CS 410 and the grade if available",
+      "is_impossible": false,
+      "expected_doc_type": "term",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "hard",
+      "notes": "Multi-part question requiring specific course data"
+    },
+    {
+      "test_id": "edge_003",
+      "category": "edge_case",
+      "question": "Kubernetes",
+      "expected_keywords": [],
+      "expected_answer": "Should note Kubernetes context and include a clarifying follow-up.",
+      "is_impossible": false,
+      "expected_doc_type": null,
+      "min_sources": 0,
+      "grounded_expected": false,
+      "difficulty": "medium",
+      "notes": "Single word query - should surface ambiguity while acknowledging topic",
+      "expected_behavior": {
+        "should_detect_ambiguity": true,
+        "expected_response": {
+          "should_ask_clarification": true,
+          "allowed_keywords": [
+            "clarify",
+            "specific",
+            "focus"
+          ]
+        }
+      }
+    },
+    {
+      "test_id": "broad_001",
+      "category": "broad",
+      "question": "Summarize my professional background",
+      "expected_keywords": [
+        "Computer Science",
+        "experience",
+        "GCP",
+        "Kubernetes"
+      ],
+      "expected_answer": "Should include education, technical skills, and experience",
+      "is_impossible": false,
+      "expected_doc_type": "resume",
+      "min_sources": 2,
+      "grounded_expected": true,
+      "difficulty": "hard",
+      "notes": "Very broad summary question - focusing on core elements that should be present"
+    },
+    {
+      "test_id": "broad_002",
+      "category": "broad",
+      "question": "What technical skills do I have?",
+      "expected_keywords": [
+        "Kubernetes",
+        "Docker",
+        "Python",
+        "Rust",
+        "GCP",
+        "AWS",
+        "Terraform"
+      ],
+      "expected_answer": "Should list multiple technical skills",
+      "is_impossible": false,
+      "expected_doc_type": "resume",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "medium",
+      "notes": "Broad but answerable from resume"
+    },
+    {
+      "test_id": "broad_003",
+      "category": "broad",
+      "question": "Give me an overview of my academic performance",
+      "expected_keywords": [
+        "GPA",
+        "4.00",
+        "3.97",
+        "credits",
+        "169"
+      ],
+      "expected_answer": "Should mention GPAs and possibly credit totals",
+      "is_impossible": false,
+      "expected_doc_type": "term",
+      "min_sources": 2,
+      "grounded_expected": true,
+      "difficulty": "medium",
+      "notes": "Broad academic summary"
+    },
+    {
+      "test_id": "broad_004",
+      "category": "broad",
+      "question": "Summarize my professional experience, education, and certifications",
+      "expected_keywords": [
+        "Computer Science",
+        "education",
+        "certifications",
+        "experience"
+      ],
+      "expected_answer": "Should include education, certifications, and work experience highlights",
+      "is_impossible": false,
+      "expected_doc_type": "resume",
+      "min_sources": 2,
+      "grounded_expected": true,
+      "difficulty": "hard",
+      "notes": "Structured broad query that should leverage multi-document retrieval",
+      "expected_behavior": {
+        "should_detect_ambiguity": false,
+        "should_ask_clarification": false,
+        "min_sources": 2
+      }
+    },
+    {
+      "test_id": "broad_multi_001",
+      "category": "broad",
+      "question": "Give me an overview of my career background and academic achievements",
+      "expected_keywords": [
+        "career",
+        "academic",
+        "Computer Science"
+      ],
+      "expected_answer": "Should include academic background and career highlights",
+      "is_impossible": false,
+      "expected_doc_type": "resume",
+      "min_sources": 2,
+      "grounded_expected": true,
+      "difficulty": "hard",
+      "notes": "Multi-focus structured query covering experience and education",
+      "expected_behavior": {
+        "should_detect_ambiguity": false,
+        "should_ask_clarification": false,
+        "min_sources": 2
+      }
+    },
+    {
+      "test_id": "ambig_001",
+      "category": "ambiguity_detection",
+      "question": "Experience?",
+      "expected_keywords": [],
+      "expected_answer": "Should request clarification about the type of experience.",
+      "is_impossible": false,
+      "expected_doc_type": null,
+      "min_sources": 0,
+      "grounded_expected": false,
+      "difficulty": "easy",
+      "expected_behavior": {
+        "should_detect_ambiguity": true,
+        "min_ambiguity_score": 0.8,
+        "expected_response": {
+          "should_ask_clarification": true,
+          "allowed_keywords": [
+            "clarify",
+            "which",
+            "specific",
+            "detail",
+            "type",
+            "education",
+            "work experience",
+            "certifications",
+            "background",
+            "qualifications",
+            "experience",
+            "documents"
+          ],
+          "max_sources": 0
+        }
+      }
+    },
+    {
+      "test_id": "clarify_001",
+      "category": "clarification_handling",
+      "question": "What about my background?",
+      "expected_keywords": [
+        "which",
+        "aspect",
+        "background",
+        "specific",
+        "clarify"
+      ],
+      "expected_answer": "The response should explicitly ask the user to specify which aspect of their background they're interested in (e.g., work experience, education, skills).",
+      "is_impossible": false,
+      "expected_doc_type": null,
+      "min_sources": 0,
+      "grounded_expected": false,
+      "difficulty": "medium",
+      "min_response_length": 50,
+      "expected_behavior": {
+        "should_detect_ambiguity": true,
+        "expected_response": {
+          "should_ask_clarification": true,
+          "allowed_keywords": [
+            "clarify",
+            "which",
+            "specific",
+            "detail",
+            "aspect",
+            "background",
+            "education",
+            "work experience",
+            "skills",
+            "certifications",
+            "qualifications"
+          ],
+          "required_keywords": [
+            "which",
+            "background"
+          ],
+          "max_sources": 0,
+          "response_format": {
+            "should_contain_examples": true,
+            "min_examples": 2,
+            "example_domains": [
+              "work experience",
+              "education",
+              "skills"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "test_id": "edge_ambig_001",
+      "category": "edge_cases",
+      "question": "?",
+      "expected_keywords": [],
+      "expected_answer": "Should request clarification for the ambiguous query.",
+      "is_impossible": false,
+      "expected_doc_type": null,
+      "min_sources": 0,
+      "grounded_expected": false,
+      "difficulty": "hard",
+      "expected_behavior": {
+        "should_detect_ambiguity": true,
+        "expected_response": {
+          "should_ask_clarification": true,
+          "allowed_keywords": [
+            "clarify",
+            "question",
+            "which",
+            "specific",
+            "detail",
+            "education",
+            "work experience",
+            "certifications",
+            "background",
+            "qualifications",
+            "documents",
+            "broad"
+          ],
+          "max_sources": 0
+        }
+      }
+    },
+    {
+      "test_id": "summary_001",
+      "category": "summary_requests",
+      "question": "Can you summarize my education and work experience?",
+      "expected_keywords": [
+        "education",
+        "work experience",
+        "summary",
+        "GPA",
+        "internship"
+      ],
+      "expected_answer": "Should provide a summary of education and work experience including GPA and work history.",
+      "is_impossible": false,
+      "expected_doc_types": [
+        "resume",
+        "transcript_analysis"
+      ],
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "medium",
+      "expected_behavior": {
+        "should_detect_ambiguity": false,
+        "max_ambiguity_score": 0.5,
+        "expected_response": {
+          "should_ask_clarification": false,
+          "should_contain": [
+            "education",
+            "work experience",
+            "GPA",
+            "internship"
+          ],
+          "min_response_length": 50
+        }
+      }
+    },
+    {
+      "test_id": "ambig_003",
+      "category": "ambiguity_detection",
+      "question": "Tell me everything about my background and qualifications.",
+      "expected_keywords": [],
+      "expected_answer": "Should note the question is broad and ask what specifics are needed.",
+      "is_impossible": false,
+      "expected_doc_type": null,
+      "min_sources": 0,
+      "grounded_expected": false,
+      "difficulty": "hard",
+      "expected_behavior": {
+        "should_detect_ambiguity": true,
+        "min_ambiguity_score": 0.8,
+        "expected_response": {
+          "should_ask_clarification": true,
+          "allowed_keywords": [
+            "clarify",
+            "which",
+            "specific",
+            "detail",
+            "education",
+            "work experience",
+            "certifications",
+            "background",
+            "qualifications"
+          ],
+          "max_sources": 0
+        }
+      }
+    },
+    {
+      "test_id": "clarify_002",
+      "category": "clarification_handling",
+      "question": "I'm looking for information about my history—can you help?",
+      "expected_keywords": [],
+      "expected_answer": "Should request clarification on whether the user means education, work, or other history.",
+      "is_impossible": false,
+      "expected_doc_type": null,
+      "min_sources": 0,
+      "grounded_expected": false,
+      "difficulty": "medium",
+      "expected_behavior": {
+        "should_detect_ambiguity": true,
+        "min_ambiguity_score": 0.7,
+        "expected_response": {
+          "should_ask_clarification": true,
+          "allowed_keywords": [
+            "clarify",
+            "which",
+            "specific",
+            "detail",
+            "education",
+            "work",
+            "work experience",
+            "certifications",
+            "background",
+            "history",
+            "qualifications"
+          ],
+          "max_sources": 0
+        }
+      }
+    },
+    {
+      "test_id": "control_specific_001",
+      "category": "ambiguity_control",
+      "question": "What grade did I receive in CS 410 in Fall 2022?",
+      "expected_keywords": [
+        "CS 410",
+        "A"
+      ],
+      "expected_answer": "Should report the CS 410 grade without asking for clarification.",
+      "is_impossible": false,
+      "expected_doc_type": "term",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "medium",
+      "expected_behavior": {
+        "should_detect_ambiguity": false,
+        "expected_response": {
+          "should_ask_clarification": false,
+          "max_sources": 5
+        }
+      }
+    },
+    {
+      "test_id": "control_specific_002",
+      "category": "ambiguity_control",
+      "question": "Which certifications do I have that expire in 2028?",
+      "expected_keywords": [
+        "AWS",
+        "Cloud Practitioner",
+        "2028"
+      ],
+      "expected_answer": "Should list the relevant certification without a clarification prompt.",
+      "is_impossible": false,
+      "expected_doc_type": "certificate",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "medium",
+      "expected_behavior": {
+        "should_detect_ambiguity": false,
+        "expected_response": {
+          "should_ask_clarification": false,
+          "max_sources": 5
+        }
+      }
+    }
+  ]
+}
