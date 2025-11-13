@@ -126,9 +126,6 @@ def search(
 
         logger.debug(f"Using metadata filter: {where_clause}")
 
-    if "transcript" in query.lower() or "course" in query.lower():
-        k = 10
-
     # Query ChromaDB
     try:
         results = _collection.query(
