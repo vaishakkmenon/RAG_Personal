@@ -33,3 +33,6 @@ archive/
 
 # Ignore Claude
 .claude/
+
+# Ignore docs (Area to hold documents that are provided created by Claude)
+docs/
