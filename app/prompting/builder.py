@@ -5,24 +5,64 @@ Handles building and validating prompts with safety guards.
 """
 
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from ..query_router.patterns import PatternMatcher
-from ..settings import QueryRouterSettings
+from ..settings import QueryRouterSettings, settings
 from .clarification import build_clarification_message
 from .config import PromptConfig, PromptResult
 
 logger = logging.getLogger(__name__)
 
 
-def _format_context(chunks: List[Dict[str, str]]) -> str:
-    """Format chunks into context string."""
+def _format_context(chunks: List[Dict[str, Any]]) -> str:
+    """Format chunks into context string with metadata injection.
+
+    Args:
+        chunks: List of chunks with 'source', 'text', and 'metadata' keys
+
+    Returns:
+        Formatted context string with metadata injected
+    """
+
     parts: List[str] = []
     for chunk in chunks:
         source = chunk.get("source", "unknown")
         text = (chunk.get("text") or "").strip()
-        if text:
-            parts.append(f"[Source: {source}]\n{text}")
+        metadata = chunk.get("metadata", {})
+
+        # Skip if no text
+        if not text:
+            continue
+
+        # Start building chunk parts
+        chunk_parts = [f"[Source: {source}]"]
+
+        # Add metadata if enabled
+        if settings.metadata_injection.enabled:
+            # Get document type from metadata
+            doc_type = metadata.get("doc_type")
+
+            # Get relevant metadata fields
+            relevant_metadata = {}
+            if doc_type in settings.metadata_injection.injection_config:
+                for field in settings.metadata_injection.injection_config[doc_type]:
+                    if field in metadata and metadata[field] is not None:
+                        relevant_metadata[field] = metadata[field]
+
+            # Format metadata if any
+            if relevant_metadata:
+                metadata_str = ", ".join(
+                    f"{k.capitalize()}: {v}" for k, v in relevant_metadata.items()
+                )
+                chunk_parts.append(f"[Metadata: {metadata_str}]")
+
+        # Add the actual text
+        chunk_parts.append(text)
+
+        # Add to final parts
+        parts.append("\n".join(chunk_parts))
+
     return "\n\n".join(parts)
 
 
@@ -96,50 +136,32 @@ class PromptBuilder:
         return False, ""
 
     def build_prompt(
-        self, question: str, context_chunks: List[Dict[str, str]], **kwargs
+        self, question: str, context_chunks: List[Dict[str, Any]]
     ) -> PromptResult:
-        """Build a structured prompt with validation.
+        """Build a prompt with the given question and context chunks."""
+        try:
+            # Format context with metadata injection
+            context = _format_context(context_chunks)
 
-        Args:
-            question: The user's question
-            context_chunks: List of context chunks
-            **kwargs: Additional arguments (unused)
+            # Build prompt sections
+            prompt_sections = [
+                self.config.system_prompt.strip(),
+                context,
+                "QUESTION:",
+                question.strip(),
+                "ANSWER:",
+            ]
 
-        Returns:
-            PromptResult with status and prompt
-        """
-        stripped_question = (question or "").strip()
-        ambiguous, reason = self.is_ambiguous(stripped_question)
-        if ambiguous:
+            # Join sections with double newlines
+            prompt = "\n\n".join(section for section in prompt_sections if section)
+
+            return PromptResult(status="success", prompt=prompt, context=context)
+
+        except Exception as e:
+            logger.error(f"Error building prompt: {str(e)}")
             return PromptResult(
-                status="ambiguous",
-                message=build_clarification_message(stripped_question, self.config),
+                status="error", message=f"Failed to build prompt: {str(e)}"
             )
-
-        context = _format_context(context_chunks)
-        if not context:
-            return PromptResult(
-                status="no_context",
-                message="No relevant context found to answer the question.",
-            )
-
-        prompt_sections = [self.config.system_prompt.strip()]
-
-        prompt_sections.append(
-            """CONTEXT:
-{context}
-
-QUESTION: {question}
-
-ANSWER:""".format(
-                context=context,
-                question=stripped_question,
-            )
-        )
-
-        prompt = "\n\n".join(section for section in prompt_sections if section)
-
-        return PromptResult(status="success", prompt=prompt, context=context)
 
     def is_refusal(self, answer: str) -> bool:
         """Check if answer is a refusal.

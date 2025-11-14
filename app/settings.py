@@ -52,7 +52,7 @@ class QueryRouterSettings(BaseModel):
             "kubernetes_administration": ["cka", "certified kubernetes administrator"],
             "aws_cloud": ["aws cloud", "amazon cloud"],
         },
-        description="Technology terms and their common aliases"
+        description="Technology terms and their common aliases",
     )
 
     # Categories and their related terms
@@ -60,13 +60,30 @@ class QueryRouterSettings(BaseModel):
         default_factory=lambda: {
             "technical_skills": ["technical", "skills", "programming", "coding"],
             "cloud_platforms": ["cloud", "aws", "gcp", "azure"],
-            "programming_languages": ["python", "javascript", "java", "go", "typescript"],
+            "programming_languages": [
+                "python",
+                "javascript",
+                "java",
+                "go",
+                "typescript",
+            ],
             "certifications": ["certification", "certificate", "certified"],
             "devops": ["devops", "ci/cd", "continuous", "deployment"],
-            "data_science": ["data science", "machine learning", "ml", "ai", "pandas", "numpy"],
-            "cloud_certifications": ["aws certified", "azure certified", "gcp certified"],
+            "data_science": [
+                "data science",
+                "machine learning",
+                "ml",
+                "ai",
+                "pandas",
+                "numpy",
+            ],
+            "cloud_certifications": [
+                "aws certified",
+                "azure certified",
+                "gcp certified",
+            ],
         },
-        description="Categories and their related terms"
+        description="Categories and their related terms",
     )
 
     # Question type patterns
@@ -80,7 +97,7 @@ class QueryRouterSettings(BaseModel):
             "what_is_my": [r"what('s| is) my (.*?)\??"],
             "how_much": [r"how (much|many) (.*?) (do|have) i"],
         },
-        description="Patterns for different question types"
+        description="Patterns for different question types",
     )
 
     ambiguity_threshold: float = Field(
@@ -313,6 +330,43 @@ class RetrievalSettings(BaseModel):
     )
 
 
+# Add this new class to app/settings.py
+class MetadataInjectionSettings(BaseModel):
+    """Configuration for metadata injection into LLM context."""
+
+    injection_config: Dict[str, List[str]] = Field(
+        default_factory=lambda: {
+            "certificate": [
+                "earned",  # When certification was earned
+                "expires",  # Expiration date
+                "issuer",  # Issuing organization
+                "credential_id",  # Credential ID for verification
+            ],
+            "resume": ["owner", "last_updated"],  # Resume owner  # When last updated
+            "term": [
+                "term_id",  # e.g., "spring_2023"
+                "level",  # undergraduate/graduate
+                "gpa",  # Term GPA
+                "credits",  # Credits earned
+            ],
+        },
+        description="Metadata fields to inject per document type",
+    )
+
+    date_fields: List[str] = Field(
+        default_factory=lambda: [
+            "earned",
+            "expires",
+            "last_updated",
+            "start_date",
+            "end_date",
+        ],
+        description="Metadata fields that contain dates",
+    )
+
+    enabled: bool = Field(default=True, description="Enable/disable metadata injection")
+
+
 class Settings(BaseModel):
     """Global application configuration.
 
@@ -416,6 +470,11 @@ class Settings(BaseModel):
     )
     ingest: IngestSettings = Field(
         default_factory=IngestSettings, description="Document ingestion configuration"
+    )
+
+    metadata_injection: MetadataInjectionSettings = Field(
+        default_factory=MetadataInjectionSettings,
+        description="Metadata injection configuration",
     )
 
     class Config:

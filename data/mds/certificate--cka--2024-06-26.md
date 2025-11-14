@@ -37,7 +37,7 @@ source_file: "/mnt/data/CKA_Cert.pdf"
 ---
 
 # Summary
-- Earned **CKA** on **2024-06-26**.
+- Earned **CKA** on **2024-06-26** (valid through **2026-06-26**).
 
 # Full Name:
 - Certified Kubernetes Administrator

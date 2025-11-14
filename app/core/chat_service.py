@@ -56,17 +56,21 @@ class ChatService:
         result.update({k: v for k, v in manual.items() if v is not None})
         return result
 
-    def _format_sources(self, chunks: List[dict]) -> List[Dict[str, str]]:
+    def _format_sources(self, chunks: List[dict]) -> List[Dict[str, Any]]:
         """Format chunks for the prompt builder.
 
         Args:
-            chunks: List of retrieved chunks
+            chunks: List of retrieved chunks with text, source, and metadata
 
         Returns:
             List of formatted sources
         """
         return [
-            {"source": c.get("source", "unknown"), "text": c.get("text", "")}
+            {
+                "source": c.get("source", "unknown"),
+                "text": c.get("text", ""),
+                "metadata": c.get("metadata", {}),
+            }
             for c in chunks
             if c.get("text", "").strip()
         ]
@@ -75,7 +79,7 @@ class ChatService:
         """Create output source metadata for chatbot responses.
 
         Args:
-            chunks: List of retrieved chunks
+            chunks: List of retrieved chunks with text, source, and metadata
 
         Returns:
             List of ChatSource objects
