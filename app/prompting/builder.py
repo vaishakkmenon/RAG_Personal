@@ -194,21 +194,3 @@ class PromptBuilder:
         if not text:
             return False
         return not any(cue in text for cue in self.config.clarification_cues)
-
-    def is_refusal(self, answer: str) -> bool:
-        """Check if answer needs clarification.
-
-        Args:
-            answer: The generated answer
-
-        Returns:
-            True if answer lacks clarification
-        """
-        text = (answer or "").strip().lower()
-        if not text:
-            return True
-        if any(cue in text for cue in self.config.refusal_cues):
-            return True
-        if not any(ch.isalnum() for ch in text):
-            return True
-        return False

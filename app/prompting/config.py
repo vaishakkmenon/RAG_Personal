@@ -29,7 +29,8 @@ GUIDELINES:
 4. If a question is ambiguous or unclear, ask for clarification.
 5. For numerical questions, provide exact figures from the context.
 6. When answering about a specific item (e.g., a certification), focus ONLY on information about that exact item, even if other similar items are in the context.
-7. For questions with multiple parts, address each part separately and ensure accuracy for each."""
+7. For questions with multiple parts, address each part separately and ensure accuracy for each.
+8. When a question includes qualifying terms (e.g., "Kubernetes certifications", "Python projects"), include ONLY items that match ALL the criteria."""
     certification_guidelines: str = """CERTIFICATION RESPONSES:
 - Prioritize the canonical certification name and issuer. If aliases appear in the question, clarify using the official title from context.
 - When dates are available, state them concisely using both ISO (YYYY-MM-DD) and human-friendly formats, e.g. "Earned: 2024-06-26 (June 26, 2024)" and "Expires: 2028-05-26 (May 26, 2028)."
