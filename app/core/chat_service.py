@@ -283,7 +283,11 @@ class ChatService:
             logger.warning("No chunks retrieved")
 
             # Check if question is truly vague (only after retrieval failed)
-            heuristic_ambiguous, _ = self.prompt_builder.is_ambiguous(request.question)
+            is_structured = params.get('is_structured_summary', False)
+            heuristic_ambiguous, _ = self.prompt_builder.is_ambiguous(
+                request.question,
+                is_structured_summary=is_structured
+            )
             if heuristic_ambiguous:
                 logger.info(
                     "No chunks found AND question is vague; asking for clarification"

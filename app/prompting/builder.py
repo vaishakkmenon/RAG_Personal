@@ -94,11 +94,12 @@ class PromptBuilder:
         """Check if question follows specific question patterns."""
         return len(self.question_matcher.find_matches(question)) > 0
 
-    def is_ambiguous(self, question: str) -> Tuple[bool, str]:
+    def is_ambiguous(self, question: str, is_structured_summary: bool = False) -> Tuple[bool, str]:
         """Check if a question is ambiguous or too vague.
 
         Args:
             question: The user's question
+            is_structured_summary: Whether router detected structured summary intent
 
         Returns:
             Tuple of (is_ambiguous, reason)
@@ -111,6 +112,10 @@ class PromptBuilder:
 
         if len(question.split()) < self.config.min_question_length:
             return True, "Question is too short"
+
+        # Structured summaries are NOT ambiguous (have clear intent + scope)
+        if is_structured_summary:
+            return False, ""
 
         # Early exit: Check for disambiguating signals
         if self._contains_technology(question):

@@ -73,6 +73,20 @@ class ResponseBuilder:
     
     def _apply_final_adjustments(self, params: Dict[str, Any], analysis: Dict[str, Any]) -> None:
         """Apply final adjustments to parameters."""
+        # Handle structured summaries (broad but clear intent with multiple domains)
+        if analysis.get('is_structured_summary'):
+            num_domains = len(analysis.get('summary_domains', []))
+            params.update({
+                'top_k': 15,  # Increased from 10 for multi-domain coverage
+                'rerank': True,
+                'null_threshold': 0.55,
+                'max_distance': 0.65,
+                'is_structured_summary': True,
+                'is_ambiguous': False,  # Override ambiguity detection
+            })
+            logger.info(f"Structured summary detected covering {num_domains} domains: {analysis.get('summary_domains')}")
+            return
+
         # Adjust for broad questions
         if params['question_type'] == 'broad':
             params.update({
@@ -81,7 +95,7 @@ class ResponseBuilder:
                 'null_threshold': 0.55,
                 'max_distance': 0.65
             })
-        
+
         # Adjust for specific questions
         elif params['question_type'] == 'specific':
             params.update({
@@ -90,6 +104,6 @@ class ResponseBuilder:
                 'null_threshold': 0.4,
                 'max_distance': 0.5
             })
-        
+
         # Cap confidence at 1.0
         params['confidence'] = min(1.0, params.get('confidence', 1.0))
