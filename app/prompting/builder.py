@@ -146,6 +146,7 @@ class PromptBuilder:
             # Build prompt sections
             prompt_sections = [
                 self.config.system_prompt.strip(),
+                self.config.certification_guidelines.strip(),
                 context,
                 "QUESTION:",
                 question.strip(),
