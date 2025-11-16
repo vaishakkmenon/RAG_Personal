@@ -6,25 +6,43 @@ Phase 1: Collect all RAG answers using 1B model (fast)
 Phase 2: Validate all answers at once using 3B model (one model load)
 
 This avoids model swapping overhead while getting accurate validation.
+Supports both Ollama (local) and Groq (cloud) providers.
 """
 
 import json
-import ollama
+import time
 from typing import Dict, Any, List
 from datetime import datetime
+from .llm_validator import LLMValidator
 
 
 class BatchValidator:
     """Validates test results in batch using a larger model"""
 
-    def __init__(self, validation_model: str = "llama3.2:3b-instruct-q4_K_M"):
+    def __init__(
+        self,
+        provider: str = "ollama",
+        validation_model: str = None,
+        groq_api_key: str = None,
+        delay: float = 4.0
+    ):
         """Initialize batch validator
 
         Args:
-            validation_model: Model to use for batch validation (should be larger/better than RAG model)
+            provider: "ollama" or "groq"
+            validation_model: Model to use for batch validation (defaults based on provider)
+            groq_api_key: Groq API key (required if provider='groq')
+            delay: Delay in seconds between validation requests (for rate limiting)
         """
-        self.validation_model = validation_model
-        self.client = ollama.Client()
+        self.provider = provider
+        self.delay = delay
+        self.validator = LLMValidator(
+            provider=provider,
+            model=validation_model,
+            groq_api_key=groq_api_key,
+            keep_alive="30m"  # Keep model loaded for batch processing
+        )
+        self.validation_model = self.validator.model
 
     def validate_batch(
         self,
@@ -49,6 +67,10 @@ class BatchValidator:
         print(f"Found {len(results)} tests to validate\n")
 
         print(f"Loading validation model: {self.validation_model}")
+        if self.provider == "groq":
+            print(f"Rate limiting: {self.delay}s delay between requests")
+            estimated_time = len(results) * self.delay / 60
+            print(f"Estimated validation time: {estimated_time:.1f} minutes")
         print("This may take a moment for the first validation...")
 
         # Validate each test
@@ -76,6 +98,10 @@ class BatchValidator:
                 print("FAIL")
 
             validated_results.append(result)
+
+            # Add delay between validation requests (for Groq rate limiting only)
+            if self.provider == "groq" and i < len(results):  # Don't delay for Ollama or after last validation
+                time.sleep(self.delay)
 
         # Create report
         report = {
@@ -133,14 +159,7 @@ class BatchValidator:
 
         # Get validation from LLM
         try:
-            response = self.client.generate(
-                model=self.validation_model,
-                prompt=validation_prompt,
-                options={"temperature": 0.0},
-                keep_alive="30m"  # Keep model loaded for batch processing
-            )
-
-            validation_text = response['response'].strip()
+            validation_text = self.validator._generate(validation_prompt, temperature=0.0)
             return self._parse_validation(validation_text)
 
         except Exception as e:
@@ -322,14 +341,29 @@ def main():
         help="Output file for validation report"
     )
     parser.add_argument(
+        "--provider",
+        choices=["ollama", "groq"],
+        default="ollama",
+        help="LLM provider for validation"
+    )
+    parser.add_argument(
         "--model",
-        default="llama3.2:3b-instruct-q4_K_M",
-        help="Model to use for validation"
+        help="Model to use for validation (optional, uses defaults)"
+    )
+    parser.add_argument(
+        "--delay",
+        type=float,
+        default=4.0,
+        help="Delay between validation requests in seconds (for rate limiting)"
     )
 
     args = parser.parse_args()
 
-    validator = BatchValidator(validation_model=args.model)
+    validator = BatchValidator(
+        provider=args.provider,
+        validation_model=args.model,
+        delay=args.delay
+    )
     validator.validate_batch(args.results, args.output)
 
 

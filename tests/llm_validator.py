@@ -2,47 +2,103 @@
 LLM-based Test Validator
 
 Uses an LLM to semantically validate RAG answers instead of simple keyword matching.
-This provides much more robust validation that understands:
-- Semantic correctness (not just keyword presence)
-- Partial correctness vs complete incorrectness
-- Relevance and precision
+Supports both Ollama (local) and Groq (cloud) providers.
 """
 
 import json
+import os
 from typing import Dict, Any, List, Optional
 import ollama
+from groq import Groq
 
 
 class LLMValidator:
     """Validates RAG answers using LLM-based semantic evaluation"""
 
-    def __init__(self, model: str = "llama3.2:1b-instruct-q4_K_M", keep_alive: str = "10m"):
-        """Initialize validator with specified model
+    def __init__(
+        self,
+        provider: str = "ollama",
+        model: str = None,
+        groq_api_key: str = None,
+        keep_alive: str = "10m"
+    ):
+        """Initialize validator with specified provider and model
 
         Args:
-            model: Ollama model to use for validation
-            keep_alive: How long to keep model loaded (e.g., "10m", "1h")
+            provider: "ollama" or "groq"
+            model: Model name (defaults based on provider)
+            groq_api_key: Groq API key (required if provider='groq')
+            keep_alive: How long to keep Ollama model loaded (e.g., "10m", "1h")
         """
-        self.model = model
+        self.provider = provider.lower()
         self.keep_alive = keep_alive
-        self.client = ollama.Client()
 
-        # Pre-load the model to avoid loading delays during tests
-        self._warm_up_model()
+        # Set default models based on provider
+        if model is None:
+            if self.provider == "groq":
+                self.model = "llama-3.1-8b-instant"
+            else:
+                self.model = "llama3.1:8b"  # Updated to use 8B model for better validation
+        else:
+            self.model = model
+
+        # Initialize clients
+        if self.provider == "groq":
+            api_key = groq_api_key or os.getenv("LLM_GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
+            if not api_key:
+                raise ValueError(
+                    "Groq API key required. Set LLM_GROQ_API_KEY env var or pass groq_api_key parameter"
+                )
+            self.groq_client = Groq(api_key=api_key)
+            self.ollama_client = None
+            print(f"Initialized validator with Groq: {self.model}")
+        else:
+            self.ollama_client = ollama.Client()
+            self.groq_client = None
+            print(f"Initialized validator with Ollama: {self.model}")
+            # Pre-load the model to avoid loading delays during tests
+            self._warm_up_model()
 
     def _warm_up_model(self):
-        """Pre-load the model to avoid delays during first validation"""
+        """Pre-load the Ollama model to avoid delays during first validation"""
+        if self.provider != "ollama" or not self.ollama_client:
+            return
+
         try:
             # Send a minimal request to load the model into memory
-            self.client.generate(
+            self.ollama_client.generate(
                 model=self.model,
                 prompt="test",
                 options={"temperature": 0.0},
                 keep_alive=self.keep_alive
             )
-        except Exception:
+            print(f"Ollama model {self.model} warmed up")
+        except Exception as e:
+            print(f"Warning: Failed to warm up model: {e}")
             # If warm-up fails, continue anyway (model will load on first real request)
-            pass
+
+    def _generate(self, prompt: str, temperature: float = 0.0) -> str:
+        """Generate response using configured provider"""
+
+        if self.provider == "groq":
+            response = self.groq_client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=temperature,
+                max_tokens=500,
+            )
+            return response.choices[0].message.content
+        else:
+            response = self.ollama_client.generate(
+                model=self.model,
+                prompt=prompt,
+                options={
+                    "temperature": temperature,
+                    "num_predict": 500,
+                },
+                keep_alive=self.keep_alive
+            )
+            return response['response']
 
     def validate_answer(
         self,
@@ -78,14 +134,7 @@ class LLMValidator:
 
         # Get LLM evaluation
         try:
-            response = self.client.generate(
-                model=self.model,
-                prompt=validation_prompt,
-                options={"temperature": 0.0},  # Deterministic evaluation
-                keep_alive=self.keep_alive  # Keep model loaded between validations
-            )
-
-            result_text = response['response'].strip()
+            result_text = self._generate(validation_prompt, temperature=0.0)
 
             # Parse the structured response
             return self._parse_validation_response(result_text)
@@ -238,7 +287,14 @@ Evaluation:"""
 
 # Example usage
 if __name__ == "__main__":
-    validator = LLMValidator()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Test LLM Validator")
+    parser.add_argument("--provider", choices=["ollama", "groq"], default="ollama")
+    parser.add_argument("--model", help="Model name (optional, uses defaults)")
+    args = parser.parse_args()
+
+    validator = LLMValidator(provider=args.provider, model=args.model)
 
     # Test case 1: Correct answer
     result1 = validator.validate_answer(

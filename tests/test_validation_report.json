@@ -1,0 +1,1807 @@
+{
+  "timestamp": "2025-11-16T15:56:32.550382",
+  "validation_model": "llama3.1:8b",
+  "summary": {
+    "total_tests": 43,
+    "passed": 27,
+    "failed": 16,
+    "pass_rate": 62.7906976744186,
+    "average_score": 0.8418604651162791
+  },
+  "results": [
+    {
+      "test_id": "transcript_001",
+      "category": "transcript_gpa",
+      "question": "What was my graduate GPA?",
+      "answer": "4.00 (across all 30 graduate credits)",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 1.9625623226165771,
+      "expected_keywords": [
+        "4.0"
+      ],
+      "expected_answer": "4.0",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:2",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "## Overall Academic Performance\n\n- **Total Credits Earned:** 169 credits (139 undergraduate + 30 graduate)\n- **Consistent Academic Excellence:** Presidential Honors multiple terms\n- **Perfect Graduate...",
+          "distance": 0.26105546951293945
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:3",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "# Graduate Program (MS Computer Science)",
+          "distance": 0.2697538733482361
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:30",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "## Notable Academic Achievements\n\n- **Perfect Graduate GPA:** 4.00 across all 30 graduate credits\n- **Summa Cum Laude:** Undergraduate graduation with highest honors\n- **Consistent Excellence:** Presi...",
+          "distance": 0.26998138427734375
+        }
+      ],
+      "validation": {
+        "passed": true,
+        "score": 0.9,
+        "issues": [],
+        "explanation": "The answer is semantically correct and conveys the expected meaning of a graduate GPA of 4.00, but it does not exactly match the primary criteria of \"4.0\". However, this minor format difference does not significantly impact the accuracy or completeness of the answer."
+      },
+      "passed": true,
+      "validation_score": 0.9,
+      "validation_issues": [],
+      "validation_explanation": "The answer is semantically correct and conveys the expected meaning of a graduate GPA of 4.00, but it does not exactly match the primary criteria of \"4.0\". However, this minor format difference does not significantly impact the accuracy or completeness of the answer."
+    },
+    {
+      "test_id": "transcript_002",
+      "category": "transcript_gpa",
+      "question": "What was my undergraduate GPA?",
+      "answer": "3.97 (Overall GPA)",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.2667267322540283,
+      "expected_keywords": [
+        "3.97"
+      ],
+      "expected_answer": "3.97",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:12",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "## Undergraduate Summary\n\n- **Earned Credits:** 139.00 (121.00 institutional + 18.00 transfer)\n- **GPA Credits:** 121.00\n- **Quality Points:** 481.00\n- **Overall GPA:** 3.97\n- **Graduation Honors:** S...",
+          "distance": 0.26669836044311523
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:11",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "# Undergraduate Program (BS Computer Science)",
+          "distance": 0.2738848924636841
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:1",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "## Degrees Earned\n\n- **Bachelor of Science** in Computer Science (April 27, 2024)\n\n- Minor: Software Engineering\n  - Honors: Summa Cum Laude\n  - Overall GPA: 3.97\n\n- **Master of Science** in Computer ...",
+          "distance": 0.28818023204803467
+        }
+      ],
+      "validation": {
+        "passed": true,
+        "score": 1.0,
+        "issues": [],
+        "explanation": "The answer is semantically correct and conveys the expected meaning of the undergraduate GPA, which is exactly 3.97. It meets all the key elements and is factually accurate, making it a perfect score."
+      },
+      "passed": true,
+      "validation_score": 1.0,
+      "validation_issues": [],
+      "validation_explanation": "The answer is semantically correct and conveys the expected meaning of the undergraduate GPA, which is exactly 3.97. It meets all the key elements and is factually accurate, making it a perfect score."
+    },
+    {
+      "test_id": "transcript_003",
+      "category": "transcript_credits",
+      "question": "How many total credits did I earn?",
+      "answer": "169 credits (139 undergraduate + 30 graduate)",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.2814199924468994,
+      "expected_keywords": [
+        "169",
+        "credits"
+      ],
+      "expected_answer": "169 credits",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:2",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "## Overall Academic Performance\n\n- **Total Credits Earned:** 169 credits (139 undergraduate + 30 graduate)\n- **Consistent Academic Excellence:** Presidential Honors multiple terms\n- **Perfect Graduate...",
+          "distance": 0.2999999523162842
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:20",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "**Term Summary:** 15.00 credits, 60.00 quality points, 4.00 GPA",
+          "distance": 0.3310617208480835
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:16",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "**Term Summary:** 16.00 credits, 64.00 quality points, 4.00 GPA",
+          "distance": 0.3334936499595642
+        }
+      ],
+      "validation": {
+        "passed": true,
+        "score": 1.0,
+        "issues": [],
+        "explanation": "The answer directly conveys the total number of credits earned, which is semantically correct and accurate. It also includes all key elements (169 and credits), making it a perfect evaluation."
+      },
+      "passed": true,
+      "validation_score": 1.0,
+      "validation_issues": [],
+      "validation_explanation": "The answer directly conveys the total number of credits earned, which is semantically correct and accurate. It also includes all key elements (169 and credits), making it a perfect evaluation."
+    },
+    {
+      "test_id": "transcript_004",
+      "category": "transcript_courses",
+      "question": "What courses did I take in Fall 2022?",
+      "answer": "You took the following courses in Fall 2022:\n\n* CS 355: Probability & Statistics in CS\n* CS 401: Programming Languages\n* EE 333: Engr Programming using Objects\n* EE 337: Intro to Microprocessors",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.40863919258117676,
+      "expected_keywords": [
+        "CS 410",
+        "CMST 101",
+        "CS 420",
+        "CS 436",
+        "EE 233"
+      ],
+      "expected_answer": "Should include all classes: 410, 101, 420, 436, 233",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:25",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "### Fall Term 2023 (Dual Enrollment - Graduate Courses)\n\n| Course  | Title                       | Credits | Grade | Quality Points |\n| ------- | --------------------------- | ------- | ----- | ------...",
+          "distance": 0.26779210567474365
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:22",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "### Fall Term 2022\n\n| Course | Title                          | Credits | Grade | Quality Points |\n| ------ | ------------------------------ | ------- | ----- | -------------- |\n| CS 355 | Probability...",
+          "distance": 0.274183988571167
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:9",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "### Fall 2024\n\n| Course | Title                              | Credits | Grade | Quality Points |\n| ------ | ---------------------------------- | ------- | ----- | -------------- |\n| CS 652 | Advanced...",
+          "distance": 0.289076566696167
+        }
+      ],
+      "validation": {
+        "passed": false,
+        "score": 0.5,
+        "issues": [
+          ""
+        ],
+        "explanation": "The answer conveys the expected meaning of courses taken in Fall 2022, but fails to include all key elements."
+      },
+      "passed": false,
+      "validation_score": 0.5,
+      "validation_issues": [
+        ""
+      ],
+      "validation_explanation": "The answer conveys the expected meaning of courses taken in Fall 2022, but fails to include all key elements."
+    },
+    {
+      "test_id": "transcript_005",
+      "category": "transcript_courses",
+      "question": "Did I take CS 410?",
+      "answer": "Yes, CS 410 (Database App Dev).",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.391754150390625,
+      "expected_keywords": [
+        "CS 410",
+        "Fall 2022"
+      ],
+      "expected_answer": "Yes, CS 410 Database App Dev in Fall 2022",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:21",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "### Spring Term 2022\n\n| Course | Title                | Credits | Grade | Quality Points |\n| ------ | -------------------- | ------- | ----- | -------------- |\n| CS 410 | Database App Dev     | 3.00  ...",
+          "distance": 0.3194735050201416
+        },
+        {
+          "id": "/workspace/data/mds/term_2023_spring.md:1",
+          "source": "/workspace/data/mds/term_2023_spring.md",
+          "text": "## Coursework\n\n| Course | Title | Credits | Grade | Quality Points |\n|--------|-------|---------|-------|----------------|\n| CS 355 | Probability & Statistics in CS | 3.00 | A | 12.00 |\n| CS 401 | Pro...",
+          "distance": 0.3298279047012329
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:8",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "### Summer 2024\n\n| Course | Title           | Credits | Grade | Quality Points |\n| ------ | --------------- | ------- | ----- | -------------- |\n| CS 633 | Cloud Computing | 3.00    | A     | 12.00   ...",
+          "distance": 0.33373206853866577
+        }
+      ],
+      "validation": {
+        "passed": true,
+        "score": 0.9,
+        "issues": [],
+        "explanation": "The answer is semantically correct and conveys the expected meaning, but it lacks the specific date (\"Fall 2022\") that was mentioned in the expected answer. However, this minor format issue does not significantly impact the overall accuracy of the response."
+      },
+      "passed": true,
+      "validation_score": 0.9,
+      "validation_issues": [],
+      "validation_explanation": "The answer is semantically correct and conveys the expected meaning, but it lacks the specific date (\"Fall 2022\") that was mentioned in the expected answer. However, this minor format issue does not significantly impact the overall accuracy of the response."
+    },
+    {
+      "test_id": "transcript_006",
+      "category": "transcript_degrees",
+      "question": "What degrees did I earn?",
+      "answer": "You earned the following degrees:\n\n* **Bachelor of Science** in Computer Science (April 27, 2024)\n* **Master of Science** in Computer Science (May 1, 2025)",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.3098888397216797,
+      "expected_keywords": [
+        "Bachelor",
+        "Master"
+      ],
+      "expected_answer": "Bachelor of Science and Master of Science in Computer Science",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:1",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "## Degrees Earned\n\n- **Bachelor of Science** in Computer Science (April 27, 2024)\n\n- Minor: Software Engineering\n  - Honors: Summa Cum Laude\n  - Overall GPA: 3.97\n\n- **Master of Science** in Computer ...",
+          "distance": 0.33083415031433105
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:18",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "**Term Summary:** 17.00 credits, 68.00 quality points, 4.00 GPA",
+          "distance": 0.3446221351623535
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:20",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "**Term Summary:** 15.00 credits, 60.00 quality points, 4.00 GPA",
+          "distance": 0.35549479722976685
+        }
+      ],
+      "validation": {
+        "passed": true,
+        "score": 0.9,
+        "issues": [],
+        "explanation": "The answer is semantically correct and conveys the expected meaning, listing both Bachelor of Science and Master of Science degrees in Computer Science. However, it includes specific dates that are not present in the expected answer, which slightly detracts from a perfect score."
+      },
+      "passed": true,
+      "validation_score": 0.9,
+      "validation_issues": [],
+      "validation_explanation": "The answer is semantically correct and conveys the expected meaning, listing both Bachelor of Science and Master of Science degrees in Computer Science. However, it includes specific dates that are not present in the expected answer, which slightly detracts from a perfect score."
+    },
+    {
+      "test_id": "transcript_007",
+      "category": "transcript_timing",
+      "question": "When did I graduate with my Bachelor's degree?",
+      "answer": "April 27, 2024.",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.273404598236084,
+      "expected_keywords": [
+        "April",
+        "2024",
+        "Bachelor"
+      ],
+      "expected_answer": "April 27, 2024",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:7",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "# Education\n\n- **University of Alabama at Birmingham**, Birmingham, Alabama\n  - **B.S. in Computer Science** \u2014 Graduation Date: Apr 27, 2024\n  - **M.S. in Computer Science** \u2014 Graduation Date: May 1, ...",
+          "distance": 0.3075907230377197
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:1",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "## Degrees Earned\n\n- **Bachelor of Science** in Computer Science (April 27, 2024)\n\n- Minor: Software Engineering\n  - Honors: Summa Cum Laude\n  - Overall GPA: 3.97\n\n- **Master of Science** in Computer ...",
+          "distance": 0.32394468784332275
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:30",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "## Notable Academic Achievements\n\n- **Perfect Graduate GPA:** 4.00 across all 30 graduate credits\n- **Summa Cum Laude:** Undergraduate graduation with highest honors\n- **Consistent Excellence:** Presi...",
+          "distance": 0.3516867756843567
+        }
+      ],
+      "validation": {
+        "passed": true,
+        "score": 1.0,
+        "issues": [],
+        "explanation": "The answer is semantically correct and conveys the expected meaning of graduating with a Bachelor's degree on April 27, 2024. It meets all key elements (April, 2024, Bachelor) and is factually accurate."
+      },
+      "passed": true,
+      "validation_score": 1.0,
+      "validation_issues": [],
+      "validation_explanation": "The answer is semantically correct and conveys the expected meaning of graduating with a Bachelor's degree on April 27, 2024. It meets all key elements (April, 2024, Bachelor) and is factually accurate."
+    },
+    {
+      "test_id": "transcript_008",
+      "category": "transcript_timing",
+      "question": "When did I graduate with my Master's degree?",
+      "answer": "You graduated with your Master's degree on May 1, 2025.",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.2935338020324707,
+      "expected_keywords": [
+        "May",
+        "2025",
+        "Master"
+      ],
+      "expected_answer": "May 1, 2025",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:3",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "# Graduate Program (MS Computer Science)",
+          "distance": 0.3126639127731323
+        },
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:7",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "# Education\n\n- **University of Alabama at Birmingham**, Birmingham, Alabama\n  - **B.S. in Computer Science** \u2014 Graduation Date: Apr 27, 2024\n  - **M.S. in Computer Science** \u2014 Graduation Date: May 1, ...",
+          "distance": 0.3274924159049988
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:1",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "## Degrees Earned\n\n- **Bachelor of Science** in Computer Science (April 27, 2024)\n\n- Minor: Software Engineering\n  - Honors: Summa Cum Laude\n  - Overall GPA: 3.97\n\n- **Master of Science** in Computer ...",
+          "distance": 0.34642529487609863
+        }
+      ],
+      "validation": {
+        "passed": true,
+        "score": 1.0,
+        "issues": [],
+        "explanation": "The answer is semantically correct and conveys the expected meaning of graduating with a Master's degree on May 1, 2025. It meets all key elements (May, 2025, Master) and is factually accurate, making it a perfect score."
+      },
+      "passed": true,
+      "validation_score": 1.0,
+      "validation_issues": [],
+      "validation_explanation": "The answer is semantically correct and conveys the expected meaning of graduating with a Master's degree on May 1, 2025. It meets all key elements (May, 2025, Master) and is factually accurate, making it a perfect score."
+    },
+    {
+      "test_id": "certification_001",
+      "category": "certifications",
+      "question": "What certifications do I have?",
+      "answer": "You have the following certifications:\n\n* Certified Kubernetes Administrator (CKA) \n  - Earned: 2024-06-26 (valid through 2026-06-26)\n  - Issuer: CNCF / The Linux Foundation\n  - Credential_id: LF-qel6snk7io\n* AWS Certified Cloud Practitioner \n  - Earned: 2025-05-26 (valid through 2028-05-26)\n  - Issuer: Amazon Web Services\n  - Credential_id: 713c45fb6a6341fca45facfc74fabcaa\n* AWS Certified AI Practitioner \n  - Earned: 2025-06-01 (valid through 2028-06-01)\n  - Issuer: Amazon Web Services\n  - Credential_id: dc53d66c1c1d46a18e76f862c9a07bdb",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.49211645126342773,
+      "expected_keywords": [
+        "CKA",
+        "Cloud Practitioner",
+        "AI Practitioner"
+      ],
+      "expected_answer": "CKA, AWS Certified Cloud Practitioner, AWS Certified AI Practitioner",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:12",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "# Certifications\n\n- Certified Kubernetes Administrator (CKA)\n- AWS Certified Cloud Practitioner (CCP)\n- AWS Certified AI Practitioner",
+          "distance": 0.29666757583618164
+        },
+        {
+          "id": "/workspace/data/mds/certificate--aws-cloud-practitioner--2025-05-26.md:0",
+          "source": "/workspace/data/mds/certificate--aws-cloud-practitioner--2025-05-26.md",
+          "text": "# Summary\n- Awarded **AWS Certified Cloud Practitioner** on **2025-05-26** (valid through **2028-05-26**).\n- Core domains: cloud concepts, security, pricing, support, shared responsibility.\n\n# Key Are...",
+          "distance": 0.345206618309021
+        },
+        {
+          "id": "/workspace/data/mds/certificate--aws-ai-practitioner--2025-06-01.md:0",
+          "source": "/workspace/data/mds/certificate--aws-ai-practitioner--2025-06-01.md",
+          "text": "# Summary\n- Awarded **AWS Certified AI Practitioner** on **2025-06-01** (valid through **2028-06-01**).\n- Foundational AI/ML knowledge on AWS; responsible AI; solution framing.\n\n# Key Areas\n- AI/ML fu...",
+          "distance": 0.37595897912979126
+        }
+      ],
+      "validation": {
+        "passed": true,
+        "score": 1.0,
+        "issues": [],
+        "explanation": "The answer is semantically correct and conveys the expected meaning, including all key elements (CKA, Cloud Practitioner, AI Practitioner) with accurate information about each certification. The format and structure are different from the expected answer, but the meaning is preserved."
+      },
+      "passed": true,
+      "validation_score": 1.0,
+      "validation_issues": [],
+      "validation_explanation": "The answer is semantically correct and conveys the expected meaning, including all key elements (CKA, Cloud Practitioner, AI Practitioner) with accurate information about each certification. The format and structure are different from the expected answer, but the meaning is preserved."
+    },
+    {
+      "test_id": "certification_002",
+      "category": "certifications",
+      "question": "When did I earn my CKA certification?",
+      "answer": "You earned your Certified Kubernetes Administrator (CKA) certification on **2024-06-26**.",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.31145691871643066,
+      "expected_keywords": [
+        "2024-06-26",
+        "June 26, 2024",
+        "CKA"
+      ],
+      "expected_answer": "June 26, 2024",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/certificate--cka--2024-06-26.md:0",
+          "source": "/workspace/data/mds/certificate--cka--2024-06-26.md",
+          "text": "# Summary\n- Earned **CKA** on **2024-06-26** (valid through **2026-06-26**).\n\n# Full Name:\n- Certified Kubernetes Administrator\n\n# Coverage\n- Cluster lifecycle; scheduling; logging & monitoring\n- Core...",
+          "distance": 0.20937836170196533
+        },
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:12",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "# Certifications\n\n- Certified Kubernetes Administrator (CKA)\n- AWS Certified Cloud Practitioner (CCP)\n- AWS Certified AI Practitioner",
+          "distance": 0.3029521703720093
+        },
+        {
+          "id": "/workspace/data/mds/certificate--aws-ai-practitioner--2025-06-01.md:0",
+          "source": "/workspace/data/mds/certificate--aws-ai-practitioner--2025-06-01.md",
+          "text": "# Summary\n- Awarded **AWS Certified AI Practitioner** on **2025-06-01** (valid through **2028-06-01**).\n- Foundational AI/ML knowledge on AWS; responsible AI; solution framing.\n\n# Key Areas\n- AI/ML fu...",
+          "distance": 0.37517452239990234
+        }
+      ],
+      "validation": {
+        "passed": true,
+        "score": 0.9,
+        "issues": [],
+        "explanation": "The answer is semantically correct and conveys the expected meaning, but it uses a specific date format (\"2024-06-26\") instead of the more general format (\"June 26, 2024\"). This minor format issue prevents a perfect score."
+      },
+      "passed": true,
+      "validation_score": 0.9,
+      "validation_issues": [],
+      "validation_explanation": "The answer is semantically correct and conveys the expected meaning, but it uses a specific date format (\"2024-06-26\") instead of the more general format (\"June 26, 2024\"). This minor format issue prevents a perfect score."
+    },
+    {
+      "test_id": "certification_003",
+      "category": "certifications",
+      "question": "When does my AWS Cloud Practitioner certification expire?",
+      "answer": "Your AWS Cloud Practitioner certification expires on **2028-05-26**.",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.3534846305847168,
+      "expected_keywords": [
+        "2028-05-26",
+        "May",
+        "2028",
+        "expires"
+      ],
+      "expected_answer": "May 26, 2028",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/certificate--aws-cloud-practitioner--2025-05-26.md:0",
+          "source": "/workspace/data/mds/certificate--aws-cloud-practitioner--2025-05-26.md",
+          "text": "# Summary\n- Awarded **AWS Certified Cloud Practitioner** on **2025-05-26** (valid through **2028-05-26**).\n- Core domains: cloud concepts, security, pricing, support, shared responsibility.\n\n# Key Are...",
+          "distance": 0.1755353808403015
+        },
+        {
+          "id": "/workspace/data/mds/certificate--aws-ai-practitioner--2025-06-01.md:0",
+          "source": "/workspace/data/mds/certificate--aws-ai-practitioner--2025-06-01.md",
+          "text": "# Summary\n- Awarded **AWS Certified AI Practitioner** on **2025-06-01** (valid through **2028-06-01**).\n- Foundational AI/ML knowledge on AWS; responsible AI; solution framing.\n\n# Key Areas\n- AI/ML fu...",
+          "distance": 0.2125687599182129
+        },
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:12",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "# Certifications\n\n- Certified Kubernetes Administrator (CKA)\n- AWS Certified Cloud Practitioner (CCP)\n- AWS Certified AI Practitioner",
+          "distance": 0.2775028944015503
+        }
+      ],
+      "validation": {
+        "passed": true,
+        "score": 0.9,
+        "issues": [],
+        "explanation": "The answer conveys the correct semantic meaning of the expected date, but uses a specific format (\"2028-05-26\") instead of the more general format (\"May 26, 2028\"). This minor format difference prevents it from being perfect."
+      },
+      "passed": true,
+      "validation_score": 0.9,
+      "validation_issues": [],
+      "validation_explanation": "The answer conveys the correct semantic meaning of the expected date, but uses a specific format (\"2028-05-26\") instead of the more general format (\"May 26, 2028\"). This minor format difference prevents it from being perfect."
+    },
+    {
+      "test_id": "certification_004",
+      "category": "certifications",
+      "question": "Do I have any Kubernetes certifications?",
+      "answer": "Yes, Certified Kubernetes Administrator (CKA), earned on 2024-06-26 (valid through 2026-06-26).",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.3603546619415283,
+      "expected_keywords": [
+        "Certified Kubernetes Administrator"
+      ],
+      "expected_answer": "Yes, Certified Kubernetes Administrator (CKA)",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:12",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "# Certifications\n\n- Certified Kubernetes Administrator (CKA)\n- AWS Certified Cloud Practitioner (CCP)\n- AWS Certified AI Practitioner",
+          "distance": 0.17240720987319946
+        },
+        {
+          "id": "/workspace/data/mds/certificate--cka--2024-06-26.md:0",
+          "source": "/workspace/data/mds/certificate--cka--2024-06-26.md",
+          "text": "# Summary\n- Earned **CKA** on **2024-06-26** (valid through **2026-06-26**).\n\n# Full Name:\n- Certified Kubernetes Administrator\n\n# Coverage\n- Cluster lifecycle; scheduling; logging & monitoring\n- Core...",
+          "distance": 0.2355332374572754
+        },
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:13",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "# Skills\n\n- **DevOps / Cloud:** Kubernetes, Terraform, Docker, Google Cloud Platform\n- **Programming:** Python, Rust, JavaScript/TypeScript, Java, C\n- **Data / ML:** PSQL, MongoDB, Transformers, RAG, ...",
+          "distance": 0.3026193380355835
+        }
+      ],
+      "validation": {
+        "passed": true,
+        "score": 0.9,
+        "issues": [],
+        "explanation": "The answer is semantically correct and conveys the expected meaning, but it includes additional information (date of certification and expiration) that is not strictly necessary to answer the question. However, this does not detract from its overall accuracy and completeness."
+      },
+      "passed": true,
+      "validation_score": 0.9,
+      "validation_issues": [],
+      "validation_explanation": "The answer is semantically correct and conveys the expected meaning, but it includes additional information (date of certification and expiration) that is not strictly necessary to answer the question. However, this does not detract from its overall accuracy and completeness."
+    },
+    {
+      "test_id": "work_001",
+      "category": "work_experience",
+      "question": "What companies have I worked for?",
+      "answer": "Maven Wave Partners.",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.30948352813720703,
+      "expected_keywords": [
+        "Maven Wave Partners"
+      ],
+      "expected_answer": "Maven Wave Partners and University of Alabama at Birmingham (as Teaching Assistant)",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:2",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "# Work Experience",
+          "distance": 0.3967213034629822
+        },
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:4",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "## Infrastructure Intern \u2014 Maven Wave Partners (Jun 2023 \u2013 Aug 2023) \u00b7 Chicago, IL\n\n- Authored comprehensive training documentation on YAML configuration and Terraform provisioning, ensuring new emplo...",
+          "distance": 0.45907390117645264
+        },
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:6",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "## Infrastructure Intern \u2014 Maven Wave Partners (Jun 2021 \u2013 Aug 2021) \u00b7 Chicago, IL\n\n- Integrated with the Infrastructure team on the progressive implementation of a Google Cloud Platform environment u...",
+          "distance": 0.4728625416755676
+        }
+      ],
+      "validation": {
+        "passed": false,
+        "score": 0.7,
+        "issues": [
+          ""
+        ],
+        "explanation": "The answer is partially correct, mentioning Maven Wave Partners but failing to include the University of Alabama at Birmingham as a work experience."
+      },
+      "passed": false,
+      "validation_score": 0.7,
+      "validation_issues": [
+        ""
+      ],
+      "validation_explanation": "The answer is partially correct, mentioning Maven Wave Partners but failing to include the University of Alabama at Birmingham as a work experience."
+    },
+    {
+      "test_id": "work_002",
+      "category": "work_experience",
+      "question": "What was my role at Maven Wave Partners?",
+      "answer": "Infrastructure Intern.",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.40221643447875977,
+      "expected_keywords": [
+        "Infrastructure Intern",
+        "intern"
+      ],
+      "expected_answer": "Infrastructure Intern",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:4",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "## Infrastructure Intern \u2014 Maven Wave Partners (Jun 2023 \u2013 Aug 2023) \u00b7 Chicago, IL\n\n- Authored comprehensive training documentation on YAML configuration and Terraform provisioning, ensuring new emplo...",
+          "distance": 0.22173750400543213
+        },
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:6",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "## Infrastructure Intern \u2014 Maven Wave Partners (Jun 2021 \u2013 Aug 2021) \u00b7 Chicago, IL\n\n- Integrated with the Infrastructure team on the progressive implementation of a Google Cloud Platform environment u...",
+          "distance": 0.2530949115753174
+        },
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:5",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "## Infrastructure Intern \u2014 Maven Wave Partners (Jun 2022 \u2013 Aug 2022) \u00b7 Chicago, IL\n\n- Refined Terraform configurations to finalize a scalable Google Cloud Platform environment, ensuring reliable deplo...",
+          "distance": 0.29427415132522583
+        }
+      ],
+      "validation": {
+        "passed": true,
+        "score": 1.0,
+        "issues": [],
+        "explanation": "The answer is semantically correct and complete, conveying the exact role as expected without any inaccuracies or irrelevant information. It directly answers the question with no refusal to provide the requested information."
+      },
+      "passed": true,
+      "validation_score": 1.0,
+      "validation_issues": [],
+      "validation_explanation": "The answer is semantically correct and complete, conveying the exact role as expected without any inaccuracies or irrelevant information. It directly answers the question with no refusal to provide the requested information."
+    },
+    {
+      "test_id": "work_003",
+      "category": "work_experience",
+      "question": "How many summers did I intern at Maven Wave?",
+      "answer": "Three summers: 2021, 2022, and 2023.",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.41910886764526367,
+      "expected_keywords": [
+        "3"
+      ],
+      "expected_answer": "3 summers (2021, 2022, 2023)",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:4",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "## Infrastructure Intern \u2014 Maven Wave Partners (Jun 2023 \u2013 Aug 2023) \u00b7 Chicago, IL\n\n- Authored comprehensive training documentation on YAML configuration and Terraform provisioning, ensuring new emplo...",
+          "distance": 0.2620832920074463
+        },
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:6",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "## Infrastructure Intern \u2014 Maven Wave Partners (Jun 2021 \u2013 Aug 2021) \u00b7 Chicago, IL\n\n- Integrated with the Infrastructure team on the progressive implementation of a Google Cloud Platform environment u...",
+          "distance": 0.3181111812591553
+        },
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:5",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "## Infrastructure Intern \u2014 Maven Wave Partners (Jun 2022 \u2013 Aug 2022) \u00b7 Chicago, IL\n\n- Refined Terraform configurations to finalize a scalable Google Cloud Platform environment, ensuring reliable deplo...",
+          "distance": 0.3393046259880066
+        }
+      ],
+      "validation": {
+        "passed": true,
+        "score": 0.9,
+        "issues": [],
+        "explanation": "The answer is semantically correct and conveys the expected meaning of three summers interning at Maven Wave, with accurate dates provided. However, it does not exactly match the expected format, which is why I scored it as \"Excellent\" (0.9) instead of \"Perfect\" (1.0)."
+      },
+      "passed": true,
+      "validation_score": 0.9,
+      "validation_issues": [],
+      "validation_explanation": "The answer is semantically correct and conveys the expected meaning of three summers interning at Maven Wave, with accurate dates provided. However, it does not exactly match the expected format, which is why I scored it as \"Excellent\" (0.9) instead of \"Perfect\" (1.0)."
+    },
+    {
+      "test_id": "work_004",
+      "category": "work_experience",
+      "question": "When did I start working as a Teaching Assistant?",
+      "answer": "August 2022.",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.3438420295715332,
+      "expected_keywords": [
+        "August 2022",
+        "Aug 2022",
+        "2022"
+      ],
+      "expected_answer": "August 2022",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:3",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "## Computer Science Teaching Assistant \u2014 University of Alabama at Birmingham (Aug 2022 \u2013 May 2025) \u00b7 Birmingham, AL\n\n- Assisted professors in teaching Data Structure and Algorithms in Python and Java ...",
+          "distance": 0.40090125799179077
+        },
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:1",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "# Professional Summary\n\nGraduate student in Computer Science with hands-on experience deploying cloud-based solutions to GCP using Terraform and deploying applications to Kubernetes. Demonstrated teac...",
+          "distance": 0.44006335735321045
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:14",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "## Undergraduate Coursework by Term",
+          "distance": 0.4573364853858948
+        }
+      ],
+      "validation": {
+        "passed": true,
+        "score": 1.0,
+        "issues": [],
+        "explanation": "The answer is semantically correct and directly conveys the expected information in the exact format requested, making it a perfect match. It accurately answers the question without any irrelevant information or refusal to provide the answer."
+      },
+      "passed": true,
+      "validation_score": 1.0,
+      "validation_issues": [],
+      "validation_explanation": "The answer is semantically correct and directly conveys the expected information in the exact format requested, making it a perfect match. It accurately answers the question without any irrelevant information or refusal to provide the answer."
+    },
+    {
+      "test_id": "skills_001",
+      "category": "skills",
+      "question": "Do I have experience with Kubernetes?",
+      "answer": "Yes, deploying cloud-based solutions to GCP using Terraform and deploying applications to Kubernetes.",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.3805551528930664,
+      "expected_keywords": [
+        "yes"
+      ],
+      "expected_answer": "Yes, Kubernetes experience and CKA certification",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:13",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "# Skills\n\n- **DevOps / Cloud:** Kubernetes, Terraform, Docker, Google Cloud Platform\n- **Programming:** Python, Rust, JavaScript/TypeScript, Java, C\n- **Data / ML:** PSQL, MongoDB, Transformers, RAG, ...",
+          "distance": 0.2943882942199707
+        },
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:1",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "# Professional Summary\n\nGraduate student in Computer Science with hands-on experience deploying cloud-based solutions to GCP using Terraform and deploying applications to Kubernetes. Demonstrated teac...",
+          "distance": 0.2985585331916809
+        },
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:12",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "# Certifications\n\n- Certified Kubernetes Administrator (CKA)\n- AWS Certified Cloud Practitioner (CCP)\n- AWS Certified AI Practitioner",
+          "distance": 0.306612491607666
+        }
+      ],
+      "validation": {
+        "passed": false,
+        "score": 0.7,
+        "issues": [
+          ""
+        ],
+        "explanation": "The answer conveys some relevant information about Kubernetes experience, but falls short of explicitly mentioning the expected key element of CKA certification."
+      },
+      "passed": false,
+      "validation_score": 0.7,
+      "validation_issues": [
+        ""
+      ],
+      "validation_explanation": "The answer conveys some relevant information about Kubernetes experience, but falls short of explicitly mentioning the expected key element of CKA certification."
+    },
+    {
+      "test_id": "skills_002",
+      "category": "skills",
+      "question": "What cloud platforms do I have experience with?",
+      "answer": "You have experience with the following cloud platforms:\n\n* Google Cloud Platform (GCP) \n  - Deploying cloud-based solutions using Terraform\n  - Refined Terraform configurations to finalize a scalable GCP environment\n  - Implemented a Google Cloud Platform environment using Kubernetes\n\nNote: AWS is also mentioned in the context, but it is specifically mentioned in the context of the AWS Certified Cloud Practitioner certification, not as a platform you have experience with.",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.4084465503692627,
+      "expected_keywords": [
+        "GCP",
+        "AWS"
+      ],
+      "expected_answer": "GCP and AWS",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:13",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "# Skills\n\n- **DevOps / Cloud:** Kubernetes, Terraform, Docker, Google Cloud Platform\n- **Programming:** Python, Rust, JavaScript/TypeScript, Java, C\n- **Data / ML:** PSQL, MongoDB, Transformers, RAG, ...",
+          "distance": 0.31141501665115356
+        },
+        {
+          "id": "/workspace/data/mds/certificate--aws-cloud-practitioner--2025-05-26.md:0",
+          "source": "/workspace/data/mds/certificate--aws-cloud-practitioner--2025-05-26.md",
+          "text": "# Summary\n- Awarded **AWS Certified Cloud Practitioner** on **2025-05-26** (valid through **2028-05-26**).\n- Core domains: cloud concepts, security, pricing, support, shared responsibility.\n\n# Key Are...",
+          "distance": 0.33406341075897217
+        },
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:1",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "# Professional Summary\n\nGraduate student in Computer Science with hands-on experience deploying cloud-based solutions to GCP using Terraform and deploying applications to Kubernetes. Demonstrated teac...",
+          "distance": 0.34263885021209717
+        }
+      ],
+      "validation": {
+        "passed": true,
+        "score": 0.9,
+        "issues": [],
+        "explanation": "The answer is semantically correct and conveys the expected meaning, listing GCP as a cloud platform with experience. However, it does not explicitly mention AWS, which is part of the expected content, but the note about AWS being mentioned in context is provided, making it a minor format issue rather than a major error."
+      },
+      "passed": true,
+      "validation_score": 0.9,
+      "validation_issues": [],
+      "validation_explanation": "The answer is semantically correct and conveys the expected meaning, listing GCP as a cloud platform with experience. However, it does not explicitly mention AWS, which is part of the expected content, but the note about AWS being mentioned in context is provided, making it a minor format issue rather than a major error."
+    },
+    {
+      "test_id": "skills_003",
+      "category": "skills",
+      "question": "What programming languages do I know?",
+      "answer": "You know the following programming languages:\n- Python\n- Assembly\n- Object-Oriented Programming",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.3121824264526367,
+      "expected_keywords": [
+        "Python",
+        "Java",
+        "C"
+      ],
+      "expected_answer": "Python, C, and Java are the main languages I know",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:32",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "## Technical Proficiencies (Based on Coursework)\n\n- **Programming Languages:** Python, Assembly, Object-Oriented Programming\n- **AI/ML Technologies:** Neural Networks, Deep Learning, Computer Vision, ...",
+          "distance": 0.30696964263916016
+        },
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:13",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "# Skills\n\n- **DevOps / Cloud:** Kubernetes, Terraform, Docker, Google Cloud Platform\n- **Programming:** Python, Rust, JavaScript/TypeScript, Java, C\n- **Data / ML:** PSQL, MongoDB, Transformers, RAG, ...",
+          "distance": 0.36769676208496094
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:29",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "## Undergraduate Core Competencies\n\n- **Programming & Software Development:** Python, Object-Oriented Programming, Software Engineering\n- **Computer Systems:** Computer Organization, Digital Logic, Mi...",
+          "distance": 0.37616586685180664
+        }
+      ],
+      "validation": {
+        "passed": false,
+        "score": 0.5,
+        "issues": [
+          ""
+        ],
+        "explanation": "The answer conveys the correct meaning, but lacks some key elements and has minor formatting issues."
+      },
+      "passed": false,
+      "validation_score": 0.5,
+      "validation_issues": [
+        ""
+      ],
+      "validation_explanation": "The answer conveys the correct meaning, but lacks some key elements and has minor formatting issues."
+    },
+    {
+      "test_id": "projects_001",
+      "category": "projects",
+      "question": "What personal projects have I built?",
+      "answer": "I don't know. It isn't mentioned in the provided documents.",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 0.2733018398284912,
+      "expected_keywords": [
+        "RAG",
+        "GPT",
+        "Music Genre Classification"
+      ],
+      "expected_answer": "FastAPI RAG Service, GPT From Scratch, Music Genre Classification",
+      "is_impossible": false,
+      "sources": [],
+      "validation": {
+        "passed": false,
+        "score": 0.7,
+        "issues": [
+          ""
+        ],
+        "explanation": "The answer \"I don't know\" is too vague and doesn't provide any information about the personal projects built. Although it's factually correct that the information isn't mentioned in the provided documents, it doesn't convey the expected meaning of listing specific project names."
+      },
+      "passed": false,
+      "validation_score": 0.7,
+      "validation_issues": [
+        ""
+      ],
+      "validation_explanation": "The answer \"I don't know\" is too vague and doesn't provide any information about the personal projects built. Although it's factually correct that the information isn't mentioned in the provided documents, it doesn't convey the expected meaning of listing specific project names."
+    },
+    {
+      "test_id": "projects_002",
+      "category": "projects",
+      "question": "Have I built any machine learning projects?",
+      "answer": "Yes, Music Genre Classification, which is a CNN-based model to classify audio spectrograms, improving accuracy by +5\u201310% over traditional baselines (k-NN, SVM, Random Forest).",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.3092620372772217,
+      "expected_keywords": [
+        "yes",
+        "Music Genre Classification",
+        "GPT"
+      ],
+      "expected_answer": "Yes, including Music Genre Classification and GPT From Scratch",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:8",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "# Personal Projects",
+          "distance": 0.375446081161499
+        },
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:11",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "## Music Genre Classification\n\n- Built a CNN-based model to classify audio spectrograms, improving accuracy by **+5\u201310%** over traditional baselines (k-NN, SVM, Random Forest).",
+          "distance": 0.3795151710510254
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:28",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "## Graduate Focus Areas\n\n- **Artificial Intelligence & Machine Learning:** Strong foundation with AI, NLP, Deep Learning, Machine Learning, and Computer Vision\n- **Data Science & Analytics:** Comprehe...",
+          "distance": 0.39463865756988525
+        }
+      ],
+      "validation": {
+        "passed": false,
+        "score": 0.7,
+        "issues": [
+          ""
+        ],
+        "explanation": "The answer is partially correct and accurate in mentioning Music Genre Classification, but it misses another important project, GPT From Scratch."
+      },
+      "passed": false,
+      "validation_score": 0.7,
+      "validation_issues": [
+        ""
+      ],
+      "validation_explanation": "The answer is partially correct and accurate in mentioning Music Genre Classification, but it misses another important project, GPT From Scratch."
+    },
+    {
+      "test_id": "impossible_001",
+      "category": "impossible",
+      "question": "What is my favorite color?",
+      "answer": "I don't know. I couldn't find sufficiently relevant information in my documents to answer this question confidently.",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 0.061795949935913086,
+      "expected_keywords": [
+        "don't know"
+      ],
+      "expected_answer": "I don't know",
+      "is_impossible": true,
+      "sources": [],
+      "validation": {
+        "passed": true,
+        "score": 1.0,
+        "issues": [],
+        "explanation": "The response clearly expresses uncertainty and does not provide any made-up information, adhering to the criteria for correct handling of impossible questions. It accurately conveys that there is no relevant information available in the documents to answer the question confidently."
+      },
+      "passed": true,
+      "validation_score": 1.0,
+      "validation_issues": [],
+      "validation_explanation": "The response clearly expresses uncertainty and does not provide any made-up information, adhering to the criteria for correct handling of impossible questions. It accurately conveys that there is no relevant information available in the documents to answer the question confidently."
+    },
+    {
+      "test_id": "impossible_002",
+      "category": "impossible",
+      "question": "Where was I born?",
+      "answer": "I don't know. I couldn't find sufficiently relevant information in my documents to answer this question confidently.",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 0.04630875587463379,
+      "expected_keywords": [
+        "don't know"
+      ],
+      "expected_answer": "I don't know",
+      "is_impossible": true,
+      "sources": [],
+      "validation": {
+        "passed": true,
+        "score": 1.0,
+        "issues": [],
+        "explanation": "The response clearly expresses uncertainty and does not provide any made-up information, adhering to the criteria for correct handling of an impossible question. It accurately conveys that there is insufficient relevant information in the documents to answer the question confidently."
+      },
+      "passed": true,
+      "validation_score": 1.0,
+      "validation_issues": [],
+      "validation_explanation": "The response clearly expresses uncertainty and does not provide any made-up information, adhering to the criteria for correct handling of an impossible question. It accurately conveys that there is insufficient relevant information in the documents to answer the question confidently."
+    },
+    {
+      "test_id": "impossible_003",
+      "category": "impossible",
+      "question": "What did I have for breakfast today?",
+      "answer": "I don't know. It isn't mentioned in the provided documents.",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 0.36803627014160156,
+      "expected_keywords": [
+        "don't know"
+      ],
+      "expected_answer": "I don't know",
+      "is_impossible": true,
+      "sources": [],
+      "validation": {
+        "passed": true,
+        "score": 1.0,
+        "issues": [],
+        "explanation": "The response clearly expresses uncertainty and does not provide any specific facts or made-up information, adhering to the criteria for correct handling of an impossible question. It accurately conveys that the answer cannot be determined from the provided documents."
+      },
+      "passed": true,
+      "validation_score": 1.0,
+      "validation_issues": [],
+      "validation_explanation": "The response clearly expresses uncertainty and does not provide any specific facts or made-up information, adhering to the criteria for correct handling of an impossible question. It accurately conveys that the answer cannot be determined from the provided documents."
+    },
+    {
+      "test_id": "impossible_004",
+      "category": "impossible",
+      "question": "Do I have a PhD?",
+      "answer": "I don't know. It isn't mentioned in the provided documents.",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 0.28157544136047363,
+      "expected_keywords": [
+        "no"
+      ],
+      "expected_answer": "No, only BS and MS degrees",
+      "is_impossible": false,
+      "sources": [],
+      "validation": {
+        "passed": false,
+        "score": 0.7,
+        "issues": [
+          ""
+        ],
+        "explanation": "The answer does not explicitly state that only BS and MS degrees are mentioned, which is the primary information needed to answer the question. However, it does imply this by stating \"I don't know\" without mentioning any other degrees, which is why I'm giving a score of 0.7."
+      },
+      "passed": false,
+      "validation_score": 0.7,
+      "validation_issues": [
+        ""
+      ],
+      "validation_explanation": "The answer does not explicitly state that only BS and MS degrees are mentioned, which is the primary information needed to answer the question. However, it does imply this by stating \"I don't know\" without mentioning any other degrees, which is why I'm giving a score of 0.7."
+    },
+    {
+      "test_id": "impossible_005",
+      "category": "impossible",
+      "question": "What high school did I attend?",
+      "answer": "I don't know. It isn't mentioned in the provided documents.",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 0.29105281829833984,
+      "expected_keywords": [
+        "not mentioned"
+      ],
+      "expected_answer": "I don't know",
+      "is_impossible": true,
+      "sources": [],
+      "validation": {
+        "passed": true,
+        "score": 1.0,
+        "issues": [],
+        "explanation": "The response clearly expresses uncertainty and does not provide any specific facts or dates that could be considered made-up. It accurately reflects the limitations of the provided documents in answering the question."
+      },
+      "passed": true,
+      "validation_score": 1.0,
+      "validation_issues": [],
+      "validation_explanation": "The response clearly expresses uncertainty and does not provide any specific facts or dates that could be considered made-up. It accurately reflects the limitations of the provided documents in answering the question."
+    },
+    {
+      "test_id": "impossible_006",
+      "category": "impossible",
+      "question": "What is my salary?",
+      "answer": "I don't know. It isn't mentioned in the provided documents.",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 0.25269627571105957,
+      "expected_keywords": [
+        "don't know"
+      ],
+      "expected_answer": "I don't know",
+      "is_impossible": true,
+      "sources": [],
+      "validation": {
+        "passed": true,
+        "score": 1.0,
+        "issues": [],
+        "explanation": "The response clearly expresses uncertainty and does not provide any specific facts or made-up information, adhering to the criteria for correct handling of an impossible question. It directly states that the salary is \"not mentioned\" in the provided documents."
+      },
+      "passed": true,
+      "validation_score": 1.0,
+      "validation_issues": [],
+      "validation_explanation": "The response clearly expresses uncertainty and does not provide any specific facts or made-up information, adhering to the criteria for correct handling of an impossible question. It directly states that the salary is \"not mentioned\" in the provided documents."
+    },
+    {
+      "test_id": "edge_001",
+      "category": "edge_case",
+      "question": "GPA?",
+      "answer": "4.00 (Graduate GPA)",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.24353861808776855,
+      "expected_keywords": [],
+      "expected_answer": "Should prompt the user to clarify which GPA they need.",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:2",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "## Overall Academic Performance\n\n- **Total Credits Earned:** 169 credits (139 undergraduate + 30 graduate)\n- **Consistent Academic Excellence:** Presidential Honors multiple terms\n- **Perfect Graduate...",
+          "distance": 0.2740671634674072
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:16",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "**Term Summary:** 16.00 credits, 64.00 quality points, 4.00 GPA",
+          "distance": 0.2779858112335205
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:18",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "**Term Summary:** 17.00 credits, 68.00 quality points, 4.00 GPA",
+          "distance": 0.28056013584136963
+        }
+      ],
+      "validation": {
+        "passed": false,
+        "score": 0.7,
+        "issues": [
+          ""
+        ],
+        "explanation": "The answer provides a specific value for a graduate GPA, but fails to address the ambiguity of the original question by not asking for clarification. This indicates that it's missing some essential information and has minor inaccuracies in its assumption."
+      },
+      "passed": false,
+      "validation_score": 0.7,
+      "validation_issues": [
+        ""
+      ],
+      "validation_explanation": "The answer provides a specific value for a graduate GPA, but fails to address the ambiguity of the original question by not asking for clarification. This indicates that it's missing some essential information and has minor inaccuracies in its assumption."
+    },
+    {
+      "test_id": "edge_002",
+      "category": "edge_case",
+      "question": "Did I take any database courses and what grades did I receive in them?",
+      "answer": "Yes, you took the following database courses and received the following grades:\n\n* CS 610 - Database Systems: A\n* CS 410 - Database App Dev: A\n* CS 410 - Database App Development: A (Note: This is the same course as CS 410 - Database App Dev)\n\nNote: There is a duplicate entry for CS 410 - Database App Dev, but the grade is the same.",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.4369041919708252,
+      "expected_keywords": [
+        "CS 410",
+        "Database",
+        "CS 610"
+      ],
+      "expected_answer": "Should mention CS 410 and the grade if available",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/term_2025_spring.md:1",
+          "source": "/workspace/data/mds/term_2025_spring.md",
+          "text": "## Coursework\n\n| Course | Title | Credits | Grade | Quality Points |\n|--------|-------|---------|-------|----------------|\n| CS 610 | Database Systems | 3.00 | A | 12.00 |\n| CS 685 | Foundations of Da...",
+          "distance": 0.2944120168685913
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:10",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "### Spring 2025\n\n| Course | Title                       | Credits | Grade | Quality Points |\n| ------ | --------------------------- | ------- | ----- | -------------- |\n| CS 610 | Database Systems    ...",
+          "distance": 0.3185919523239136
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:21",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "### Spring Term 2022\n\n| Course | Title                | Credits | Grade | Quality Points |\n| ------ | -------------------- | ------- | ----- | -------------- |\n| CS 410 | Database App Dev     | 3.00  ...",
+          "distance": 0.3526836633682251
+        }
+      ],
+      "validation": {
+        "passed": true,
+        "score": 0.9,
+        "issues": [],
+        "explanation": "The answer is semantically correct and conveys the expected meaning, mentioning CS 410 with a grade of A. However, it includes an unnecessary note about the duplicate entry, which slightly detracts from its precision."
+      },
+      "passed": true,
+      "validation_score": 0.9,
+      "validation_issues": [],
+      "validation_explanation": "The answer is semantically correct and conveys the expected meaning, mentioning CS 410 with a grade of A. However, it includes an unnecessary note about the duplicate entry, which slightly detracts from its precision."
+    },
+    {
+      "test_id": "edge_003",
+      "category": "edge_case",
+      "question": "Kubernetes",
+      "answer": "Here's the answer based on the provided context:\n\n* Certified Kubernetes Administrator (CKA) \n  - Earned: 2024-06-26 (valid through 2026-06-26)\n  - Issuer: CNCF / The Linux Foundation\n  - Coverage: \n    \u2022 Cluster lifecycle; scheduling; logging & monitoring\n    \u2022 Core concepts; networking; storage; troubleshooting\n    \u2022 Security/RBAC; workload management",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 1.5859832763671875,
+      "expected_keywords": [],
+      "expected_answer": "Should note Kubernetes context and include a clarifying follow-up.",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:12",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "# Certifications\n\n- Certified Kubernetes Administrator (CKA)\n- AWS Certified Cloud Practitioner (CCP)\n- AWS Certified AI Practitioner",
+          "distance": 0.2589151859283447
+        },
+        {
+          "id": "/workspace/data/mds/certificate--cka--2024-06-26.md:0",
+          "source": "/workspace/data/mds/certificate--cka--2024-06-26.md",
+          "text": "# Summary\n- Earned **CKA** on **2024-06-26** (valid through **2026-06-26**).\n\n# Full Name:\n- Certified Kubernetes Administrator\n\n# Coverage\n- Cluster lifecycle; scheduling; logging & monitoring\n- Core...",
+          "distance": 0.26444685459136963
+        },
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:6",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "## Infrastructure Intern \u2014 Maven Wave Partners (Jun 2021 \u2013 Aug 2021) \u00b7 Chicago, IL\n\n- Integrated with the Infrastructure team on the progressive implementation of a Google Cloud Platform environment u...",
+          "distance": 0.2700843811035156
+        }
+      ],
+      "validation": {
+        "passed": true,
+        "score": 0.9,
+        "issues": [],
+        "explanation": "The answer conveys the expected meaning and includes all key elements, but with minor format issues (e.g., \"valid through\" instead of just \"expires\"). It accurately represents the information about the Certified Kubernetes Administrator certification."
+      },
+      "passed": true,
+      "validation_score": 0.9,
+      "validation_issues": [],
+      "validation_explanation": "The answer conveys the expected meaning and includes all key elements, but with minor format issues (e.g., \"valid through\" instead of just \"expires\"). It accurately represents the information about the Certified Kubernetes Administrator certification."
+    },
+    {
+      "test_id": "broad_001",
+      "category": "broad",
+      "question": "Summarize my professional background",
+      "answer": "Based on the provided context, your professional background is not explicitly mentioned. However, we can infer some information from the academic summaries.\n\nYou have completed multiple terms with a consistent 4.00 GPA, indicating academic achievement. The academic specializations are not mentioned in the provided context.\n\nTo provide a more comprehensive answer, I would need more information about your professional experience and background. However, based on the available data, here is a summary:\n\nYou have a strong academic record with a 4.00 GPA across multiple terms, earning 15.00, 16.00, and 17.00 credits with quality points of 60.00, 64.00, and 68.00, respectively.",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 0.4844200611114502,
+      "expected_keywords": [
+        "Computer Science",
+        "experience",
+        "GCP",
+        "Kubernetes"
+      ],
+      "expected_answer": "Should include education, technical skills, and experience",
+      "is_impossible": false,
+      "sources": [],
+      "validation": {
+        "passed": false,
+        "score": 0.7,
+        "issues": [
+          ""
+        ],
+        "explanation": "The answer provides some relevant information about the academic record, but it fails to include essential details about education, technical skills, and experience."
+      },
+      "passed": false,
+      "validation_score": 0.7,
+      "validation_issues": [
+        ""
+      ],
+      "validation_explanation": "The answer provides some relevant information about the academic record, but it fails to include essential details about education, technical skills, and experience."
+    },
+    {
+      "test_id": "broad_002",
+      "category": "broad",
+      "question": "What technical skills do I have?",
+      "answer": "Based on the provided context, you have the following technical skills:\n\n* **Programming Languages:**\n  - Python\n  - Assembly\n  - Object-Oriented Programming\n* **AI/ML Technologies:**\n  - Neural Networks\n  - Deep Learning\n  - Computer Vision\n  - Natural Language Processing\n* **Data & Analytics:**\n  - Database Systems\n  - Data Science Foundations\n  - Statistical Analysis\n* **Systems & Networks:**\n  - Computer Organization\n  - Networking\n  - Cloud Computing\n* **Security:**\n  - Cryptography\n  - Computer Security\n* **Software Engineering:**\n  - Full software development lifecycle\n  - Engineering methodologies\n* **DevOps / Cloud:**\n  - Kubernetes\n  - Terraform\n  - Docker\n  - Google Cloud Platform\n* **Programming:**\n  - Python\n  - Rust\n  - JavaScript/TypeScript\n  - Java\n  - C\n* **Data / ML:**\n  - PSQL\n  - MongoDB\n  - Transformers\n  - RAG\n  - ChromaDB\n  - LangGraph\n  - Llama-3 via Ollama\n* **Tooling:**\n  - FastAPI\n  - Next.js\n  - Tailwind\n  - GitHub Actions",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 3.689880609512329,
+      "expected_keywords": [
+        "Kubernetes",
+        "Docker",
+        "Python",
+        "Rust",
+        "GCP",
+        "AWS",
+        "Terraform"
+      ],
+      "expected_answer": "Should list multiple technical skills",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:32",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "## Technical Proficiencies (Based on Coursework)\n\n- **Programming Languages:** Python, Assembly, Object-Oriented Programming\n- **AI/ML Technologies:** Neural Networks, Deep Learning, Computer Vision, ...",
+          "distance": 0.2955801486968994
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:31",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "# Skills & Knowledge Areas Demonstrated",
+          "distance": 0.3299330472946167
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:29",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "## Undergraduate Core Competencies\n\n- **Programming & Software Development:** Python, Object-Oriented Programming, Software Engineering\n- **Computer Systems:** Computer Organization, Digital Logic, Mi...",
+          "distance": 0.3709383010864258
+        }
+      ],
+      "validation": {
+        "passed": true,
+        "score": 0.9,
+        "issues": [],
+        "explanation": "The answer is semantically correct and conveys multiple technical skills, but it's not perfect due to some minor format issues (e.g., redundant listing of Python under \"Programming\" and \"Data / ML\"). However, all key elements are present, making it an excellent response."
+      },
+      "passed": true,
+      "validation_score": 0.9,
+      "validation_issues": [],
+      "validation_explanation": "The answer is semantically correct and conveys multiple technical skills, but it's not perfect due to some minor format issues (e.g., redundant listing of Python under \"Programming\" and \"Data / ML\"). However, all key elements are present, making it an excellent response."
+    },
+    {
+      "test_id": "broad_003",
+      "category": "broad",
+      "question": "Give me an overview of my academic performance",
+      "answer": "Based on the provided context, here's an overview of your academic performance:\n\n* **Total Credits Earned:** 169 credits (139 undergraduate + 30 graduate)\n* **Consistent Academic Excellence:** You have received Presidential Honors multiple terms.\n* **Perfect Graduate Performance:** You have achieved a 4.00 GPA across all graduate coursework.\n* **Graduate Term Performance:**\n + **Credits Earned:** 3.00\n + **Quality Points:** 12.00\n + **Term GPA:** 4.00\n + **Academic Standing:** Good Standing (in both Summer 2023 and Summer 2024 terms)\n* **Graduate Level:** You are currently at the graduate level, as indicated by the metadata in the Summer 2024 Term Summary.",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 3.127373695373535,
+      "expected_keywords": [
+        "GPA",
+        "4.00",
+        "3.97",
+        "credits",
+        "169"
+      ],
+      "expected_answer": "Should mention GPAs and possibly credit totals",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:0",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "# Academic Summary",
+          "distance": 0.22898149490356445
+        },
+        {
+          "id": "/workspace/data/mds/term_2024_summer.md:0",
+          "source": "/workspace/data/mds/term_2024_summer.md",
+          "text": "# Summer 2024 Term Summary\n\n## Term Performance\n- **Credits Earned:** 3.00\n- **Quality Points:** 12.00\n- **Term GPA:** 4.00\n- **Academic Standing:** Good Standing",
+          "distance": 0.2839961051940918
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:27",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "# Academic Specialization Analysis",
+          "distance": 0.28963589668273926
+        }
+      ],
+      "validation": {
+        "passed": true,
+        "score": 0.9,
+        "issues": [],
+        "explanation": "The answer is semantically correct and conveys the expected meaning of academic performance, including GPAs and credit totals. However, it includes some minor format issues, such as unnecessary details about graduate level and term summaries, which prevents a perfect score."
+      },
+      "passed": true,
+      "validation_score": 0.9,
+      "validation_issues": [],
+      "validation_explanation": "The answer is semantically correct and conveys the expected meaning of academic performance, including GPAs and credit totals. However, it includes some minor format issues, such as unnecessary details about graduate level and term summaries, which prevents a perfect score."
+    },
+    {
+      "test_id": "broad_004",
+      "category": "broad",
+      "question": "Summarize my professional experience, education, and certifications",
+      "answer": "Based on the provided context, here's a summary of your professional experience, education, and certifications:\n\n**Professional Experience:**\n\nUnfortunately, the provided context does not contain any information about your professional experience.\n\n**Education:**\n\n* **Academic Summary:**\n + You have completed multiple terms with a 4.00 GPA.\n + The exact number of credits and quality points for each term are not specified, but the following information is available:\n  - Term 1: 15.00 credits, 60.00 quality points, 4.00 GPA\n  - Term 2: 16.00 credits, 64.00 quality points, 4.00 GPA\n\n**Certifications:**\n\nUnfortunately, the provided context does not contain any information about your certifications.",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.45023226737976074,
+      "expected_keywords": [
+        "Computer Science",
+        "education",
+        "certifications",
+        "experience"
+      ],
+      "expected_answer": "Should include education, certifications, and work experience highlights",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:2",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "# Work Experience",
+          "distance": 0.3007941246032715
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:0",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "# Academic Summary",
+          "distance": 0.309609055519104
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:20",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "**Term Summary:** 15.00 credits, 60.00 quality points, 4.00 GPA",
+          "distance": 0.3327054977416992
+        }
+      ],
+      "validation": {
+        "passed": false,
+        "score": 0.7,
+        "issues": [
+          ""
+        ],
+        "explanation": "The answer partially covers the expected content, but it lacks essential details about certifications and professional experience."
+      },
+      "passed": false,
+      "validation_score": 0.7,
+      "validation_issues": [
+        ""
+      ],
+      "validation_explanation": "The answer partially covers the expected content, but it lacks essential details about certifications and professional experience."
+    },
+    {
+      "test_id": "broad_multi_001",
+      "category": "broad",
+      "question": "Give me an overview of my career background and academic achievements",
+      "answer": "Based on the provided context, here's an overview of your career background and academic achievements:\n\n**Academic Achievements:**\n\n* Total Credits Earned: 169 credits (139 undergraduate + 30 graduate)\n* Consistent Academic Excellence: Presidential Honors multiple terms\n* Perfect Graduate Performance: 4.00 GPA across all graduate coursework\n* GPA: 4.00 (undergraduate and graduate)\n* Quality Points: 64.00 (undergraduate) and 60.00 (graduate)\n* Term Summary: 16.00 credits, 64.00 quality points, 4.00 GPA (undergraduate) and 15.00 credits, 60.00 quality points, 4.00 GPA (graduate)\n\n**No information is available about your career background in the provided context.**",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.44942402839660645,
+      "expected_keywords": [
+        "career",
+        "academic",
+        "Computer Science"
+      ],
+      "expected_answer": "Should include academic background and career highlights",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:0",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "# Academic Summary",
+          "distance": 0.28444135189056396
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:16",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "**Term Summary:** 16.00 credits, 64.00 quality points, 4.00 GPA",
+          "distance": 0.32096314430236816
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:2",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "## Overall Academic Performance\n\n- **Total Credits Earned:** 169 credits (139 undergraduate + 30 graduate)\n- **Consistent Academic Excellence:** Presidential Honors multiple terms\n- **Perfect Graduate...",
+          "distance": 0.3217673897743225
+        }
+      ],
+      "validation": {
+        "passed": false,
+        "score": 0.7,
+        "issues": [
+          ""
+        ],
+        "explanation": ""
+      },
+      "passed": false,
+      "validation_score": 0.7,
+      "validation_issues": [
+        ""
+      ],
+      "validation_explanation": ""
+    },
+    {
+      "test_id": "ambig_001",
+      "category": "ambiguity_detection",
+      "question": "Experience?",
+      "answer": "- **Work Experience:**\n  - **Summer 2024 Term:** \n    - Earned: 3.00 credits\n    - Quality Points: 12.00\n    - Term GPA: 4.00\n    - Academic Standing: Good Standing\n  - **Summer 2022 Term:** \n    - Earned: 3.00 credits\n    - Quality Points: 12.00\n    - Term GPA: 4.00\n    - Academic Standing: Good Standing\n  - **Summer 2023 Term:** \n    - Earned: 3.00 credits\n    - Quality Points: 12.00\n    - Term GPA: 4.00\n    - Academic Standing: Good Standing",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 1.439516305923462,
+      "expected_keywords": [],
+      "expected_answer": "Should request clarification about the type of experience.",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:2",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "# Work Experience",
+          "distance": 0.22643673419952393
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:31",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "# Skills & Knowledge Areas Demonstrated",
+          "distance": 0.38698315620422363
+        },
+        {
+          "id": "/workspace/data/mds/term_2024_summer.md:0",
+          "source": "/workspace/data/mds/term_2024_summer.md",
+          "text": "# Summer 2024 Term Summary\n\n## Term Performance\n- **Credits Earned:** 3.00\n- **Quality Points:** 12.00\n- **Term GPA:** 4.00\n- **Academic Standing:** Good Standing",
+          "distance": 0.4100306034088135
+        }
+      ],
+      "validation": {
+        "passed": false,
+        "score": 0.7,
+        "issues": [
+          ""
+        ],
+        "explanation": "The answer is partially correct in providing information related to \"experience,\" but fails to directly answer the primary criteria of requesting clarification about the type of experience."
+      },
+      "passed": false,
+      "validation_score": 0.7,
+      "validation_issues": [
+        ""
+      ],
+      "validation_explanation": "The answer is partially correct in providing information related to \"experience,\" but fails to directly answer the primary criteria of requesting clarification about the type of experience."
+    },
+    {
+      "test_id": "clarify_001",
+      "category": "clarification_handling",
+      "question": "What about my background?",
+      "answer": "Based on the provided context, here's an overview of your background:\n\n* Education:\n + You have completed multiple terms with a strong academic record.\n + You have earned a total of 16.00 credits and 64.00 quality points.\n + Your overall GPA is 4.00.\n + You have maintained Good Standing in all terms.\n + In the Fall 2023 term, you earned Presidential Honors.\n + You have also completed the Summer 2024 term with a GPA of 4.00.\n* Certifications: Not mentioned in the provided context.\n* Projects: You have worked on personal projects, but details are not provided in the context.\n* Work Experience: You have work experience, but details are not provided in the context.\n\nPlease note that the provided context does not contain detailed information about your background, education, certifications, projects, or work experience.",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 1.00254487991333,
+      "expected_keywords": [
+        "which",
+        "aspect",
+        "background",
+        "specific",
+        "clarify"
+      ],
+      "expected_answer": "The response should explicitly ask the user to specify which aspect of their background they're interested in (e.g., work experience, education, skills).",
+      "is_impossible": false,
+      "sources": [],
+      "validation": {
+        "passed": true,
+        "score": 0.9,
+        "issues": [],
+        "explanation": "The answer is semantically correct and conveys the expected meaning, but it could be more direct in asking for clarification on which aspect of the background is desired. It provides a clear overview of the available information, but does not explicitly ask for further details."
+      },
+      "passed": true,
+      "validation_score": 0.9,
+      "validation_issues": [],
+      "validation_explanation": "The answer is semantically correct and conveys the expected meaning, but it could be more direct in asking for clarification on which aspect of the background is desired. It provides a clear overview of the available information, but does not explicitly ask for further details."
+    },
+    {
+      "test_id": "edge_ambig_001",
+      "category": "edge_cases",
+      "question": "?",
+      "answer": "I don't have a question to answer. Please provide a question, and I'll do my best to respond based on the provided context.",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 6.4555346965789795,
+      "expected_keywords": [],
+      "expected_answer": "Should request clarification for the ambiguous query.",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/term_2023_fall.md:2",
+          "source": "/workspace/data/mds/term_2023_fall.md",
+          "text": "### CS 662 - Natural Language Processing\n- **Level:** Graduate\n- **Credits:** 3.00\n- **Performance:** A\n- **Quality Points:** 12.00\n\n### MU 120 - Music Appreciation\n- **Level:** Undergraduate\n- **Cred...",
+          "distance": 0.3557260036468506
+        },
+        {
+          "id": "/workspace/data/mds/term_2020_fall.md:2",
+          "source": "/workspace/data/mds/term_2020_fall.md",
+          "text": "### EH 101 - English Composition I\n- **Credits:** 3.00\n- **Performance:** A\n- **Quality Points:** 12.00\n\n### MA 126 - Calculus II\n- **Credits:** 4.00\n- **Performance:** A\n- **Quality Points:** 16.00\n\n...",
+          "distance": 0.3649636507034302
+        },
+        {
+          "id": "/workspace/data/mds/term_2022_spring.md:2",
+          "source": "/workspace/data/mds/term_2022_spring.md",
+          "text": "### CS 350 - Automata/Formal Languages\n- **Credits:** 3.00\n- **Performance:** B\n- **Quality Points:** 9.00\n\n### EGR 150 - Computer Methods in Engineering\n- **Credits:** 3.00\n- **Performance:** A\n- **Q...",
+          "distance": 0.3658602237701416
+        }
+      ],
+      "validation": {
+        "passed": true,
+        "score": 1.0,
+        "issues": [],
+        "explanation": "The answer correctly conveys that it doesn't have a question to answer and requests clarification, which is semantically equivalent to requesting more information or asking for a question to be provided. This response meets all the expected criteria, including semantic correctness, completeness, accuracy, precision, and no refusal of information when available."
+      },
+      "passed": true,
+      "validation_score": 1.0,
+      "validation_issues": [],
+      "validation_explanation": "The answer correctly conveys that it doesn't have a question to answer and requests clarification, which is semantically equivalent to requesting more information or asking for a question to be provided. This response meets all the expected criteria, including semantic correctness, completeness, accuracy, precision, and no refusal of information when available."
+    },
+    {
+      "test_id": "summary_001",
+      "category": "summary_requests",
+      "question": "Can you summarize my education and work experience?",
+      "answer": "Based on the provided context, here's a summary of your education and work experience:\n\n**Education:**\n\n* GPA: 4.00 (both terms)\n* Quality points:\n  \u2022 60.00 (Term 1)\n  \u2022 64.00 (Term 2)\n* Credits:\n  \u2022 15.00 (Term 1)\n  \u2022 16.00 (Term 2)\n\n**Work Experience:**\n\nUnfortunately, there is no information about your work experience in the provided context.",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 0.37342143058776855,
+      "expected_keywords": [
+        "education",
+        "work experience",
+        "summary",
+        "GPA",
+        "internship"
+      ],
+      "expected_answer": "Should provide a summary of education and work experience including GPA and work history.",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md:2",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "# Work Experience",
+          "distance": 0.2630288600921631
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:0",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "# Academic Summary",
+          "distance": 0.3322021961212158
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:31",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "# Skills & Knowledge Areas Demonstrated",
+          "distance": 0.3518819212913513
+        }
+      ],
+      "validation": {
+        "passed": false,
+        "score": 0.7,
+        "issues": [
+          ""
+        ],
+        "explanation": "The answer provides some relevant information about education, including GPA and credits, but fails to include a comprehensive summary of work experience. Additionally, the presentation of GPA and quality points could be improved for clarity."
+      },
+      "passed": false,
+      "validation_score": 0.7,
+      "validation_issues": [
+        ""
+      ],
+      "validation_explanation": "The answer provides some relevant information about education, including GPA and credits, but fails to include a comprehensive summary of work experience. Additionally, the presentation of GPA and quality points could be improved for clarity."
+    },
+    {
+      "test_id": "ambig_003",
+      "category": "ambiguity_detection",
+      "question": "Tell me everything about my background and qualifications.",
+      "answer": "Based on the provided context, here's the information about your background and qualifications:\n\n**Overall Academic Performance:**\n\n* Total Credits Earned: 169 credits (139 undergraduate + 30 graduate)\n* Consistent Academic Excellence: Presidential Honors multiple terms\n* Perfect Graduate Performance: 4.00 GPA across all graduate coursework\n\n**Undergraduate Coursework:**\n\n* CAS 112: Success in College (1.00 credits, A, 4.00 quality points)\n* CS 103: Introduction to CS in Python (4.00 credits, A, 16.00 quality points)\n* EH 101: English Composition I (3.00 credits, A, 12.00 quality points)\n* MA 126: Calculus II (4.00 credits, A, 16.00 quality points)\n* PH 221: General Physics I (4.00 credits, A, 16.00 quality points)\n\n**Graduate Coursework:**\n\n* No specific information is provided about graduate coursework in the given context.\n\n**GPA:**\n\n* 4.00 GPA across all graduate coursework\n* 4.00 GPA in multiple terms (15.00 credits, 60.00 quality points; 16.00 credits, 64.00 quality points; 17.00 credits, 68.00 quality points)\n\nNote that there is no information about specific certifications, work experience, or other qualifications beyond academic performance.",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 2.716043472290039,
+      "expected_keywords": [],
+      "expected_answer": "Should note the question is broad and ask what specifics are needed.",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:2",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "## Overall Academic Performance\n\n- **Total Credits Earned:** 169 credits (139 undergraduate + 30 graduate)\n- **Consistent Academic Excellence:** Presidential Honors multiple terms\n- **Perfect Graduate...",
+          "distance": 0.37920165061950684
+        },
+        {
+          "id": "/workspace/data/mds/term_2020_fall.md:1",
+          "source": "/workspace/data/mds/term_2020_fall.md",
+          "text": "## Coursework\n\n| Course | Title | Credits | Grade | Quality Points |\n|--------|-------|---------|-------|----------------|\n| CAS 112 | Success in College | 1.00 | A | 4.00 |\n| CS 103 | Introduction to...",
+          "distance": 0.38147878646850586
+        },
+        {
+          "id": "/workspace/data/mds/complete_transcript_analysis.md:20",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "**Term Summary:** 15.00 credits, 60.00 quality points, 4.00 GPA",
+          "distance": 0.3866071105003357
+        }
+      ],
+      "validation": {
+        "passed": false,
+        "score": 0.7,
+        "issues": [
+          ""
+        ],
+        "explanation": "The answer provides some relevant academic information, but fails to address the broader question about background and qualifications. It also lacks clarity in presenting the information, which detracts from its overall quality."
+      },
+      "passed": false,
+      "validation_score": 0.7,
+      "validation_issues": [
+        ""
+      ],
+      "validation_explanation": "The answer provides some relevant academic information, but fails to address the broader question about background and qualifications. It also lacks clarity in presenting the information, which detracts from its overall quality."
+    },
+    {
+      "test_id": "clarify_002",
+      "category": "clarification_handling",
+      "question": "I'm looking for information about my history\u2014can you help?",
+      "answer": "I don't know. It isn't mentioned in the provided documents.",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 1.387531042098999,
+      "expected_keywords": [],
+      "expected_answer": "Should request clarification on whether the user means education, work, or other history.",
+      "is_impossible": false,
+      "sources": [],
+      "validation": {
+        "passed": false,
+        "score": 0.5,
+        "issues": [
+          ""
+        ],
+        "explanation": "The answer acknowledges that it doesn't know, but fails to ask for further clarification or provide a clear direction for the user. A better response would have been \"Could you please specify what kind of history you're looking for (e.g., education, work, personal)?\"."
+      },
+      "passed": false,
+      "validation_score": 0.5,
+      "validation_issues": [
+        ""
+      ],
+      "validation_explanation": "The answer acknowledges that it doesn't know, but fails to ask for further clarification or provide a clear direction for the user. A better response would have been \"Could you please specify what kind of history you're looking for (e.g., education, work, personal)?\"."
+    },
+    {
+      "test_id": "control_specific_001",
+      "category": "ambiguity_control",
+      "question": "What grade did I receive in CS 410 in Fall 2022?",
+      "answer": "I don't know. It isn't mentioned in the provided documents.",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 5.399948358535767,
+      "expected_keywords": [
+        "CS 410",
+        "A"
+      ],
+      "expected_answer": "Should report the CS 410 grade without asking for clarification.",
+      "is_impossible": false,
+      "sources": [],
+      "validation": {
+        "passed": false,
+        "score": 0.7,
+        "issues": [
+          ""
+        ],
+        "explanation": "The answer conveys that it doesn't know the grade, but it should have reported the actual grade if available, making it only partially correct."
+      },
+      "passed": false,
+      "validation_score": 0.7,
+      "validation_issues": [
+        ""
+      ],
+      "validation_explanation": "The answer conveys that it doesn't know the grade, but it should have reported the actual grade if available, making it only partially correct."
+    },
+    {
+      "test_id": "control_specific_002",
+      "category": "ambiguity_control",
+      "question": "Which certifications do I have that expire in 2028?",
+      "answer": "You have the following certifications that expire in 2028:\n\n* **AWS Certified Cloud Practitioner** (Expires: 2028-05-26)\n* **AWS Certified AI Practitioner** (Expires: 2028-06-01)",
+      "grounded": true,
+      "num_sources": 5,
+      "response_time": 6.4599854946136475,
+      "expected_keywords": [
+        "AWS",
+        "Cloud Practitioner",
+        "2028"
+      ],
+      "expected_answer": "Should list the relevant certification without a clarification prompt.",
+      "is_impossible": false,
+      "sources": [
+        {
+          "id": "/workspace/data/mds/certificate--aws-cloud-practitioner--2025-05-26.md:0",
+          "source": "/workspace/data/mds/certificate--aws-cloud-practitioner--2025-05-26.md",
+          "text": "# Summary\n- Awarded **AWS Certified Cloud Practitioner** on **2025-05-26** (valid through **2028-05-26**).\n- Core domains: cloud concepts, security, pricing, support, shared responsibility.\n\n# Key Are...",
+          "distance": 0.3481065630912781
+        },
+        {
+          "id": "/workspace/data/mds/certificate--aws-ai-practitioner--2025-06-01.md:0",
+          "source": "/workspace/data/mds/certificate--aws-ai-practitioner--2025-06-01.md",
+          "text": "# Summary\n- Awarded **AWS Certified AI Practitioner** on **2025-06-01** (valid through **2028-06-01**).\n- Foundational AI/ML knowledge on AWS; responsible AI; solution framing.\n\n# Key Areas\n- AI/ML fu...",
+          "distance": 0.36247485876083374
+        },
+        {
+          "id": "/workspace/data/mds/certificate--cka--2024-06-26.md:0",
+          "source": "/workspace/data/mds/certificate--cka--2024-06-26.md",
+          "text": "# Summary\n- Earned **CKA** on **2024-06-26** (valid through **2026-06-26**).\n\n# Full Name:\n- Certified Kubernetes Administrator\n\n# Coverage\n- Cluster lifecycle; scheduling; logging & monitoring\n- Core...",
+          "distance": 0.37712621688842773
+        }
+      ],
+      "validation": {
+        "passed": true,
+        "score": 0.9,
+        "issues": [],
+        "explanation": "The answer is semantically correct and conveys the expected meaning, listing the relevant certifications that expire in 2028. However, it falls short of a perfect score due to minor format issues (listing specific dates instead of just mentioning \"2028\")."
+      },
+      "passed": true,
+      "validation_score": 0.9,
+      "validation_issues": [],
+      "validation_explanation": "The answer is semantically correct and conveys the expected meaning, listing the relevant certifications that expire in 2028. However, it falls short of a perfect score due to minor format issues (listing specific dates instead of just mentioning \"2028\")."
+    }
+  ]
+}

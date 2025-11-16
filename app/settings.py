@@ -321,12 +321,15 @@ class RetrievalSettings(BaseModel):
         description="Weight for lexical vs semantic similarity in reranking",
     )
 
+    # DEPRECATED: Use LLM_TEMPERATURE and LLM_MAX_TOKENS instead
     temperature: float = Field(
-        default=0.0, description="Default temperature for LLM generation"
+        default=float(os.getenv("RETRIEVAL_TEMPERATURE", "0.1")),
+        description="Default temperature for LLM generation (DEPRECATED: use LLM_TEMPERATURE)"
     )
 
     max_tokens: int = Field(
-        default=300, description="Default maximum number of tokens to generate"
+        default=int(os.getenv("RETRIEVAL_MAX_TOKENS", "300")),
+        description="Default maximum number of tokens to generate (DEPRECATED: use LLM_MAX_TOKENS)"
     )
 
 
@@ -367,6 +370,75 @@ class MetadataInjectionSettings(BaseModel):
     enabled: bool = Field(default=True, description="Enable/disable metadata injection")
 
 
+class LLMSettings(BaseModel):
+    """LLM provider configuration (Groq or Ollama)."""
+
+    # Provider selection
+    provider: str = Field(
+        default=os.getenv("LLM_PROVIDER", "ollama"),
+        description="LLM provider: 'ollama' or 'groq'",
+    )
+
+    # Groq settings
+    groq_api_key: str = Field(
+        default=os.getenv("LLM_GROQ_API_KEY", ""),
+        description="Groq API key (required if provider='groq')",
+    )
+    groq_model: str = Field(
+        default=os.getenv("LLM_GROQ_MODEL", "llama-3.1-8b-instant"),
+        description="Groq model name",
+    )
+
+    # Ollama settings
+    ollama_host: str = Field(
+        default=os.getenv("LLM_OLLAMA_HOST", os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")),
+        description="URL for the Ollama API server",
+    )
+    ollama_model: str = Field(
+        default=os.getenv("LLM_OLLAMA_MODEL", os.getenv("OLLAMA_MODEL", "llama3.2:3b-instruct-q4_K_M")),
+        description="Ollama model name (with quantization tag)",
+    )
+    ollama_timeout: int = Field(
+        default=int(os.getenv("LLM_OLLAMA_TIMEOUT", os.getenv("OLLAMA_TIMEOUT", "60"))),
+        description="Maximum seconds to wait for Ollama responses",
+    )
+
+    # Shared generation settings
+    temperature: float = Field(
+        default=float(os.getenv("LLM_TEMPERATURE", "0.1")),
+        description="Sampling temperature for generation (0.0-2.0)",
+    )
+    max_tokens: int = Field(
+        default=int(os.getenv("LLM_MAX_TOKENS", "1000")),
+        description="Maximum number of tokens to generate",
+    )
+    num_ctx: int = Field(
+        default=int(os.getenv("LLM_NUM_CTX", os.getenv("NUM_CTX", "2048"))),
+        description="Context window size for Ollama model (tokens)",
+        ge=512,
+        le=16384,
+    )
+
+    # Validation
+    @validator("provider")
+    def validate_provider(cls, v):
+        if v not in ["ollama", "groq"]:
+            raise ValueError("Provider must be 'ollama' or 'groq'")
+        return v
+
+    @validator("temperature")
+    def validate_temperature(cls, v):
+        if not 0.0 <= v <= 2.0:
+            raise ValueError("Temperature must be between 0.0 and 2.0")
+        return v
+
+    @validator("max_tokens")
+    def validate_max_tokens(cls, v):
+        if v <= 0:
+            raise ValueError("max_tokens must be positive")
+        return v
+
+
 class Settings(BaseModel):
     """Global application configuration.
 
@@ -375,7 +447,7 @@ class Settings(BaseModel):
     2. Defaults specified below
 
     Categories:
-    - LLM: Ollama connection and model settings
+    - LLM: LLM provider settings (Groq or Ollama)
     - Embeddings: Sentence transformer model
     - Storage: ChromaDB and document paths
     - Retrieval: Search and chunking parameters
@@ -385,24 +457,30 @@ class Settings(BaseModel):
     - API: FastAPI and server settings
     """
 
-    # LLM Settings
+    # LLM Settings (new structure)
+    llm: LLMSettings = Field(
+        default_factory=LLMSettings,
+        description="LLM provider configuration",
+    )
+
+    # Legacy Ollama settings (for backward compatibility)
     ollama_host: str = Field(
         default=os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434"),
-        description="URL for the Ollama API server",
+        description="URL for the Ollama API server (DEPRECATED: use LLM_OLLAMA_HOST)",
     )
     ollama_model: str = Field(
         default=os.getenv("OLLAMA_MODEL", "llama3.2:3b-instruct-q4_K_M"),
-        description="Ollama model name (with quantization tag)",
+        description="Ollama model name (DEPRECATED: use LLM_OLLAMA_MODEL)",
     )
     num_ctx: int = Field(
         default=int(os.getenv("NUM_CTX", "2048")),
-        description="Context window size for Ollama model (tokens)",
-        ge=512,  # Minimum context size
-        le=16384,  # Maximum reasonable context size
+        description="Context window size (DEPRECATED: use LLM_NUM_CTX)",
+        ge=512,
+        le=16384,
     )
     ollama_timeout: int = Field(
         default=int(os.getenv("OLLAMA_TIMEOUT", "60")),
-        description="Maximum seconds to wait for LLM responses",
+        description="Ollama timeout (DEPRECATED: use LLM_OLLAMA_TIMEOUT)",
     )
 
     # Embeddings

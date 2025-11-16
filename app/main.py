@@ -67,5 +67,9 @@ api_router = create_api_router()
 app.include_router(api_router)
 
 logger.info(f"Application started: {settings.api.title} v{settings.api.version}")
-logger.info(f"Ollama host: {settings.ollama_host}")
-logger.info(f"Model: {settings.ollama_model}")
+logger.info(f"LLM Provider: {settings.llm.provider}")
+if settings.llm.provider == "groq":
+    logger.info(f"Groq Model: {settings.llm.groq_model}")
+    logger.info(f"Groq API Key: {'✓ Set' if settings.llm.groq_api_key else '✗ Not Set'}")
+logger.info(f"Ollama Fallback: {settings.llm.ollama_host}")
+logger.info(f"Ollama Model: {settings.llm.ollama_model}")

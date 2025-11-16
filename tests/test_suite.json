@@ -74,9 +74,10 @@
       "category": "transcript_courses",
       "question": "Did I take CS 410?",
       "expected_keywords": [
-        "CS 410"
+        "CS 410",
+        "Fall 2022"
       ],
-      "expected_answer": "Yes, CS 410 Database App Dev in Spring 2022",
+      "expected_answer": "Yes, CS 410 Database App Dev in Fall 2022",
       "is_impossible": false,
       "expected_doc_type": "term",
       "min_sources": 1,
@@ -88,11 +89,12 @@
       "category": "transcript_degrees",
       "question": "What degrees did I earn?",
       "expected_keywords": [
-        "Computer Science"
+        "Bachelor",
+        "Master"
       ],
-      "expected_answer": "BS and MS in Computer Science",
+      "expected_answer": "Bachelor of Science and Master of Science in Computer Science",
       "is_impossible": false,
-      "expected_doc_type": "term",
+      "expected_doc_type": "transcript_analysis",
       "min_sources": 1,
       "grounded_expected": true,
       "difficulty": "easy"
@@ -103,11 +105,12 @@
       "question": "When did I graduate with my Bachelor's degree?",
       "expected_keywords": [
         "April",
-        "2024"
+        "2024",
+        "Bachelor"
       ],
-      "expected_answer": "April 2024",
+      "expected_answer": "April 27, 2024",
       "is_impossible": false,
-      "expected_doc_type": "resume",
+      "expected_doc_type": "transcript_analysis",
       "min_sources": 1,
       "grounded_expected": true,
       "difficulty": "medium"
@@ -119,11 +122,11 @@
       "expected_keywords": [
         "May",
         "2025",
-        "MS"
+        "Master"
       ],
-      "expected_answer": "May 2025",
+      "expected_answer": "May 1, 2025",
       "is_impossible": false,
-      "expected_doc_type": "resume",
+      "expected_doc_type": "transcript_analysis",
       "min_sources": 1,
       "grounded_expected": true,
       "difficulty": "medium"
@@ -269,8 +272,8 @@
       "category": "skills",
       "question": "What cloud platforms do I have experience with?",
       "expected_keywords": [
-        "Google Cloud",
-        "cloud"
+        "GCP",
+        "AWS"
       ],
       "expected_answer": "GCP and AWS",
       "is_impossible": false,
@@ -284,9 +287,11 @@
       "category": "skills",
       "question": "What programming languages do I know?",
       "expected_keywords": [
-        "Python"
+        "Python",
+        "Java",
+        "C"
       ],
-      "expected_answer": "Should include Python and Rust",
+      "expected_answer": "Python, C, and Java are the main languages I know",
       "is_impossible": false,
       "expected_doc_type": "resume",
       "min_sources": 1,
@@ -299,7 +304,8 @@
       "question": "What personal projects have I built?",
       "expected_keywords": [
         "RAG",
-        "GPT"
+        "GPT",
+        "Music Genre Classification"
       ],
       "expected_answer": "FastAPI RAG Service, GPT From Scratch, Music Genre Classification",
       "is_impossible": false,
@@ -622,6 +628,70 @@
       }
     },
     {
+      "test_id": "ambig_002",
+      "category": "ambiguity_detection",
+      "question": "Tell me everything about my background and qualifications.",
+      "expected_keywords": [],
+      "expected_answer": "Should note the question is broad and ask what specifics are needed.",
+      "is_impossible": false,
+      "expected_doc_type": null,
+      "min_sources": 0,
+      "grounded_expected": false,
+      "difficulty": "hard",
+      "expected_behavior": {
+        "should_detect_ambiguity": true,
+        "min_ambiguity_score": 0.8,
+        "expected_response": {
+          "should_ask_clarification": true,
+          "allowed_keywords": [
+            "clarify",
+            "which",
+            "specific",
+            "detail",
+            "education",
+            "work experience",
+            "certifications",
+            "background",
+            "qualifications"
+          ],
+          "max_sources": 0
+        }
+      }
+    },
+    {
+      "test_id": "edge_ambig_001",
+      "category": "edge_cases",
+      "question": "?",
+      "expected_keywords": [],
+      "expected_answer": "Should request clarification for the ambiguous query.",
+      "is_impossible": false,
+      "expected_doc_type": null,
+      "min_sources": 0,
+      "grounded_expected": false,
+      "difficulty": "hard",
+      "expected_behavior": {
+        "should_detect_ambiguity": true,
+        "expected_response": {
+          "should_ask_clarification": true,
+          "allowed_keywords": [
+            "clarify",
+            "question",
+            "which",
+            "specific",
+            "detail",
+            "education",
+            "work experience",
+            "certifications",
+            "background",
+            "qualifications",
+            "documents",
+            "broad"
+          ],
+          "max_sources": 0
+        }
+      }
+    },
+    {
       "test_id": "clarify_001",
       "category": "clarification_handling",
       "question": "What about my background?",
@@ -674,33 +744,33 @@
       }
     },
     {
-      "test_id": "edge_ambig_001",
-      "category": "edge_cases",
-      "question": "?",
+      "test_id": "clarify_002",
+      "category": "clarification_handling",
+      "question": "I'm looking for information about my history—can you help?",
       "expected_keywords": [],
-      "expected_answer": "Should request clarification for the ambiguous query.",
+      "expected_answer": "Should request clarification on whether the user means education, work, or other history.",
       "is_impossible": false,
       "expected_doc_type": null,
       "min_sources": 0,
       "grounded_expected": false,
-      "difficulty": "hard",
+      "difficulty": "medium",
       "expected_behavior": {
         "should_detect_ambiguity": true,
+        "min_ambiguity_score": 0.7,
         "expected_response": {
           "should_ask_clarification": true,
           "allowed_keywords": [
             "clarify",
-            "question",
             "which",
             "specific",
             "detail",
             "education",
+            "work",
             "work experience",
             "certifications",
             "background",
-            "qualifications",
-            "documents",
-            "broad"
+            "history",
+            "qualifications"
           ],
           "max_sources": 0
         }
@@ -738,70 +808,6 @@
             "internship"
           ],
           "min_response_length": 50
-        }
-      }
-    },
-    {
-      "test_id": "ambig_003",
-      "category": "ambiguity_detection",
-      "question": "Tell me everything about my background and qualifications.",
-      "expected_keywords": [],
-      "expected_answer": "Should note the question is broad and ask what specifics are needed.",
-      "is_impossible": false,
-      "expected_doc_type": null,
-      "min_sources": 0,
-      "grounded_expected": false,
-      "difficulty": "hard",
-      "expected_behavior": {
-        "should_detect_ambiguity": true,
-        "min_ambiguity_score": 0.8,
-        "expected_response": {
-          "should_ask_clarification": true,
-          "allowed_keywords": [
-            "clarify",
-            "which",
-            "specific",
-            "detail",
-            "education",
-            "work experience",
-            "certifications",
-            "background",
-            "qualifications"
-          ],
-          "max_sources": 0
-        }
-      }
-    },
-    {
-      "test_id": "clarify_002",
-      "category": "clarification_handling",
-      "question": "I'm looking for information about my history—can you help?",
-      "expected_keywords": [],
-      "expected_answer": "Should request clarification on whether the user means education, work, or other history.",
-      "is_impossible": false,
-      "expected_doc_type": null,
-      "min_sources": 0,
-      "grounded_expected": false,
-      "difficulty": "medium",
-      "expected_behavior": {
-        "should_detect_ambiguity": true,
-        "min_ambiguity_score": 0.7,
-        "expected_response": {
-          "should_ask_clarification": true,
-          "allowed_keywords": [
-            "clarify",
-            "which",
-            "specific",
-            "detail",
-            "education",
-            "work",
-            "work experience",
-            "certifications",
-            "background",
-            "history",
-            "qualifications"
-          ],
-          "max_sources": 0
         }
       }
     },

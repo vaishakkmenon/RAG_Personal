@@ -11,6 +11,13 @@ services:
       - HF_HOME=/home/nonroot/.cache/huggingface
       - OLLAMA_HOST=http://ollama:11434
       - UVICORN_WORKERS=2
+      # LLM Provider Settings (explicitly pass from .env)
+      - LLM_PROVIDER=${LLM_PROVIDER:-ollama}
+      - LLM_GROQ_API_KEY=${LLM_GROQ_API_KEY:-}
+      - LLM_GROQ_MODEL=${LLM_GROQ_MODEL:-llama-3.1-8b-instant}
+      - LLM_OLLAMA_HOST=http://ollama:11434
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.1}
+      - LLM_MAX_TOKENS=${LLM_MAX_TOKENS:-1000}
     env_file:
       - .env
     volumes:

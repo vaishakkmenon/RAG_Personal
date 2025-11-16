@@ -75,28 +75,31 @@ class TwoPhaseTestRunner:
     def collect_answers(
         self,
         test_suite: Dict[str, Any],
-        output_file: str = "test_answers.json"
+        output_file: str = "test_answers.json",
+        delay: float = 4.0,
     ) -> List[Dict[str, Any]]:
         """Phase 1: Collect all answers from RAG system"""
 
-        test_cases = test_suite.get('test_cases') or test_suite.get('tests', [])
+        test_cases = test_suite.get("test_cases") or test_suite.get("tests", [])
 
         print(f"{'='*80}")
         print(f"PHASE 1: COLLECTING ANSWERS")
         print(f"{'='*80}")
         print(f"Running {len(test_cases)} tests...")
-        print(f"This will use the 1B model for all queries\n")
+        print(f"Delay between requests: {delay}s (to avoid rate limits)")
+        estimated_time = len(test_cases) * delay / 60
+        print(f"Estimated time: {estimated_time:.1f} minutes\n")
 
         results = []
 
         for i, test_case in enumerate(test_cases, 1):
-            test_id = test_case['test_id']
-            question = test_case['question']
+            test_id = test_case["test_id"]
+            question = test_case["question"]
 
             if self.verbose:
                 print(f"[{i}/{len(test_cases)}] {test_id}: {question}")
             else:
-                print(f"[{i}/{len(test_cases)}] {test_id}", end=' ')
+                print(f"[{i}/{len(test_cases)}] {test_id}", end=" ")
 
             # Make request
             response = self.make_request(question)
@@ -126,18 +129,23 @@ class TwoPhaseTestRunner:
                     "expected_keywords": test_case.get("expected_keywords", []),
                     "expected_answer": test_case.get("expected_answer", ""),
                     "is_impossible": test_case.get("is_impossible", False),
-                    "sources": response["data"].get("sources", [])[:3]  # First 3 sources
+                    "sources": response["data"].get("sources", [])[
+                        :3
+                    ],  # First 3 sources
                 }
 
             results.append(result)
-            time.sleep(0.1)  # Small delay between requests
+
+            # Delay between requests to avoid rate limits
+            if i < len(test_cases):  # Don't delay after last test
+                time.sleep(delay)
 
         # Save collected answers
         output = {
             "timestamp": datetime.now().isoformat(),
             "phase": "collection",
             "total_tests": len(results),
-            "results": results
+            "results": results,
         }
 
         with open(output_file, "w", encoding="utf-8") as f:
@@ -158,42 +166,41 @@ def main():
         "--phase",
         choices=["collect", "validate", "both"],
         default="both",
-        help="Which phase to run"
+        help="Which phase to run",
     )
     parser.add_argument(
-        "--api-url",
-        default="http://localhost:8000",
-        help="API base URL"
+        "--api-url", default="http://localhost:8000", help="API base URL"
     )
     parser.add_argument(
-        "--api-key",
-        default="dev-key-1",
-        help="API key for authentication"
+        "--api-key", default="dev-key-1", help="API key for authentication"
     )
     parser.add_argument(
-        "--tests",
-        default="tests/test_suite.json",
-        help="Path to test cases JSON file"
+        "--tests", default="tests/test_suite.json", help="Path to test cases JSON file"
     )
     parser.add_argument(
-        "--answers-file",
-        default="test_answers.json",
-        help="File to save/load answers"
+        "--answers-file", default="test_answers.json", help="File to save/load answers"
     )
     parser.add_argument(
         "--report-file",
         default="test_validation_report.json",
-        help="File to save validation report"
+        help="File to save validation report",
+    )
+    parser.add_argument(
+        "--validation-provider",
+        choices=["ollama", "groq"],
+        default="ollama",
+        help="LLM provider for validation (default: ollama to save Groq quota)",
     )
     parser.add_argument(
         "--validation-model",
-        default="llama3.2:3b-instruct-q4_K_M",
-        help="Model for validation (3B recommended)"
+        help="Model for validation (optional, uses provider defaults)",
     )
+    parser.add_argument("--verbose", action="store_true", help="Show detailed output")
     parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Show detailed output"
+        "--delay",
+        type=float,
+        default=4.0,
+        help="Delay between requests in seconds (applies to both collection and validation phases)",
     )
 
     args = parser.parse_args()
@@ -201,9 +208,7 @@ def main():
     # Phase 1: Collect answers
     if args.phase in ["collect", "both"]:
         runner = TwoPhaseTestRunner(
-            api_url=args.api_url,
-            api_key=args.api_key,
-            verbose=args.verbose
+            api_url=args.api_url, api_key=args.api_key, verbose=args.verbose
         )
 
         try:
@@ -212,14 +217,14 @@ def main():
             print(f"Error: Test file not found: {args.tests}")
             sys.exit(1)
 
-        runner.collect_answers(test_suite, args.answers_file)
+        runner.collect_answers(test_suite, args.answers_file, delay=args.delay)
 
     # Phase 2: Validate
     if args.phase in ["validate", "both"]:
         if args.phase == "validate":
             # Check if answers file exists
             try:
-                with open(args.answers_file, 'r') as f:
+                with open(args.answers_file, "r") as f:
                     json.load(f)
             except FileNotFoundError:
                 print(f"Error: Answers file not found: {args.answers_file}")
@@ -229,10 +234,23 @@ def main():
         print(f"\n{'='*80}")
         print(f"PHASE 2: VALIDATING ANSWERS")
         print(f"{'='*80}")
-        print(f"Using validation model: {args.validation_model}")
-        print(f"This will load the 3B model ONCE for all validations\n")
+        print(f"Using validation provider: {args.validation_provider}")
+        if args.validation_model:
+            print(f"Using validation model: {args.validation_model}")
+        else:
+            default_model = (
+                "llama-3.1-8b-instant"
+                if args.validation_provider == "groq"
+                else "llama3.1:8b"
+            )
+            print(f"Using default model: {default_model}")
+        print(f"This will validate all answers using a single model instance\n")
 
-        validator = BatchValidator(validation_model=args.validation_model)
+        validator = BatchValidator(
+            provider=args.validation_provider,
+            validation_model=args.validation_model,
+            delay=args.delay
+        )
         validator.validate_batch(args.answers_file, args.report_file)
 
 
