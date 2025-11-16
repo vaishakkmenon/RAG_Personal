@@ -144,7 +144,9 @@ class ChatService:
         max_tokens = (
             max_tokens if max_tokens is not None else settings.retrieval.max_tokens
         )
-        model_name = model or settings.ollama_model
+        # Don't pass model parameter - let LLM service use its configured default
+        # Passing None lets the service choose based on provider
+        model_name = model  # Only use if explicitly provided
 
         # Default parameters
         params = {
@@ -227,27 +229,6 @@ class ChatService:
                 ),
             )
 
-        # Check for heuristic ambiguity
-        heuristic_ambiguous, _ = self.prompt_builder.is_ambiguous(request.question)
-        if heuristic_ambiguous:
-            logger.info(
-                "Heuristic ambiguity detected; prompting user for clarification"
-            )
-            params["is_ambiguous"] = True
-            clarification = build_clarification_message(
-                request.question, self.prompt_builder.config
-            )
-            return ChatResponse(
-                answer=clarification,
-                sources=[],
-                grounded=False,
-                ambiguity=AmbiguityMetadata(
-                    is_ambiguous=True,
-                    score=0.9,
-                    clarification_requested=True,
-                ),
-            )
-
         # Build metadata filter
         metadata_filter = {
             k: v
@@ -300,13 +281,35 @@ class ChatService:
         # Grounding check - no chunks
         if not chunks:
             logger.warning("No chunks retrieved")
+
+            # Check if question is truly vague (only after retrieval failed)
+            heuristic_ambiguous, _ = self.prompt_builder.is_ambiguous(request.question)
+            if heuristic_ambiguous:
+                logger.info(
+                    "No chunks found AND question is vague; asking for clarification"
+                )
+                clarification = build_clarification_message(
+                    request.question, self.prompt_builder.config
+                )
+                return ChatResponse(
+                    answer=clarification,
+                    sources=[],
+                    grounded=False,
+                    ambiguity=AmbiguityMetadata(
+                        is_ambiguous=True,
+                        score=0.9,
+                        clarification_requested=True,
+                    ),
+                )
+
+            # Question is specific but no relevant docs found
             return ChatResponse(
                 answer="I don't know. I couldn't find any relevant information in my documents.",
                 sources=[],
                 grounded=False,
                 ambiguity=AmbiguityMetadata(
-                    is_ambiguous=params.get("is_ambiguous", False),
-                    score=params.get("ambiguity_score", 0.0),
+                    is_ambiguous=False,
+                    score=0.0,
                     clarification_requested=False,
                 ),
             )
