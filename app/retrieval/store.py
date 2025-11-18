@@ -169,6 +169,207 @@ def search(
     return output
 
 
+def multi_query_search(
+    main_query: str,
+    keywords: List[str],
+    k: int,
+    max_distance: float,
+    metadata_filter: Optional[Dict[str, Any]] = None,
+) -> List[dict]:
+    """Perform multiple searches with keywords and merge results.
+
+    This function improves retrieval by:
+    1. Searching with the full question (semantic similarity)
+    2. Searching with individual keywords (exact matches)
+    3. Deduplicating and merging results
+    4. Returning top k chunks by best distance
+
+    Args:
+        main_query: The original full question
+        keywords: List of extracted keywords to search
+        k: Number of total results to return
+        max_distance: Maximum cosine distance threshold
+        metadata_filter: Optional metadata filter
+
+    Returns:
+        List of deduplicated chunks sorted by distance
+    """
+    if not keywords or len(keywords) == 0:
+        # Fall back to regular search if no keywords
+        return search(main_query, k, max_distance, metadata_filter)
+
+    # Dictionary to store chunks by ID for deduplication
+    all_chunks = {}  # id -> {chunk, min_distance}
+
+    # Perform main search with full query
+    logger.info(f"Multi-query search: main query + {len(keywords)} keywords")
+    main_results = search(main_query, k, max_distance, metadata_filter)
+    for chunk in main_results:
+        chunk_id = chunk["id"]
+        all_chunks[chunk_id] = {
+            "chunk": chunk,
+            "min_distance": chunk["distance"],
+            "sources": ["main"]
+        }
+
+    # Perform keyword searches (limit to 5 keywords to control latency)
+    for keyword in keywords[:5]:
+        kw_results = search(keyword, k // 2, max_distance, metadata_filter)
+        for chunk in kw_results:
+            chunk_id = chunk["id"]
+            if chunk_id in all_chunks:
+                # Chunk found in multiple searches - update min distance
+                current_min = all_chunks[chunk_id]["min_distance"]
+                new_dist = chunk["distance"]
+                all_chunks[chunk_id]["min_distance"] = min(current_min, new_dist)
+                all_chunks[chunk_id]["sources"].append(keyword)
+            else:
+                # New chunk from keyword search
+                all_chunks[chunk_id] = {
+                    "chunk": chunk,
+                    "min_distance": chunk["distance"],
+                    "sources": [keyword]
+                }
+
+    # Extract chunks and update distances to minimum found
+    deduplicated_chunks = []
+    for chunk_id, data in all_chunks.items():
+        chunk = data["chunk"].copy()
+        chunk["distance"] = data["min_distance"]  # Use best distance
+        deduplicated_chunks.append(chunk)
+
+    # Sort by distance (lower is better) and take top k
+    sorted_chunks = sorted(deduplicated_chunks, key=lambda x: x["distance"])
+    result = sorted_chunks[:k]
+
+    logger.info(
+        f"Multi-query retrieved {len(deduplicated_chunks)} unique chunks from {len(keywords) + 1} queries, returning top {len(result)}"
+    )
+
+    return result
+
+
+def multi_domain_search(
+    query: str,
+    domain_configs: List[Dict[str, Any]],
+    k: int,
+    max_distance: float,
+) -> List[dict]:
+    """Search across multiple domains with balanced representation.
+
+    This function ensures balanced coverage across different content domains
+    (e.g., education, work experience, certifications) by searching each domain
+    separately and merging results with equal representation.
+
+    Args:
+        query: User's full question (used for all searches)
+        domain_configs: List of domain configurations, each with:
+            - name: domain name (for logging)
+            - filters: list of metadata filter dicts to try
+            - section_prefix: optional string for post-filtering by section prefix
+        k: Total number of chunks to return
+        max_distance: Maximum cosine distance threshold
+
+    Returns:
+        List of chunks with balanced representation across domains
+
+    Example domain_config:
+        {
+            'name': 'education',
+            'filters': [
+                {'doc_type': 'term'},
+                {'doc_type': 'resume', 'section': 'Education'}
+            ],
+            'section_prefix': None
+        }
+    """
+    if not domain_configs:
+        logger.warning("multi_domain_search called with no domain configs, falling back to regular search")
+        return search(query, k, max_distance)
+
+    num_domains = len(domain_configs)
+    per_domain_k = max(1, k // num_domains)
+
+    logger.info(f"Multi-domain search across {num_domains} domains, {per_domain_k} chunks per domain")
+
+    all_chunks = []
+
+    for domain_config in domain_configs:
+        domain_name = domain_config.get('name', 'unknown')
+        filters = domain_config.get('filters', [])
+        section_prefix = domain_config.get('section_prefix')
+
+        domain_chunks = []
+
+        # Try each filter for this domain
+        for metadata_filter in filters:
+            try:
+                chunks = search(
+                    query=query,
+                    k=per_domain_k,
+                    max_distance=max_distance,
+                    metadata_filter=metadata_filter if metadata_filter else None
+                )
+
+                # Apply section prefix post-filter if specified
+                if section_prefix and chunks:
+                    original_count = len(chunks)
+                    chunks = [
+                        c for c in chunks
+                        if c.get('metadata', {}).get('section', '').startswith(section_prefix)
+                    ]
+                    if original_count != len(chunks):
+                        logger.debug(
+                            f"Section prefix '{section_prefix}' filter: {original_count} → {len(chunks)}"
+                        )
+
+                domain_chunks.extend(chunks)
+
+                # Stop if we have enough chunks for this domain
+                if len(domain_chunks) >= per_domain_k:
+                    break
+
+            except Exception as e:
+                logger.warning(f"Search failed for domain '{domain_name}' with filter {metadata_filter}: {e}")
+                continue
+
+        # Deduplicate within domain and take top per_domain_k
+        seen_ids = set()
+        unique_domain_chunks = []
+        for chunk in domain_chunks:
+            chunk_id = chunk['id']
+            if chunk_id not in seen_ids:
+                seen_ids.add(chunk_id)
+                unique_domain_chunks.append(chunk)
+                if len(unique_domain_chunks) >= per_domain_k:
+                    break
+
+        logger.info(
+            f"Domain '{domain_name}': retrieved {len(unique_domain_chunks)} chunks"
+        )
+
+        all_chunks.extend(unique_domain_chunks)
+
+    # Deduplicate across domains (in case of overlap)
+    seen_ids = set()
+    final_chunks = []
+    for chunk in all_chunks:
+        chunk_id = chunk['id']
+        if chunk_id not in seen_ids:
+            seen_ids.add(chunk_id)
+            final_chunks.append(chunk)
+
+    # Sort by distance and take top k
+    final_chunks.sort(key=lambda x: x['distance'])
+    result = final_chunks[:k]
+
+    logger.info(
+        f"Multi-domain search: {len(result)} total chunks from {num_domains} domains"
+    )
+
+    return result
+
+
 def get_sample_chunks(n: int = 10) -> List[dict]:
     """Return up to n random example chunks for testing/debugging.
 

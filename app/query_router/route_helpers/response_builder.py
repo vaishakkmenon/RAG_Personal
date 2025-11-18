@@ -58,7 +58,10 @@ class ResponseBuilder:
             'question_type': analysis.get('question_type'),
             'confidence': analysis.get('confidence', 1.0),
             'needs_clarification': analysis.get('needs_clarification', False),
-            'clarification_options': analysis.get('clarification_options')
+            'clarification_options': analysis.get('clarification_options'),
+            'keywords': analysis.get('keywords', {}),
+            'all_keywords': analysis.get('all_keywords', []),
+            'domain_configs': analysis.get('domain_configs', []),
         })
         
         # Handle certificate matches
@@ -76,6 +79,7 @@ class ResponseBuilder:
         # Handle structured summaries (broad but clear intent with multiple domains)
         if analysis.get('is_structured_summary'):
             num_domains = len(analysis.get('summary_domains', []))
+            domain_configs = params.get('domain_configs', [])
             params.update({
                 'top_k': 15,  # Increased from 10 for multi-domain coverage
                 'rerank': True,
@@ -83,8 +87,9 @@ class ResponseBuilder:
                 'max_distance': 0.65,
                 'is_structured_summary': True,
                 'is_ambiguous': False,  # Override ambiguity detection
+                'enable_multi_domain': len(domain_configs) >= 2,  # Enable multi-domain if 2+ domains
             })
-            logger.info(f"Structured summary detected covering {num_domains} domains: {analysis.get('summary_domains')}")
+            logger.info(f"Structured summary detected covering {num_domains} domains with {len(domain_configs)} domain configs")
             return
 
         # Adjust for broad questions

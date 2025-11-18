@@ -14,7 +14,7 @@ from ..models import ChatRequest, ChatResponse, ChatSource, AmbiguityMetadata
 from ..monitoring import time_execution_info
 from ..prompting import build_clarification_message, create_default_prompt_builder
 from ..query_router import route_query
-from ..retrieval import search
+from ..retrieval import search, multi_query_search, multi_domain_search
 from ..services.llm import generate_with_ollama
 from ..services.reranker import rerank_chunks
 from ..settings import settings
@@ -240,14 +240,26 @@ class ChatService:
             if v is not None
         }
 
-        # Retrieve chunks
+        # Retrieve chunks (use multi-domain if domains available and enabled)
         try:
-            chunks = search(
-                query=request.question,
-                k=params["top_k"],
-                max_distance=params["max_distance"],
-                metadata_filter=metadata_filter if metadata_filter else None,
-            )
+            enable_multi_domain = params.get("enable_multi_domain", False)
+            domain_configs = params.get("domain_configs", [])
+
+            if enable_multi_domain and domain_configs:
+                logger.info(f"Using multi-domain retrieval across {len(domain_configs)} domains")
+                chunks = multi_domain_search(
+                    query=request.question,
+                    domain_configs=domain_configs,
+                    k=params["top_k"],
+                    max_distance=params["max_distance"],
+                )
+            else:
+                chunks = search(
+                    query=request.question,
+                    k=params["top_k"],
+                    max_distance=params["max_distance"],
+                    metadata_filter=metadata_filter if metadata_filter else None,
+                )
         except Exception as e:
             logger.error(f"Retrieval failed: {e}")
             raise HTTPException(
@@ -360,7 +372,9 @@ class ChatService:
 
         # Build and validate prompt
         prompt_result = self.prompt_builder.build_prompt(
-            question=question, context_chunks=formatted_chunks
+            question=question,
+            context_chunks=formatted_chunks,
+            keywords=params.get('all_keywords', [])
         )
 
         # Handle ambiguous questions or missing context

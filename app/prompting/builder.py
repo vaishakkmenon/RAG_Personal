@@ -141,12 +141,27 @@ class PromptBuilder:
         return False, ""
 
     def build_prompt(
-        self, question: str, context_chunks: List[Dict[str, Any]]
+        self, question: str, context_chunks: List[Dict[str, Any]], keywords: Optional[List[str]] = None
     ) -> PromptResult:
-        """Build a prompt with the given question and context chunks."""
+        """Build a prompt with the given question and context chunks.
+
+        Args:
+            question: The user's question
+            context_chunks: Retrieved context chunks
+            keywords: Optional list of keywords to guide LLM focus
+
+        Returns:
+            PromptResult with the constructed prompt
+        """
         try:
             # Format context with metadata injection
             context = _format_context(context_chunks)
+
+            # Format question with optional keyword guidance
+            question_section = question.strip()
+            if keywords and len(keywords) > 0:
+                keyword_str = ", ".join(keywords)
+                question_section += f"\n[Focus areas: {keyword_str}]"
 
             # Build prompt sections
             prompt_sections = [
@@ -154,7 +169,7 @@ class PromptBuilder:
                 self.config.certification_guidelines.strip(),
                 context,
                 "QUESTION:",
-                question.strip(),
+                question_section,  # Now includes keyword annotation if present
                 "ANSWER:",
             ]
 
