@@ -231,11 +231,45 @@ class QueryRouterSettings(BaseModel):
         description="Default maximum distance for retrieval",
     )
 
+    # LLM-based ambiguity detection settings
+    enable_llm_ambiguity_detection: bool = Field(
+        default=os.getenv("QUERY_ROUTER_ENABLE_LLM_AMBIGUITY", "true").lower() == "true",
+        description="Enable LLM-based ambiguity detection for uncertain queries"
+    )
+
+    llm_ambiguity_confidence_threshold: float = Field(
+        default=float(os.getenv("QUERY_ROUTER_LLM_CONFIDENCE_THRESHOLD", "0.7")),
+        description="Confidence threshold for LLM ambiguity decisions (0-1)"
+    )
+
+    # Fast path thresholds
+    min_entities_for_clarity: int = Field(
+        default=int(os.getenv("QUERY_ROUTER_MIN_ENTITIES", "2")),
+        description="Minimum entities/technologies for non-ambiguous classification"
+    )
+
+    max_words_for_llm_check: int = Field(
+        default=int(os.getenv("QUERY_ROUTER_MAX_WORDS_LLM", "10")),
+        description="Maximum word count to trigger LLM ambiguity check"
+    )
+
     # Validation
     @validator("ambiguity_threshold")
     def validate_ambiguity_threshold(cls, v: float) -> float:
         if not 0 <= v <= 1:
             raise ValueError("Ambiguity threshold must be between 0 and 1")
+        return v
+
+    @validator("llm_ambiguity_confidence_threshold")
+    def validate_llm_confidence_threshold(cls, v: float) -> float:
+        if not 0 <= v <= 1:
+            raise ValueError("LLM confidence threshold must be between 0 and 1")
+        return v
+
+    @validator("min_entities_for_clarity", "max_words_for_llm_check")
+    def validate_positive_threshold_ints(cls, v: int) -> int:
+        if v <= 0:
+            raise ValueError("Value must be positive")
         return v
 
     @validator("short_query_word_limit", "single_word_char_limit")

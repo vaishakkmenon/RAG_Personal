@@ -45,6 +45,8 @@ class ResponseBuilder:
             'categories': [],
             'question_type': None,
             'confidence': 1.0,
+            'is_ambiguous': False,
+            'ambiguity_score': 0.0,
             'needs_clarification': False,
             'clarification_options': None
         }
@@ -57,8 +59,11 @@ class ResponseBuilder:
             'categories': analysis.get('categories', []),
             'question_type': analysis.get('question_type'),
             'confidence': analysis.get('confidence', 1.0),
+            'is_ambiguous': analysis.get('is_ambiguous', False),
             'needs_clarification': analysis.get('needs_clarification', False),
             'clarification_options': analysis.get('clarification_options'),
+            'ambiguity_score': 1.0 - analysis.get('confidence', 1.0),  # Convert confidence to ambiguity score
+            'ambiguity_method': analysis.get('ambiguity_method'),
             'keywords': analysis.get('keywords', {}),
             'all_keywords': analysis.get('all_keywords', []),
             'domain_configs': analysis.get('domain_configs', []),

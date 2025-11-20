@@ -12,9 +12,10 @@ Includes rate limiting for Groq to stay within free tier limits.
 import logging
 import time
 from typing import Optional
+import asyncio
 
 import ollama
-from groq import Groq
+from groq import Groq, AsyncGroq
 from groq.types.chat import ChatCompletion
 
 from ..settings import settings
@@ -69,10 +70,12 @@ class OllamaService:
 
         # Initialize Groq client and rate limiter if configured
         self.groq_client = None
+        self.async_groq_client = None
         self.rate_limiter = None
         if self.llm_settings.provider == "groq" and self.llm_settings.groq_api_key:
             try:
                 self.groq_client = Groq(api_key=self.llm_settings.groq_api_key)
+                self.async_groq_client = AsyncGroq(api_key=self.llm_settings.groq_api_key)
 
                 # Initialize rate limiter for Groq free tier
                 # 8B model: 30 req/min, 14,400 req/day
@@ -340,6 +343,199 @@ class OllamaService:
             logger.error(f"Ollama generation failed: {e}")
             raise
 
+    async def async_generate(
+        self,
+        prompt: str,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        model: Optional[str] = None,
+    ) -> str:
+        """Generate text asynchronously using configured LLM provider with automatic fallback.
+
+        Args:
+            prompt: The input prompt to generate text from
+            temperature: Sampling temperature (None uses default from settings)
+            max_tokens: Maximum number of tokens to generate (None uses default)
+            model: Optional override for the model name
+
+        Returns:
+            Generated text response
+
+        Raises:
+            Exception: If both providers fail
+        """
+        # Use settings defaults if not provided
+        temperature = (
+            temperature if temperature is not None
+            else self.llm_settings.temperature
+        )
+        max_tokens = (
+            max_tokens if max_tokens is not None
+            else self.llm_settings.max_tokens
+        )
+
+        # Try primary provider
+        try:
+            if self.llm_settings.provider == "groq" and self.async_groq_client:
+                logger.debug("Attempting async generation with Groq")
+                return await self._generate_with_groq_async(
+                    prompt, temperature, max_tokens, model
+                )
+            else:
+                logger.debug("Generating with Ollama (async wrapper)")
+                return await self._generate_with_ollama_async(
+                    prompt, temperature, max_tokens, model
+                )
+        except Exception as e:
+            # Log the error
+            logger.error(
+                f"Async LLM generation failed with {self.llm_settings.provider}: {e}"
+            )
+
+            # Fallback to Ollama if we were trying Groq
+            if self.llm_settings.provider == "groq":
+                logger.warning("Falling back to Ollama due to Groq failure")
+                try:
+                    return await self._generate_with_ollama_async(
+                        prompt, temperature, max_tokens, model
+                    )
+                except Exception as fallback_error:
+                    logger.error(f"Ollama fallback also failed: {fallback_error}")
+                    raise fallback_error
+            else:
+                # Already using Ollama, can't fallback further
+                raise
+
+    async def _generate_with_groq_async(
+        self,
+        prompt: str,
+        temperature: float,
+        max_tokens: int,
+        model: Optional[str] = None,
+    ) -> str:
+        """Generate text asynchronously using Groq API with rate limiting.
+
+        Args:
+            prompt: The input prompt
+            temperature: Sampling temperature
+            max_tokens: Maximum tokens to generate
+            model: Optional model override
+
+        Returns:
+            Generated text
+
+        Raises:
+            Exception: If Groq API call fails
+        """
+        if not self.async_groq_client:
+            raise ValueError("Async Groq client not initialized")
+
+        model_name = model or self.llm_settings.groq_model
+
+        # Wait for rate limiter (blocks if at limit)
+        if self.rate_limiter:
+            logger.debug("Waiting for rate limiter...")
+            # Run synchronous rate limiter in executor to not block
+            loop = asyncio.get_event_loop()
+            acquired = await loop.run_in_executor(
+                None, lambda: self.rate_limiter.acquire(timeout=60)
+            )
+            if not acquired:
+                logger.warning("Rate limiter timeout - falling back to Ollama")
+                raise Exception("Rate limiter timeout")
+
+            # Log rate limit status
+            stats = self.rate_limiter.get_stats()
+            if stats['minute_utilization'] > 0.8 or stats['day_utilization'] > 0.8:
+                logger.warning(
+                    f"High rate limit usage: "
+                    f"{stats['requests_last_minute']}/{stats['requests_per_minute_limit']} req/min, "
+                    f"{stats['requests_last_day']}/{stats['requests_per_day_limit']} req/day"
+                )
+
+        start = time.time()
+        try:
+            logger.debug(f"Calling Groq API async with model: {model_name}")
+
+            response: ChatCompletion = await self.async_groq_client.chat.completions.create(
+                model=model_name,
+                messages=[
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+
+            generated_text = response.choices[0].message.content
+
+            # Metrics
+            if METRICS_ENABLED:
+                rag_llm_request_total.labels(
+                    status="success", model=f"groq:{model_name}"
+                ).inc()
+
+            duration = time.time() - start
+            logger.info(
+                f"Groq async generation successful: {len(generated_text)} chars in {duration:.2f}s"
+            )
+
+            if METRICS_ENABLED:
+                rag_llm_latency_seconds.labels(
+                    status="success", model=f"groq:{model_name}"
+                ).observe(duration)
+
+            return generated_text
+
+        except Exception as e:
+            duration = time.time() - start
+
+            if METRICS_ENABLED:
+                rag_llm_request_total.labels(
+                    status="error", model=f"groq:{model_name}"
+                ).inc()
+                rag_llm_latency_seconds.labels(
+                    status="error", model=f"groq:{model_name}"
+                ).observe(duration)
+
+            # Check for specific error types
+            error_msg = str(e)
+            if "rate_limit" in error_msg.lower():
+                logger.warning(f"Groq rate limit exceeded: {e}")
+            elif "api_key" in error_msg.lower() or "authentication" in error_msg.lower():
+                logger.error(f"Groq authentication error: {e}")
+            else:
+                logger.error(f"Groq API error: {e}")
+
+            raise
+
+    async def _generate_with_ollama_async(
+        self,
+        prompt: str,
+        temperature: float,
+        max_tokens: int,
+        model: Optional[str] = None,
+    ) -> str:
+        """Generate text asynchronously using Ollama (wraps sync client in executor).
+
+        Args:
+            prompt: The input prompt
+            temperature: Sampling temperature
+            max_tokens: Maximum tokens to generate
+            model: Optional model override
+
+        Returns:
+            Generated text
+
+        Raises:
+            Exception: If Ollama generation fails
+        """
+        # Ollama client doesn't have async support yet, so wrap in executor
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None,
+            lambda: self._generate_with_ollama(prompt, temperature, max_tokens, model)
+        )
+
 
 # Initialize global service instance at module level for better performance
 _service: OllamaService = OllamaService()
@@ -381,4 +577,35 @@ def generate_with_ollama(
     )
 
 
-__all__ = ["OllamaService", "get_ollama_service", "generate_with_ollama"]
+async def async_generate_with_ollama(
+    prompt: str,
+    temperature: Optional[float] = None,
+    max_tokens: Optional[int] = None,
+    model: Optional[str] = None,
+) -> str:
+    """Async convenience function for generating text with configured LLM provider.
+
+    Args:
+        prompt: The input prompt to generate text from
+        temperature: Sampling temperature
+        max_tokens: Maximum number of tokens to generate
+        model: Optional model override
+
+    Returns:
+        Generated text response
+    """
+    service = get_ollama_service()
+    return await service.async_generate(
+        prompt=prompt,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        model=model,
+    )
+
+
+__all__ = [
+    "OllamaService",
+    "get_ollama_service",
+    "generate_with_ollama",
+    "async_generate_with_ollama",
+]
