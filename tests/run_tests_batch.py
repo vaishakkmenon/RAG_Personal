@@ -6,14 +6,27 @@ Phase 1: Collect all RAG answers (uses 1B model only)
 Phase 2: Validate with batch validator (uses 3B model once)
 
 Usage:
-    # Phase 1: Collect answers
-    python tests/run_tests_batch.py --phase collect
+    # Run all tests
+    python tests/run_tests_batch.py --phase both
 
-    # Phase 2: Validate answers
+    # Run only specific category
+    python tests/run_tests_batch.py --phase both --category skills
+
+    # Run specific test IDs
+    python tests/run_tests_batch.py --phase both --test-id skills_001 --test-id skills_002
+
+    # Collect answers only (no validation)
+    python tests/run_tests_batch.py --phase collect --category projects
+
+    # Validate existing answers
     python tests/run_tests_batch.py --phase validate
 
-    # Or do both in sequence:
-    python tests/run_tests_batch.py --phase both
+Examples:
+    # Test only skills category
+    python tests/run_tests_batch.py --category skills
+
+    # Test projects and ambiguity categories
+    python tests/run_tests_batch.py --test-id projects_001 --test-id ambiguity_control_001
 """
 
 import argparse
@@ -77,10 +90,33 @@ class TwoPhaseTestRunner:
         test_suite: Dict[str, Any],
         output_file: str = "test_answers.json",
         delay: float = 4.0,
+        filter_category: str = None,
+        filter_test_ids: List[str] = None,
     ) -> List[Dict[str, Any]]:
-        """Phase 1: Collect all answers from RAG system"""
+        """Phase 1: Collect all answers from RAG system
+
+        Args:
+            test_suite: Dictionary containing test cases
+            output_file: File to save results
+            delay: Delay between requests
+            filter_category: Optional category to filter tests (e.g., 'skills', 'projects')
+            filter_test_ids: Optional list of specific test IDs to run
+        """
 
         test_cases = test_suite.get("test_cases") or test_suite.get("tests", [])
+
+        # Apply filters if specified
+        if filter_category:
+            test_cases = [t for t in test_cases if t.get("category") == filter_category]
+            print(f"Filtering by category: {filter_category}")
+
+        if filter_test_ids:
+            test_cases = [t for t in test_cases if t.get("test_id") in filter_test_ids]
+            print(f"Filtering by test IDs: {', '.join(filter_test_ids)}")
+
+        if not test_cases:
+            print("No tests match the specified filters!")
+            return []
 
         print(f"{'='*80}")
         print(f"PHASE 1: COLLECTING ANSWERS")
@@ -202,6 +238,16 @@ def main():
         default=4.0,
         help="Delay between requests in seconds (applies to both collection and validation phases)",
     )
+    parser.add_argument(
+        "--category",
+        help="Filter tests by category (e.g., 'skills', 'projects', 'transcript_gpa')",
+    )
+    parser.add_argument(
+        "--test-id",
+        action="append",
+        dest="test_ids",
+        help="Filter by specific test ID(s). Can be used multiple times (e.g., --test-id skills_001 --test-id skills_002)",
+    )
 
     args = parser.parse_args()
 
@@ -217,7 +263,13 @@ def main():
             print(f"Error: Test file not found: {args.tests}")
             sys.exit(1)
 
-        runner.collect_answers(test_suite, args.answers_file, delay=args.delay)
+        runner.collect_answers(
+            test_suite,
+            args.answers_file,
+            delay=args.delay,
+            filter_category=args.category,
+            filter_test_ids=args.test_ids,
+        )
 
     # Phase 2: Validate
     if args.phase in ["validate", "both"]:

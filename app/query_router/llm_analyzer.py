@@ -49,6 +49,8 @@ A question is AMBIGUOUS if:
 
 A question is CLEAR if:
 - It asks for specific information (e.g., "What was my graduate GPA?")
+- It's a yes/no question about a concrete topic (e.g., "Do I have a PhD?", "Have I built ML projects?")
+- It requests an overview but specifies the domain (e.g., "Overview of my academic performance")
 - It explicitly mentions multiple domains with clear intent (e.g., "Summarize my education and work experience")
 - It mentions specific topics/technologies (e.g., "Tell me about Kubernetes certifications")
 
@@ -59,12 +61,17 @@ AMBIGUOUS:
 - "Tell me about my history" → Unclear if academic history, work history, or other
 - "Looking for information" → No specific topic mentioned
 - "What do I know?" → Too broad, needs domain specification
+- "Experience?" → Too vague, could be work, education, skills, or projects
 
 CLEAR:
 - "What was my graduate GPA?" → Specific academic metric
+- "Do I have a PhD?" → Specific yes/no question about a concrete degree
+- "Have I built any machine learning projects?" → Specific yes/no question about concrete topic (ML projects)
+- "Give me an overview of my academic performance" → Overview request with specific domain (academic)
 - "Summarize my education and work experience" → Two explicit domains
 - "Which Kubernetes certifications do I have?" → Specific topic (Kubernetes) and type (certifications)
 - "List my technical skills" → Specific domain (skills)
+- "What companies have I worked for?" → Specific question about concrete information (employers)
 
 Question: "{question}"
 

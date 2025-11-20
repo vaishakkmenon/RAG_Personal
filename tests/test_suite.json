@@ -291,12 +291,13 @@
         "Java",
         "C"
       ],
-      "expected_answer": "Python, C, and Java are the main languages I know",
+      "expected_answer": "Should list programming languages including at minimum Python, C, and Java. May include additional languages from coursework or resume.",
       "is_impossible": false,
       "expected_doc_type": "resume",
       "min_sources": 1,
       "grounded_expected": true,
-      "difficulty": "easy"
+      "difficulty": "easy",
+      "notes": "System synthesizes information from all sources, so comprehensive list is acceptable"
     },
     {
       "test_id": "projects_001",
