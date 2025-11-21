@@ -82,6 +82,14 @@ class QueryRouterSettings(BaseModel):
                 "azure certified",
                 "gcp certified",
             ],
+            "projects": [
+                "project",
+                "projects",
+                "built",
+                "developed",
+                "created",
+                "personal project",
+            ],
         },
         description="Categories and their related terms",
     )
@@ -217,7 +225,7 @@ class QueryRouterSettings(BaseModel):
 
     # Retrieval parameters
     default_top_k: int = Field(
-        default=int(os.getenv("DEFAULT_TOP_K", "5")),
+        default=int(os.getenv("DEFAULT_TOP_K", "10")),
         description="Default number of chunks to retrieve",
     )
 
@@ -334,7 +342,7 @@ class IngestSettings(BaseModel):
 class RetrievalSettings(BaseModel):
     """Settings for retrieval and search."""
 
-    top_k: int = Field(default=5, description="Default number of chunks to retrieve")
+    top_k: int = Field(default=10, description="Default number of chunks to retrieve")
 
     null_threshold: float = Field(
         default=0.50,

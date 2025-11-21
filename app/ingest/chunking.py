@@ -211,4 +211,23 @@ def chunk_text_with_section_metadata(
 
         chunks.append({"text": current_chunk.strip(), "metadata": chunk_metadata})
 
-    return chunks
+    # Filter out tiny chunks (header-only chunks with no content)
+    # Keep chunks that are at least 50 characters (prevents "# Header" chunks)
+    MIN_CHUNK_SIZE = 50
+    filtered_chunks = []
+
+    for chunk in chunks:
+        text = chunk["text"]
+
+        # If chunk is too small and is just a header, try to merge with next chunk
+        if len(text) < MIN_CHUNK_SIZE:
+            # Check if it's just a markdown header
+            if re.match(r"^#{1,6}\s+.+$", text.strip()):
+                # Skip this header-only chunk - it will be included in the next chunk
+                # via the section metadata already
+                logger.debug(f"Filtering out header-only chunk: {text[:50]}")
+                continue
+
+        filtered_chunks.append(chunk)
+
+    return filtered_chunks

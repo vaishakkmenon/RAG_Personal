@@ -126,6 +126,7 @@ class QueryAnalyzer:
             'work': ['work', 'job', 'employment', 'professional', 'career', 'experience'],
             'certifications': ['certification', 'certificate', 'certified', 'cert'],
             'skills': ['skill', 'technical', 'programming', 'technology', 'knowledge'],
+            'projects': ['project', 'projects', 'built', 'developed', 'created'],
         }
 
         for domain, keywords in domain_map.items():
@@ -252,9 +253,14 @@ class QueryAnalyzer:
                 'name': 'skills',
                 'filters': [
                     {'doc_type': 'resume', 'section': 'Skills'},  # Technical skills
-                    {'doc_type': 'resume'},  # Will post-filter for project sections
+                ]
+            },
+            'projects': {
+                'name': 'projects',
+                'filters': [
+                    {'doc_type': 'resume'},  # Resume with project sections
                 ],
-                'section_prefix': 'Personal Projects'  # Post-filter for projects
+                'section_prefix': 'Personal Projects'  # Post-filter for project sections only
             }
         }
 

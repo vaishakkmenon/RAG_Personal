@@ -97,6 +97,24 @@ class ResponseBuilder:
             logger.info(f"Structured summary detected covering {num_domains} domains with {len(domain_configs)} domain configs")
             return
 
+        # Handle single-domain queries with section filtering
+        domain_configs = params.get('domain_configs', [])
+        if len(domain_configs) == 1:
+            domain_config = domain_configs[0]
+            # If domain has section_prefix, use post-filtering
+            if 'section_prefix' in domain_config:
+                params['post_filter_section_prefix'] = domain_config['section_prefix']
+                # Increase top_k to ensure enough chunks survive post-filtering
+                # Generic queries like "What projects?" have low semantic similarity
+                params['top_k'] = 20  # Retrieve more, then filter by section
+                logger.info(f"Single domain query - will post-filter by section: {domain_config['section_prefix']}, retrieving top_k=20")
+            # If domain has filters, apply the first one as metadata_filter
+            if 'filters' in domain_config and domain_config['filters']:
+                # Use the first filter (usually doc_type)
+                first_filter = domain_config['filters'][0]
+                params.update(first_filter)
+                logger.info(f"Single domain query - applying metadata filter: {first_filter}")
+
         # Adjust for broad questions
         if params['question_type'] == 'broad':
             params.update({
