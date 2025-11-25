@@ -24,6 +24,9 @@ Thumbs.db
 data/chroma/
 hf_cache/
 
+# Backups (ChromaDB snapshots)
+backups/
+
 # Logs (optional)
 *.log
 logs/

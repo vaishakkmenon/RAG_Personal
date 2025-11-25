@@ -29,6 +29,8 @@ tags:
 ## Overall Academic Performance
 
 - **Total Credits Earned:** 169 credits (139 undergraduate + 30 graduate)
+- **Undergraduate GPA:** 3.97
+- **Graduate GPA:** 4.00
 - **Consistent Academic Excellence:** Presidential Honors multiple terms
 - **Perfect Graduate Performance:** 4.00 GPA across all graduate coursework
 
@@ -144,34 +146,45 @@ tags:
 
 ### Fall Term 2021
 
-| Course   | Title                          | Credits | Grade | Quality Points |
-| -------- | ------------------------------ | ------- | ----- | -------------- |
-| CS 303   | Algorithms and Data Structures | 3.00    | A     | 12.00          |
-| CS 355   | Computer Organization/Assembly | 3.00    | A     | 12.00          |
-| CS 420   | Digital Logic                  | 3.00    | A     | 12.00          |
-| CMST 101 | Public Speaking                | 3.00    | A     | 12.00          |
-| EE 233   | Engineering Programming Method | 3.00    | A     | 12.00          |
+| Course | Title                          | Credits | Grade | Quality Points |
+| ------ | ------------------------------ | ------- | ----- | -------------- |
+| CS 303 | Algorithms and Data Structures | 3.00    | A     | 12.00          |
+| CS 330 | Computer Organization/Assembly | 3.00    | A     | 12.00          |
+| EE 210 | Digital Logic                  | 3.00    | A     | 12.00          |
+| EH 212 | Forms of Literature            | 3.00    | A     | 12.00          |
+| HY 121 | The United States Since 1877   | 3.00    | A     | 12.00          |
 
 **Term Summary:** 15.00 credits, 60.00 quality points, 4.00 GPA
 
 ### Spring Term 2022
 
-| Course | Title                | Credits | Grade | Quality Points |
-| ------ | -------------------- | ------- | ----- | -------------- |
-| CS 410 | Database App Dev     | 3.00    | A     | 12.00          |
-| CS 420 | Software Engineering | 3.00    | B     | 9.00           |
-| CS 436 | Computer Security    | 3.00    | A     | 12.00          |
+| Course  | Title                           | Credits | Grade | Quality Points |
+| ------- | ------------------------------- | ------- | ----- | -------------- |
+| CS 332  | Systems Programming             | 3.00    | A     | 12.00          |
+| CS 350  | Automata/Formal Langs           | 3.00    | B     | 9.00           |
+| EGR 150 | Computer Methods in Engineering | 3.00    | A     | 12.00          |
+| HY 120  | The United States to 1877       | 3.00    | A     | 12.00          |
+| MA 360  | Scientific Programming          | 3.00    | A     | 12.00          |
 
-**Term Summary:** 9.00 credits, 33.00 quality points, 3.67 GPA
+**Term Summary:** 15.00 credits, 57.00 quality points, 3.80 GPA
+
+### Summer Term 2022
+
+| Course | Title                    | Credits | Grade | Quality Points |
+| ------ | ------------------------ | ------- | ----- | -------------- |
+| PY 212 | Developmental Psychology | 3.00    | A     | 12.00          |
+
+**Term Summary:** 3.00 credits, 12.00 quality points, 4.00 GPA
 
 ### Fall Term 2022
 
-| Course | Title                          | Credits | Grade | Quality Points |
-| ------ | ------------------------------ | ------- | ----- | -------------- |
-| CS 355 | Probability & Statistics in CS | 3.00    | A     | 12.00          |
-| CS 401 | Programming Languages          | 3.00    | A     | 12.00          |
-| EE 333 | Engr Programming using Objects | 3.00    | A     | 12.00          |
-| EE 337 | Intro to Microprocessors       | 3.00    | A     | 12.00          |
+| Course   | Title                          | Credits | Grade | Quality Points |
+| -------- | ------------------------------ | ------- | ----- | -------------- |
+| CMST 101 | Public Speaking                | 3.00    | A     | 12.00          |
+| CS 410   | Database App Dev               | 3.00    | A     | 12.00          |
+| CS 420   | Software Engineering           | 3.00    | A     | 12.00          |
+| CS 436   | Computer Security              | 3.00    | A     | 12.00          |
+| EE 233   | Engineering Programming Method | 3.00    | A     | 12.00          |
 
 **Term Summary:** 12.00 credits, 48.00 quality points, 4.00 GPA
 
@@ -249,7 +262,7 @@ tags:
 
 ## Technical Proficiencies (Based on Coursework)
 
-- **Programming Languages:** Python, Assembly, Object-Oriented Programming
+- **Programming Languages:** Python, C, Java
 - **AI/ML Technologies:** Neural Networks, Deep Learning, Computer Vision, Natural Language Processing
 - **Data & Analytics:** Database Systems, Data Science Foundations, Statistical Analysis
 - **Systems & Networks:** Computer Organization, Networking, Cloud Computing

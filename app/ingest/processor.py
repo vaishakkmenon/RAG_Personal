@@ -7,13 +7,22 @@ Handles file processing, chunking, deduplication, and batch insertion.
 import hashlib
 import logging
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
+from datetime import datetime
 
-from ..retrieval import add_documents
-from ..settings import ingest_settings
-from .chunking import chunk_text_with_section_metadata
-from .discovery import find_files
-from .metadata import extract_frontmatter, read_text
+from app.retrieval import add_documents
+from app.settings import ingest_settings
+from app.ingest.chunking import (
+    chunk_text_with_section_metadata,
+    extract_doc_id,
+    split_into_section_documents,
+)
+from app.ingest.discovery import find_files
+from app.ingest.metadata import (
+    extract_frontmatter,
+    read_text,
+    generate_version_identifier,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -23,12 +32,19 @@ MAX_FILE_SIZE = ingest_settings.max_file_size
 
 # Optional: Import Prometheus metrics if available
 try:
-    from ..metrics import rag_ingested_chunks_total, rag_ingest_skipped_files_total
+    from app.metrics import rag_ingested_chunks_total, rag_ingest_skipped_files_total
 
     METRICS_ENABLED = True
 except ImportError:
     METRICS_ENABLED = False
     logger.info("Prometheus metrics not available (metrics.py not found)")
+
+
+def _generate_chunk_id(
+    doc_id: str, version: str, section_slug: str, chunk_idx: int
+) -> str:
+    """Generate a chunk ID with format: {doc_id}@{version}#{section_slug}:{chunk_idx}"""
+    return f"{doc_id}@{version}#{section_slug}:{chunk_idx}"
 
 
 def _record_metric(metric_func, value=1):
@@ -40,33 +56,63 @@ def _record_metric(metric_func, value=1):
             metric_func()
 
 
-def _process_file(fp: str) -> Optional[List[Dict]]:
-    """Process a single file, return chunks or None if failed."""
+def _process_file(fp: str) -> List[Dict]:
+    """Process a single file, return chunks or empty list if failed."""
     try:
-        # Check size
+        # Existing size check
         file_size = os.path.getsize(fp)
         if file_size > MAX_FILE_SIZE:
             logger.warning(f"Skipping {fp}: too large ({file_size} bytes)")
             _record_metric(
                 lambda: rag_ingest_skipped_files_total.labels(reason="too_large").inc()
             )
-            return None
+            return []
 
-        # Read file
+        # Read file and extract metadata
         text = read_text(fp)
         metadata, body = extract_frontmatter(text)
-        metadata["source"] = fp
 
-        return chunk_text_with_section_metadata(
-            body, ingest_settings.chunk_size, ingest_settings.chunk_overlap, metadata
+        # Add source file info to metadata
+        metadata["source"] = fp
+        metadata["filename"] = os.path.basename(fp)
+
+        # Extract doc_id and doc_type
+        doc_id, doc_type = extract_doc_id(fp)
+        metadata.update(
+            {
+                "doc_id": doc_id,
+                "doc_type": doc_type,
+                "ingestion_timestamp": datetime.now().isoformat(),
+            }
         )
 
+        # Generate version identifier with collision detection
+        version = generate_version_identifier(metadata, doc_id)
+        metadata["version_identifier"] = version
+
+        # Split into section documents first
+        section_docs = split_into_section_documents(body, metadata, fp)
+
+        all_chunks = []
+        for section_doc in section_docs:
+            # Chunk each section document
+            chunks = chunk_text_with_section_metadata(
+                text=section_doc["text"],
+                chunk_size=ingest_settings.chunk_size,
+                overlap=ingest_settings.chunk_overlap,
+                base_metadata=metadata,
+                section_metadata=section_doc["metadata"],
+            )
+            all_chunks.extend(chunks)
+
+        return all_chunks
+
     except Exception as e:
-        logger.warning(f"Failed to process {fp}: {e}")
+        logger.error(f"Failed to process {fp}: {str(e)}", exc_info=True)
         _record_metric(
             lambda: rag_ingest_skipped_files_total.labels(reason="error").inc()
         )
-        return None
+        return []
 
 
 def ingest_paths(paths: Optional[List[str]] = None, batch_size: int = None) -> int:
@@ -74,9 +120,9 @@ def ingest_paths(paths: Optional[List[str]] = None, batch_size: int = None) -> i
 
     Args:
         paths: List of file or directory paths to ingest.
-               Defaults to [settings.docs_dir] if None.
+                Defaults to [settings.docs_dir] if None.
         batch_size: Number of documents to process in a batch.
-                   If None, uses the value from configuration.
+                    If None, uses the value from configuration.
 
     Returns:
         Total number of chunks added
@@ -84,7 +130,7 @@ def ingest_paths(paths: Optional[List[str]] = None, batch_size: int = None) -> i
     if batch_size is None:
         batch_size = BATCH_SIZE
 
-    from ..settings import settings
+    from app.settings import settings
 
     base_paths = paths or [settings.docs_dir]
     files = find_files(base_paths)
@@ -106,36 +152,38 @@ def ingest_paths(paths: Optional[List[str]] = None, batch_size: int = None) -> i
         file_dupes = 0
 
         # Add chunks with metadata
-        for idx, chunk_dict in enumerate(chunk_dicts):
-            # Normalize and hash for deduplication
+        for chunk_dict in chunk_dicts:
+            # Get normalized text and generate hash for deduplication
             normalized = chunk_dict["text"].strip()
             if not normalized:
                 continue
 
             chunk_hash = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
-
             if chunk_hash in seen_hashes:
                 file_dupes += 1
                 duplicates_total += 1
-                logger.debug(
-                    f"Skipped duplicate chunk {fp}:{idx} (hash={chunk_hash[:8]})"
-                )
+                logger.debug(f"Skipped duplicate chunk (hash={chunk_hash[:8]})")
                 continue
 
             seen_hashes.add(chunk_hash)
 
-            # Create chunk record with section-enriched metadata
+            # Generate chunk ID using section and version info
+            metadata = chunk_dict["metadata"]
+            doc_id = metadata["doc_id"]
+            version = metadata["version_identifier"]
+            section_slug = metadata.get("section_slug", "root")
+            chunk_idx = file_added  # Local index within file
+
+            chunk_id = _generate_chunk_id(doc_id, version, section_slug, chunk_idx)
+
+            # Create chunk record with enriched metadata
             docs_batch.append(
-                {
-                    "id": f"{fp}:{idx}",
-                    "text": normalized,
-                    "metadata": chunk_dict["metadata"],
-                }
+                {"id": chunk_id, "text": normalized, "metadata": metadata}
             )
 
             file_added += 1
 
-            # Process files in batches
+            # Process in batches
             if len(docs_batch) >= batch_size:
                 add_documents(docs_batch)
                 _record_metric(lambda: rag_ingested_chunks_total.inc(len(docs_batch)))
@@ -155,7 +203,7 @@ def ingest_paths(paths: Optional[List[str]] = None, batch_size: int = None) -> i
         logger.info(f"Added final batch of {len(docs_batch)} chunks to ChromaDB")
 
     logger.info(
-        f"✅ Ingestion complete: added {added_total} chunks from {len(files)} files; "
+        f"[COMPLETION] Ingestion complete: added {added_total} chunks from {len(files)} files; "
         f"skipped {duplicates_total} duplicate chunks"
     )
 

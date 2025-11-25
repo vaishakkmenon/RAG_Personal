@@ -350,7 +350,7 @@ class RetrievalSettings(BaseModel):
     )
 
     max_distance: float = Field(
-        default=0.50,
+        default=0.60,
         description="Maximum cosine distance for retrieval (lower is more similar)",
     )
 
@@ -551,7 +551,7 @@ class Settings(BaseModel):
         description="Default number of chunks to retrieve",
     )
     max_distance: float = Field(
-        default=float(os.getenv("MAX_DISTANCE", "0.50")),
+        default=float(os.getenv("MAX_DISTANCE", "0.60")),
         description="Maximum cosine distance for retrieval (0-2, lower = more similar)",
     )
     null_threshold: float = Field(

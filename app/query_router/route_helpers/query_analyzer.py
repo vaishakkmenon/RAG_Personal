@@ -230,8 +230,7 @@ class QueryAnalyzer:
             'education': {
                 'name': 'education',
                 'filters': [
-                    {'doc_type': 'term'},  # Academic term records
-                    {'doc_type': 'transcript_analysis'},  # Overall academic summary
+                    {'doc_type': 'transcript_analysis'},  # Overall academic summary (cumulative data)
                     {'doc_type': 'resume', 'section': 'Education'},  # Resume education section
                 ]
             },
