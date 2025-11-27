@@ -48,12 +48,13 @@ class QueryRouter:
 
         except Exception as e:
             logger.error(f"Error routing query: {e}", exc_info=True)
-            # Return safe defaults on error
+            # Return safe defaults on error (use settings values)
+            from ..settings import settings
             return {
-                "top_k": 5,
-                "rerank": False,
-                "null_threshold": 0.5,
-                "max_distance": 0.6,
+                "top_k": settings.retrieval.top_k,
+                "rerank": settings.retrieval.rerank,
+                "null_threshold": settings.retrieval.null_threshold,
+                "max_distance": settings.retrieval.max_distance,
                 "confidence": 0.5,
                 "error": str(e),
             }

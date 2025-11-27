@@ -35,11 +35,12 @@ class ResponseBuilder:
     
     def _get_default_parameters(self) -> Dict[str, Any]:
         """Get default routing parameters."""
+        from ...settings import settings
         return {
-            'top_k': 5,
-            'rerank': False,
-            'null_threshold': 0.5,
-            'max_distance': 0.6,
+            'top_k': settings.retrieval.top_k,
+            'rerank': settings.retrieval.rerank,
+            'null_threshold': settings.retrieval.null_threshold,
+            'max_distance': settings.retrieval.max_distance,
             'doc_type': None,
             'technologies': [],
             'categories': [],

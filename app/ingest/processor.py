@@ -13,9 +13,8 @@ from datetime import datetime
 from app.retrieval import add_documents
 from app.settings import ingest_settings
 from app.ingest.chunking import (
-    chunk_text_with_section_metadata,
+    chunk_by_headers,
     extract_doc_id,
-    split_into_section_documents,
 )
 from app.ingest.discovery import find_files
 from app.ingest.metadata import (
@@ -90,20 +89,21 @@ def _process_file(fp: str) -> List[Dict]:
         version = generate_version_identifier(metadata, doc_id)
         metadata["version_identifier"] = version
 
-        # Split into section documents first
-        section_docs = split_into_section_documents(body, metadata, fp)
+        # Determine split level based on doc_type
+        # Use level 2 (##) for transcript files to ensure Academic Summary sections are chunked
+        # This includes critical sections like "Degrees Earned" and "Overall Academic Performance"
+        # as well as individual terms like "Fall Term 2022"
+        split_level = 2 if doc_type == "transcript_analysis" else 2
 
-        all_chunks = []
-        for section_doc in section_docs:
-            # Chunk each section document
-            chunks = chunk_text_with_section_metadata(
-                text=section_doc["text"],
-                chunk_size=ingest_settings.chunk_size,
-                overlap=ingest_settings.chunk_overlap,
-                base_metadata=metadata,
-                section_metadata=section_doc["metadata"],
-            )
-            all_chunks.extend(chunks)
+        # NEW: Single-stage header-based chunking (replaces two-stage process)
+        all_chunks = chunk_by_headers(
+            text=body,
+            base_metadata=metadata,
+            source_path=fp,
+            chunk_size=ingest_settings.chunk_size,
+            overlap=ingest_settings.chunk_overlap,
+            split_level=split_level,
+        )
 
         return all_chunks
 
@@ -167,14 +167,9 @@ def ingest_paths(paths: Optional[List[str]] = None, batch_size: int = None) -> i
 
             seen_hashes.add(chunk_hash)
 
-            # Generate chunk ID using section and version info
+            # Use chunk ID from chunk_by_headers() (already includes version, section, and index)
+            chunk_id = chunk_dict["id"]
             metadata = chunk_dict["metadata"]
-            doc_id = metadata["doc_id"]
-            version = metadata["version_identifier"]
-            section_slug = metadata.get("section_slug", "root")
-            chunk_idx = file_added  # Local index within file
-
-            chunk_id = _generate_chunk_id(doc_id, version, section_slug, chunk_idx)
 
             # Create chunk record with enriched metadata
             docs_batch.append(

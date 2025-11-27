@@ -7,7 +7,7 @@ Handles splitting text into overlapping chunks while preserving section informat
 import logging
 import os
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from ..settings import ingest_settings
 from .metadata import generate_version_identifier
@@ -15,276 +15,418 @@ from .metadata import generate_version_identifier
 logger = logging.getLogger(__name__)
 
 
-def chunk_text(text: str, chunk_size: int = None, overlap: int = None) -> List[str]:
-    """Split text into overlapping chunks, preferring natural boundaries.
-
-    Args:
-        text: Text to chunk
-        chunk_size: Size of each chunk (uses config if None)
-        overlap: Overlap between chunks (uses config if None)
-
-    Returns:
-        List of text chunks
-    """
-    if chunk_size is None:
-        chunk_size = ingest_settings.chunk_size
-    if overlap is None:
-        overlap = ingest_settings.chunk_overlap
-
-    if not text.strip():
-        return []
-
-    # Split into paragraphs
-    paragraphs = re.split(r"\n\s*\n", text)
-
-    chunks = []
-    current_chunk = ""
-
-    for para in paragraphs:
-        para = para.strip()
-        if not para:
-            continue
-
-        # If adding this paragraph exceeds chunk_size
-        if len(current_chunk) + len(para) + 2 > chunk_size:  # +2 for \n\n
-            # Save current chunk if not empty
-            if current_chunk:
-                chunks.append(current_chunk.strip())
-
-            # If paragraph itself is too large, split by sentences
-            if len(para) > chunk_size:
-                sentences = re.split(r"(?<=[.!?])\s+", para)
-                temp_chunk = ""
-
-                for sent in sentences:
-                    if len(temp_chunk) + len(sent) + 1 > chunk_size:
-                        if temp_chunk:
-                            chunks.append(temp_chunk.strip())
-                        temp_chunk = sent + " "
-                    else:
-                        temp_chunk += sent + " "
-
-                # Save last sentence chunk with overlap for continuity
-                if temp_chunk.strip():
-                    current_chunk = (
-                        temp_chunk[-overlap:]
-                        if len(temp_chunk) > overlap
-                        else temp_chunk
-                    )
-                else:
-                    current_chunk = ""
-            else:
-                # Start new chunk with this paragraph
-                current_chunk = para + "\n\n"
-        else:
-            # Add paragraph to current chunk
-            current_chunk += para + "\n\n"
-
-    # Don't forget last chunk
-    if current_chunk.strip():
-        chunks.append(current_chunk.strip())
-
-    return chunks
+# ============================================================================
+# NEW: Header-Based Chunking (Single-Stage)
+# ============================================================================
 
 
-def chunk_text_with_section_metadata(
+def chunk_by_headers(
     text: str,
+    base_metadata: Dict[str, Any],
+    source_path: str,
     chunk_size: int = None,
     overlap: int = None,
-    base_metadata: Optional[Dict] = None,
-    section_metadata: Optional[Dict] = None,
-) -> List[Dict]:
-    """Split text into chunks while extracting section information from markdown headers.
+    split_level: int = 2,
+) -> List[Dict[str, Any]]:
+    """
+    Single-stage header-based chunking that includes headers with content.
+
+    Replaces the two-stage process (split_into_section_documents + chunk_text_with_section_metadata)
+    with a single pass that:
+    1. Parses markdown headers at specified level (default: ##)
+    2. Creates chunks with headers included
+    3. Adds [Part X/Y] markers for multi-chunk sections
+    4. Maintains all metadata for backward compatibility
 
     Args:
-        text: Text to chunk
-        chunk_size: Size of each chunk (uses config if None)
-        overlap: Overlap between chunks (uses config if None)
-        base_metadata: Base metadata to include in all chunks
-        section_metadata: Section-specific metadata to include in chunks
+        text: Markdown body text (after frontmatter extraction)
+        base_metadata: Metadata from YAML frontmatter
+        source_path: Original file path
+        chunk_size: Target chunk size in characters (default: 600)
+        overlap: Overlap between consecutive chunks (default: 120)
+        split_level: Header level to split at (default: 2 for ##)
 
     Returns:
-        List of dicts with 'text' and 'metadata' keys
+        List of chunk dicts with 'text' and 'metadata' keys
+
+    Example:
+        Given markdown with ## headers, creates chunks like:
+        - "## Section Name\n\nContent here..."
+        - "## Long Section [Part 1/2]\n\nFirst part..."
+        - "## Long Section [Part 2/2]\n\nSecond part..."
     """
     if chunk_size is None:
         chunk_size = ingest_settings.chunk_size
     if overlap is None:
         overlap = ingest_settings.chunk_overlap
-    if base_metadata is None:
-        base_metadata = {}
-    if section_metadata is None:
-        section_metadata = {}
 
-    # Create a deep copy of base_metadata to avoid modifying the original
-    metadata = base_metadata.copy()
+    # Extract doc identifiers
+    doc_id, doc_type = extract_doc_id(source_path)
+    version = generate_version_identifier(base_metadata, doc_id)
 
-    # Update with section metadata, preserving any existing values
-    for key, value in section_metadata.items():
-        if key not in metadata or not metadata[key]:
-            metadata[key] = value
+    # Parse markdown into section structures
+    sections = _parse_markdown_sections(text, split_level)
 
-    if not text.strip():
-        return []
+    if not sections:
+        logger.warning(f"No sections found in {source_path}, creating single section")
+        sections = [{
+            'header': '# Complete Document',
+            'header_text': 'Complete Document',
+            'header_level': 1,
+            'content': text,
+            'section_stack': ['Complete Document']
+        }]
 
-    # Split into paragraphs
-    paragraphs = re.split(r"\n\s*\n", text)
+    # Create chunks for each section
+    all_chunks = []
+    chunk_idx = 0
 
-    chunks = []
-    current_chunk = ""
-    current_section = metadata.get("section")  # Get section from metadata if available
-    # Initialize section_stack as list for internal use (will be converted to string on output)
-    section_stack_str = metadata.get("section_stack", "")
-    section_stack = section_stack_str.split(" > ") if section_stack_str else []
+    for section in sections:
+        header_text = section['header']
+        content = section['content']
+        section_stack = section['section_stack']
+        section_name = section['header_text']
 
-    for para in paragraphs:
-        para = para.strip()
-        if not para:
+        # Skip empty sections
+        if not content.strip():
+            logger.debug(f"Skipping empty section: {section_name}")
             continue
 
-        # Check if this paragraph is a markdown header
-        header_match = re.match(r"^(#{1,6})\s+(.+)$", para)
+        # Calculate available space for content
+        header_length = len(header_text)
+        full_text = f"{header_text}\n\n{content}"
+
+        # Check if section fits in single chunk
+        if len(full_text) <= chunk_size:
+            # Single chunk - no continuation needed
+            chunk_metadata = _create_chunk_metadata(
+                base_metadata=base_metadata,
+                section_stack=section_stack,
+                section_name=section_name,
+                doc_id=doc_id,
+                doc_type=doc_type,
+                version=version,
+                part_num=None,
+                total_parts=1
+            )
+
+            all_chunks.append({
+                'text': full_text.strip(),
+                'metadata': chunk_metadata,
+                'id': f"{doc_id}@{version}#{chunk_metadata['section_slug']}:{chunk_idx}"
+            })
+            chunk_idx += 1
+        else:
+            # Multi-chunk section - needs splitting
+            # Reserve space for header + " [Part X/Y]" (max 12 chars for " [Part 99/99]")
+            max_content_size = chunk_size - header_length - 15
+
+            if max_content_size < 200:
+                logger.warning(f"Header too long ({header_length} chars): {header_text[:50]}...")
+                max_content_size = max(chunk_size - header_length - 15, 200)
+
+            # Split content into parts with overlap
+            content_parts = _split_content_with_overlap(content, max_content_size, overlap)
+            total_parts = len(content_parts)
+
+            for part_num, content_part in enumerate(content_parts, start=1):
+                # Add continuation marker to header
+                part_header = f"{header_text} [Part {part_num}/{total_parts}]"
+                chunk_text = f"{part_header}\n\n{content_part}".strip()
+
+                chunk_metadata = _create_chunk_metadata(
+                    base_metadata=base_metadata,
+                    section_stack=section_stack,
+                    section_name=section_name,
+                    doc_id=doc_id,
+                    doc_type=doc_type,
+                    version=version,
+                    part_num=part_num,
+                    total_parts=total_parts
+                )
+
+                all_chunks.append({
+                    'text': chunk_text,
+                    'metadata': chunk_metadata,
+                    'id': f"{doc_id}@{version}#{chunk_metadata['section_slug']}:{chunk_idx}"
+                })
+                chunk_idx += 1
+
+    logger.info(f"Created {len(all_chunks)} chunks from {len(sections)} sections in {source_path}")
+    return all_chunks
+
+
+def _parse_markdown_sections(
+    text: str,
+    split_level: int = 2
+) -> List[Dict[str, Any]]:
+    """
+    Parse markdown into section structures based on header level.
+
+    Tracks header hierarchy and creates section dictionaries for each
+    section at the split level (default: ## headers).
+
+    Args:
+        text: Markdown text to parse
+        split_level: Header level to split at (1-6, default: 2)
+
+    Returns:
+        List of section dicts with keys:
+        - header: Raw header line (e.g., "## Work Experience")
+        - header_text: Clean title (e.g., "Work Experience")
+        - header_level: Integer level (e.g., 2)
+        - content: Content text (string)
+        - section_stack: List of hierarchical section names
+    """
+    sections = []
+    current_section = None
+    section_stack = []
+    current_l1_header = None
+    preamble_content = []
+    in_preamble = True
+
+    lines = text.split('\n')
+
+    for line in lines:
+        # Check for markdown header
+        header_match = re.match(r'^(#{1,6})\s+(.+)$', line)
 
         if header_match:
-            # Save current chunk BEFORE changing section
-            if current_chunk.strip():
-                chunk_metadata = metadata.copy()
-                if current_section:
-                    chunk_metadata["section"] = current_section
-                # Convert section_stack to string for ChromaDB compatibility
-                if section_stack:
-                    chunk_metadata["section_stack"] = " > ".join(section_stack)
-
-                chunks.append(
-                    {"text": current_chunk.strip(), "metadata": chunk_metadata}
-                )
-                current_chunk = ""  # Start fresh
-
-            # Update section for the new header
-            level = len(header_match.group(1))  # Number of #
+            in_preamble = False
+            level = len(header_match.group(1))
             title = header_match.group(2).strip()
 
             # Update section stack based on header level
             if level == 1:
                 section_stack = [title]
+                current_l1_header = title
             elif level == 2:
-                section_stack = section_stack[:1] + [title]
-            elif level == 3:
-                section_stack = section_stack[:2] + [title]
-            else:
-                section_stack = section_stack[: level - 1] + [title]
-
-            current_section = " > ".join(section_stack)
-
-            # Add header to new chunk with correct section
-            current_chunk = para + "\n\n"
-            continue
-
-        # Add paragraph to current chunk
-        if len(current_chunk) + len(para) + 2 > chunk_size:
-            # Save current chunk if not empty
-            if current_chunk.strip():
-                chunk_metadata = metadata.copy()
-                if current_section:
-                    chunk_metadata["section"] = current_section
-                # Convert section_stack to string for ChromaDB compatibility
-                if section_stack:
-                    chunk_metadata["section_stack"] = " > ".join(section_stack)
-
-                chunks.append(
-                    {"text": current_chunk.strip(), "metadata": chunk_metadata}
-                )
-
-            # If paragraph itself is too large, split by sentences
-            if len(para) > chunk_size:
-                sentences = re.split(r"(?<=[.!?])\s+", para)
-                temp_chunk = ""
-
-                for sent in sentences:
-                    if len(temp_chunk) + len(sent) + 1 > chunk_size:
-                        if temp_chunk.strip():
-                            chunk_metadata = metadata.copy()
-                            if current_section:
-                                chunk_metadata["section"] = current_section
-                            # Convert section_stack to string for ChromaDB compatibility
-                            if section_stack:
-                                chunk_metadata["section_stack"] = " > ".join(section_stack)
-
-                            chunks.append(
-                                {"text": temp_chunk.strip(), "metadata": chunk_metadata}
-                            )
-                        temp_chunk = sent + " "
-                    else:
-                        temp_chunk += sent + " "
-
-                # Overlap for continuity
-                if temp_chunk.strip():
-                    current_chunk = (
-                        temp_chunk[-overlap:]
-                        if len(temp_chunk) > overlap
-                        else temp_chunk
-                    )
+                if current_l1_header:
+                    section_stack = [current_l1_header, title]
                 else:
-                    current_chunk = ""
+                    section_stack = [title]
+            elif level == 3:
+                if len(section_stack) >= 2:
+                    section_stack = section_stack[:2] + [title]
+                else:
+                    section_stack = section_stack + [title]
             else:
-                # Start new chunk with this paragraph
-                current_chunk = para + "\n\n"
+                # Levels 4-6: append to existing stack
+                if len(section_stack) >= 3:
+                    section_stack = section_stack[:3] + [title]
+                else:
+                    section_stack = section_stack + [title]
+
+            # Check if this is a split-level header
+            if level == split_level:
+                # Save previous section if exists
+                if current_section is not None:
+                    sections.append(current_section)
+
+                # Start new section
+                current_section = {
+                    'header': line,
+                    'header_text': title,
+                    'header_level': level,
+                    'content': '',
+                    'section_stack': section_stack.copy()
+                }
+            elif level == 1 and split_level == 2:
+                # Special case: Level-1 header when splitting at level 2
+                # Save previous section if exists
+                if current_section is not None:
+                    sections.append(current_section)
+
+                # This L1 might become a section if it has no L2 children
+                current_section = {
+                    'header': line,
+                    'header_text': title,
+                    'header_level': level,
+                    'content': '',
+                    'section_stack': section_stack.copy(),
+                    'is_l1_standalone': True  # Mark for potential section creation
+                }
+            else:
+                # Lower-level header - add to current section content
+                if current_section is not None:
+                    current_section['content'] += line + '\n'
         else:
-            # Add paragraph to current chunk
-            current_chunk += para + "\n\n"
+            # Regular content line
+            if in_preamble:
+                preamble_content.append(line)
+            elif current_section is not None:
+                current_section['content'] += line + '\n'
 
-    # Don't forget last chunk
-    if current_chunk.strip():
-        chunk_metadata = metadata.copy()
-        if current_section:
-            chunk_metadata["section"] = current_section
-        # Convert section_stack to string for ChromaDB compatibility
-        if section_stack:
-            chunk_metadata["section_stack"] = " > ".join(section_stack)
+    # Don't forget last section
+    if current_section is not None:
+        sections.append(current_section)
 
-        chunks.append({"text": current_chunk.strip(), "metadata": chunk_metadata})
+    # Handle preamble if exists
+    if preamble_content and any(line.strip() for line in preamble_content):
+        preamble_text = '\n'.join(preamble_content).strip()
+        if preamble_text:
+            sections.insert(0, {
+                'header': '# Preamble',
+                'header_text': 'Preamble',
+                'header_level': 1,
+                'content': preamble_text,
+                'section_stack': ['Preamble']
+            })
 
-    # Filter out tiny chunks (header-only chunks with no content)
-    MIN_CHUNK_SIZE = 50
-    filtered_chunks = []
+    # Clean up content (remove trailing whitespace)
+    for section in sections:
+        section['content'] = section['content'].strip()
 
-    for chunk in chunks:
-        text = chunk["text"]
-        chunk_metadata = chunk["metadata"]
+    return sections
 
-        # If chunk is too small and is just a markdown header
-        if len(text) < MIN_CHUNK_SIZE:
-            if re.match(r"^#{1,6}\s+.+$", text.strip()):
-                logger.debug(f"Filtering out header-only chunk: {text[:50]}")
-                continue
 
-            # For small non-header chunks, try to merge with previous chunk
-            if filtered_chunks:
-                last_chunk = filtered_chunks[-1]
-                last_chunk["text"] += " " + text
-                # Update the last chunk's metadata if needed
-                if (
-                    "section" not in last_chunk["metadata"]
-                    and "section" in chunk_metadata
-                ):
-                    last_chunk["metadata"]["section"] = chunk_metadata["section"]
-                if (
-                    "section_stack" not in last_chunk["metadata"]
-                    and "section_stack" in chunk_metadata
-                ):
-                    last_chunk["metadata"]["section_stack"] = chunk_metadata[
-                        "section_stack"
-                    ]
-                continue
+def _split_content_with_overlap(
+    content: str,
+    max_size: int,
+    overlap: int = 120
+) -> List[str]:
+    """
+    Split content into overlapping parts that fit within max_size.
 
-        # Ensure metadata is included in the chunk
-        chunk["metadata"] = chunk_metadata
-        filtered_chunks.append(chunk)
+    Splitting strategy:
+    1. Try to split at paragraph boundaries (\n\n)
+    2. If paragraph too large, split at sentence boundaries
+    3. Maintain overlap between consecutive parts
 
-    return filtered_chunks
+    Args:
+        content: Text content to split
+        max_size: Maximum size per part in characters
+        overlap: Number of characters to overlap between parts
+
+    Returns:
+        List of content strings (without headers)
+    """
+    if len(content) <= max_size:
+        return [content]
+
+    parts = []
+    remaining = content
+
+    while remaining:
+        if len(remaining) <= max_size:
+            # Last part
+            parts.append(remaining)
+            break
+
+        # Take up to max_size characters
+        chunk = remaining[:max_size]
+
+        # Try to break at paragraph boundary
+        if '\n\n' in chunk:
+            break_point = chunk.rfind('\n\n')
+            if break_point > max_size * 0.3:  # Don't break too early
+                chunk = chunk[:break_point].strip()
+            else:
+                # Paragraph break too early, try sentence break
+                if '. ' in chunk[-200:]:
+                    break_point = chunk.rfind('. ', max(0, len(chunk) - 200))
+                    chunk = chunk[:break_point + 1].strip()
+        elif '. ' in chunk[-200:]:
+            # Break at sentence boundary near end
+            break_point = chunk.rfind('. ', max(0, len(chunk) - 200))
+            if break_point > 0:
+                chunk = chunk[:break_point + 1].strip()
+        else:
+            # No good break point, just split at max_size
+            # Try to avoid splitting mid-word
+            last_space = chunk.rfind(' ')
+            if last_space > max_size * 0.8:
+                chunk = chunk[:last_space].strip()
+
+        parts.append(chunk)
+
+        # Move forward in remaining text
+        remaining = remaining[len(chunk):].strip()
+
+        # Add overlap from current chunk to beginning of next remaining
+        if remaining and overlap > 0:
+            # Get last overlap characters from chunk
+            overlap_text = chunk[-overlap:] if len(chunk) >= overlap else chunk
+            # Only add overlap if it's not already at start of remaining
+            if not remaining.startswith(overlap_text):
+                remaining = overlap_text + ' ' + remaining
+
+    return parts
+
+
+def _create_chunk_metadata(
+    base_metadata: Dict[str, Any],
+    section_stack: List[str],
+    section_name: str,
+    doc_id: str,
+    doc_type: str,
+    version: str,
+    part_num: Optional[int] = None,
+    total_parts: int = 1
+) -> Dict[str, Any]:
+    """
+    Create complete metadata dictionary for a chunk.
+
+    Preserves all fields required for QueryRouter compatibility and adds
+    new fields for multi-part tracking.
+
+    Args:
+        base_metadata: Metadata inherited from frontmatter
+        section_stack: Hierarchical section path (e.g., ["Work Experience", "Teaching Assistant"])
+        section_name: Name of this section
+        doc_id: Document identifier
+        doc_type: Document type (resume, certificate, transcript_analysis, term)
+        version: Version identifier
+        part_num: Part number for multi-chunk sections (1-indexed, None for single)
+        total_parts: Total number of parts in this section
+
+    Returns:
+        Metadata dict ready for ChromaDB (all values are str/int/float/bool, no None)
+    """
+    # Generate section slug from full stack
+    section_slug = slugify(" > ".join(section_stack))
+    section_doc_id = f"{doc_id}@{version}#{section_slug}"
+
+    # Build metadata with all required fields
+    metadata = {
+        **base_metadata,  # Inherit all frontmatter metadata
+
+        # Core identifiers
+        "doc_id": doc_id,
+        "doc_type": doc_type,
+        "version_identifier": version,
+
+        # Section identifiers
+        "section": " > ".join(section_stack),
+        "section_slug": section_slug,
+        "section_doc_id": section_doc_id,
+        "section_name": section_name,
+
+        # Section stack for ChromaDB (string, not list)
+        "section_stack": " > ".join(section_stack),
+    }
+
+    # Add hierarchical levels (section_l1, section_l2, etc.)
+    for i, section_title in enumerate(section_stack, start=1):
+        metadata[f"section_l{i}"] = section_title
+
+    # Add multi-part tracking fields (NEW)
+    if part_num is not None:
+        metadata["part_num"] = part_num
+        metadata["total_parts"] = total_parts
+        metadata["is_multipart"] = True
+    else:
+        metadata["total_parts"] = 1
+        metadata["is_multipart"] = False
+
+    # Remove None values (ChromaDB doesn't accept them)
+    metadata = {k: v for k, v in metadata.items() if v is not None}
+
+    return metadata
 
 
 # ============================================================================
-# Helper Functions for Section-Based Chunking
+# Helper Functions (shared by all chunking methods)
 # ============================================================================
 
 
@@ -387,334 +529,3 @@ def extract_section_slug(section_doc_id: str) -> str:
         parts = section_doc_id.split("#")
         return parts[1] if len(parts) > 1 else "default"
     return "default"
-
-
-# ============================================================================
-# Section Document Splitting
-# ============================================================================
-
-
-def enrich_section_text(
-    section_text: str,
-    section_name: str,
-    doc_type: str,
-    base_metadata: Dict[str, Any]
-) -> str:
-    """
-    Add contextual prefix to section text for better semantic matching.
-
-    The embeddings only see the TEXT, not metadata. This enriches the text
-    with semantic context words that help match user queries.
-
-    Args:
-        section_text: Original section content
-        section_name: Name of the section (e.g., "Skills", "Work Experience")
-        doc_type: Document type (resume, term, etc.)
-        base_metadata: Metadata dict (may contain name, etc.)
-
-    Returns:
-        Enriched text with contextual prefix
-    """
-
-    # Only enrich resume sections for now
-    if doc_type != "resume":
-        return section_text
-
-    # Get person name from metadata if available
-    person_name = base_metadata.get("name", "Vaishak Menon")
-
-    # Determine section type and add appropriate context
-    section_lower = section_name.lower()
-
-    if "skill" in section_lower:
-        prefix = f"{person_name}'s technical skills, expertise, and experience include:\n\n"
-        suffix = "\n\nKeywords: technical skills, cloud platforms, programming experience, DevOps expertise, technologies"
-
-    elif "experience" in section_lower or "intern" in section_lower or "assistant" in section_lower:
-        # Extract company name from section_name if present
-        company = "the organization"
-        if "maven wave" in section_lower:
-            company = "Maven Wave Partners"
-        elif "alabama" in section_lower or "birmingham" in section_lower:
-            company = "University of Alabama at Birmingham"
-
-        prefix = f"Professional work experience at {company}:\n\n"
-        suffix = "\n\nKeywords: work experience, employment, job, position, company, role, professional background"
-
-    elif "project" in section_lower or "fastapi" in section_lower or "gpt" in section_lower or "music" in section_lower:
-        prefix = f"Personal project built by {person_name}:\n\n"
-        suffix = "\n\nKeywords: personal projects, software projects, machine learning projects, AI projects, development work"
-
-    elif "education" in section_lower:
-        prefix = f"{person_name}'s educational background:\n\n"
-        suffix = "\n\nKeywords: education, degrees, graduation, university, academic background, BS, MS"
-
-    elif "certification" in section_lower:
-        prefix = f"{person_name}'s professional certifications and credentials:\n\n"
-        suffix = "\n\nKeywords: certifications, credentials, professional development, certificates"
-
-    elif "summary" in section_lower:
-        prefix = f"Professional summary for {person_name}:\n\n"
-        suffix = "\n\nKeywords: summary, background, overview, experience, expertise, professional profile"
-
-    elif "header" in section_lower:
-        prefix = f"Contact information for {person_name}:\n\n"
-        suffix = "\n\nKeywords: contact, email, phone, location, website, profiles"
-
-    else:
-        # Default: just add person's name
-        prefix = f"{person_name} - {section_name}:\n\n"
-        suffix = ""
-
-    # Combine: prefix + original text + suffix
-    enriched = prefix + section_text + suffix
-
-    return enriched
-
-
-def create_section_document(
-    text: str,
-    base_metadata: Dict[str, Any],
-    section_name: str,
-    section_stack: List[str],
-    source_path: str,
-) -> Dict[str, Any]:
-    """
-    Create a section document with enriched metadata.
-
-    Args:
-        text: Section text content
-        base_metadata: Metadata from YAML frontmatter (inherited)
-        section_name: Name of this section (e.g., "Work Experience")
-        section_stack: Hierarchical section path (e.g., ["Work Experience", "Teaching Assistant"])
-        source_path: Original file path
-
-    Returns:
-        Dict with 'text' and 'metadata' keys
-    """
-    # Extract doc_id and doc_type from filename
-    doc_id, _ = extract_doc_id(source_path)
-
-    # Generate version identifier with collision detection
-    # This checks ChromaDB for existing versions and auto-increments if needed
-    version = generate_version_identifier(base_metadata, doc_id)
-
-    # Create section slug
-    section_slug = slugify(section_name)
-
-    # Build section document ID
-    section_doc_id = f"{doc_id}@{version}#{section_slug}"
-
-    # Create enriched metadata (inherit all parent metadata)
-    section_metadata = {
-        **base_metadata,
-        "section_doc_id": section_doc_id,
-        "section_name": section_name,
-        "section_slug": section_slug,  # Add for chunk ID generation
-        "doc_id": doc_id,
-        "version_identifier": version,
-    }
-
-    # Add structured section levels (section_l1, section_l2, section_l3, etc.)
-    for i, section_title in enumerate(section_stack, start=1):
-        section_metadata[f"section_l{i}"] = section_title
-
-    # Also keep human-readable section path (as string, not list)
-    if section_stack:
-        section_metadata["section"] = " > ".join(section_stack)
-
-    # Enrich the text with contextual information for better semantic matching
-    doc_type = base_metadata.get("doc_type", "")
-    enriched_text = enrich_section_text(text, section_name, doc_type, base_metadata)
-
-    return {"text": enriched_text.strip(), "metadata": section_metadata}
-
-
-def split_into_section_documents(
-    text: str,
-    base_metadata: Dict[str, Any],
-    source_path: str,
-    split_level: int = 2,
-) -> List[Dict[str, Any]]:
-    """
-    Split markdown text into section documents at specified header level.
-
-    This function parses markdown headers and creates separate "virtual documents"
-    for each section at the specified level. Each section inherits the parent
-    metadata and adds section-specific metadata.
-
-    IMPORTANT: This function also creates sections for:
-    - Content before the first split-level header (preamble sections)
-    - Level-1 headers that have no split-level children (standalone sections)
-
-    Args:
-        text: Markdown body text (after frontmatter extraction)
-        base_metadata: Metadata from YAML frontmatter
-        source_path: Original file path
-        split_level: Header level to split at (1-6, default 2 for ##)
-
-    Returns:
-        List of section document dicts with 'text' and 'metadata' keys
-
-    Example:
-        Given markdown:
-        ```
-        # Professional Summary
-        Summary content...
-        # Work Experience
-        ## Teaching Assistant
-        Content about TA role...
-        ## Infrastructure Intern
-        Content about intern role...
-        # Skills
-        Skills content...
-        ```
-
-        With split_level=2, creates 4 section documents:
-        - One for "Professional Summary" (level-1 with no level-2 children)
-        - One for "Teaching Assistant" section
-        - One for "Infrastructure Intern" section
-        - One for "Skills" (level-1 with no level-2 children)
-    """
-    sections = []
-    current_section_text = ""
-    current_section_name = None
-    current_section_stack = []  # Stack at the time this section started
-    section_stack = []  # Global tracking of nested header hierarchy
-
-    # Track the current level-1 header for sections that don't have split-level children
-    current_l1_header = None
-    current_l1_text = ""
-    has_split_level_child = False
-
-    lines = text.split("\n")
-
-    def save_current_section():
-        """Helper to save the current section if it has content."""
-        nonlocal current_section_text, current_section_name, current_section_stack
-        if current_section_text.strip() and current_section_name:
-            section_doc = create_section_document(
-                text=current_section_text,
-                base_metadata=base_metadata,
-                section_name=current_section_name,
-                section_stack=(
-                    current_section_stack
-                    if current_section_stack
-                    else [current_section_name]
-                ),
-                source_path=source_path,
-            )
-            sections.append(section_doc)
-            current_section_text = ""
-            current_section_name = None
-            current_section_stack = []
-
-    def save_l1_section_if_standalone():
-        """Save a level-1 section if it had no split-level children."""
-        nonlocal current_l1_header, current_l1_text, has_split_level_child
-        if current_l1_header and current_l1_text.strip() and not has_split_level_child:
-            section_doc = create_section_document(
-                text=current_l1_text,
-                base_metadata=base_metadata,
-                section_name=current_l1_header,
-                section_stack=[current_l1_header],
-                source_path=source_path,
-            )
-            sections.append(section_doc)
-        # Reset L1 tracking
-        current_l1_header = None
-        current_l1_text = ""
-        has_split_level_child = False
-
-    for line in lines:
-        # Detect markdown headers (e.g., "## Teaching Assistant")
-        header_match = re.match(r"^(#{1,6})\s+(.+)$", line)
-
-        if header_match:
-            level = len(header_match.group(1))  # Count number of #
-            title = header_match.group(2).strip()
-
-            # Update section stack for ALL headers
-            if level == 1:
-                section_stack = [title]
-            elif level == 2:
-                section_stack = section_stack[:1] + [title]
-            elif level == 3:
-                section_stack = section_stack[:2] + [title]
-            elif level == 4:
-                section_stack = section_stack[:3] + [title]
-            elif level == 5:
-                section_stack = section_stack[:4] + [title]
-            elif level == 6:
-                section_stack = section_stack[:5] + [title]
-
-            # Handle level-1 headers specially
-            if level == 1:
-                # Save any pending split-level section
-                save_current_section()
-                # Save previous L1 section if it was standalone (no split-level children)
-                save_l1_section_if_standalone()
-
-                # Start tracking new L1 section
-                current_l1_header = title
-                current_l1_text = line + "\n"
-                has_split_level_child = False
-
-            # If we hit a split-level header
-            elif level == split_level:
-                # Mark that current L1 has a split-level child
-                has_split_level_child = True
-
-                # Save previous split-level section if it exists
-                save_current_section()
-
-                # Start new section and capture stack at this moment
-                current_section_text = line + "\n"
-                current_section_name = title
-                current_section_stack = section_stack.copy()
-
-            else:
-                # Non-split-level, non-L1 header - add to current section
-                if current_section_name:
-                    current_section_text += line + "\n"
-                elif current_l1_header:
-                    current_l1_text += line + "\n"
-
-        else:
-            # Regular content line - add to appropriate section
-            if current_section_name:
-                # We're in a split-level section
-                current_section_text += line + "\n"
-            elif current_l1_header:
-                # We're in a L1 section that may or may not have split-level children
-                current_l1_text += line + "\n"
-            # else: content before any header - typically ignored or could be added to preamble
-
-    # Save final split-level section if exists
-    save_current_section()
-
-    # Save final L1 section if it was standalone
-    save_l1_section_if_standalone()
-
-    # If no sections were created (no headers at all), return entire document as one section
-    if not sections and text.strip():
-        logger.warning(
-            f"No headers found in {source_path}, "
-            f"treating entire document as one section"
-        )
-        sections.append(
-            create_section_document(
-                text=text,
-                base_metadata=base_metadata,
-                section_name="Complete Document",
-                section_stack=["Complete Document"],
-                source_path=source_path,
-            )
-        )
-
-    logger.debug(
-        f"Split {source_path} into {len(sections)} section documents "
-        f"at level {split_level}"
-    )
-
-    return sections

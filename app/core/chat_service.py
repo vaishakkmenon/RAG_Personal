@@ -114,7 +114,7 @@ class ChatService:
         term_id: Optional[str] = None,
         level: Optional[str] = None,
         model: Optional[str] = None,
-        use_router: bool = True,
+        use_router: Optional[bool] = None,
     ) -> ChatResponse:
         """Handle a chat request with RAG.
 
@@ -179,8 +179,13 @@ class ChatService:
 
         logger.info(f"Question: {request.question}")
 
+        # Determine if we should use router (use settings default if not specified)
+        should_use_router = (
+            use_router if use_router is not None else settings.retrieval.use_router
+        )
+
         # Route query if enabled
-        if use_router:
+        if should_use_router:
             routed_params = route_query(request.question)
 
             params = self._merge_params(
@@ -207,7 +212,7 @@ class ChatService:
             logger.info(f"Using default parameters: {params}")
 
         # Check for ambiguity from router
-        if use_router and params.get("is_ambiguous"):
+        if should_use_router and params.get("is_ambiguous"):
             logger.info(
                 "Ambiguous query detected; prompting user for clarification",
                 extra={
@@ -241,6 +246,15 @@ class ChatService:
         }
 
         # Retrieve chunks (use multi-domain if domains available and enabled)
+        # If reranking is enabled, retrieve more chunks initially for better reranking
+        retrieval_k = params["top_k"]
+        if params["rerank"]:
+            retrieval_k = settings.retrieval.rerank_retrieval_k
+            logger.info(
+                f"Reranking enabled: retrieving {retrieval_k} chunks "
+                f"(will rerank to top {params['top_k']})"
+            )
+
         try:
             enable_multi_domain = params.get("enable_multi_domain", False)
             domain_configs = params.get("domain_configs", [])
@@ -250,13 +264,13 @@ class ChatService:
                 chunks = multi_domain_search(
                     query=request.question,
                     domain_configs=domain_configs,
-                    k=params["top_k"],
+                    k=retrieval_k,
                     max_distance=params["max_distance"],
                 )
             else:
                 chunks = search(
                     query=request.question,
-                    k=params["top_k"],
+                    k=retrieval_k,
                     max_distance=params["max_distance"],
                     metadata_filter=metadata_filter if metadata_filter else None,
                 )
@@ -286,6 +300,11 @@ class ChatService:
                 request.question, chunks, lex_weight=params["rerank_lex_weight"]
             )
             logger.info(f"Reranked {len(chunks)} chunks")
+
+            # Trim to top_k after reranking
+            if len(chunks) > params["top_k"]:
+                chunks = chunks[:params["top_k"]]
+                logger.info(f"Trimmed to top {params['top_k']} chunks after reranking")
 
         if METRICS_ENABLED:
             rag_retrieval_chunks.observe(len(chunks))

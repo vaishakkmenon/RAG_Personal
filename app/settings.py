@@ -316,12 +316,12 @@ class IngestSettings(BaseModel):
     )
 
     chunk_size: int = Field(
-        default=int(os.getenv("CHUNK_SIZE", "450")),
+        default=int(os.getenv("CHUNK_SIZE", "600")),
         description="Number of characters per chunk",
     )
 
     chunk_overlap: int = Field(
-        default=int(os.getenv("CHUNK_OVERLAP", "90")),
+        default=int(os.getenv("CHUNK_OVERLAP", "120")),
         description="Number of characters to overlap between chunks",
     )
 
@@ -342,7 +342,15 @@ class IngestSettings(BaseModel):
 class RetrievalSettings(BaseModel):
     """Settings for retrieval and search."""
 
-    top_k: int = Field(default=10, description="Default number of chunks to retrieve")
+    top_k: int = Field(
+        default=int(os.getenv("TOP_K", "5")),
+        description="Number of chunks to send to LLM after reranking"
+    )
+
+    rerank_retrieval_k: int = Field(
+        default=int(os.getenv("RERANK_RETRIEVAL_K", "50")),
+        description="Number of chunks to retrieve when reranking is enabled (before reranking)"
+    )
 
     null_threshold: float = Field(
         default=0.50,
@@ -355,12 +363,18 @@ class RetrievalSettings(BaseModel):
     )
 
     rerank: bool = Field(
-        default=False, description="Whether to enable reranking of results"
+        default=os.getenv("RERANK", "true").lower() == "true",
+        description="Whether to enable reranking of results"
     )
 
     rerank_lex_weight: float = Field(
-        default=0.5,
-        description="Weight for lexical vs semantic similarity in reranking",
+        default=float(os.getenv("RERANK_LEX_WEIGHT", "0.6")),
+        description="Weight for lexical vs semantic similarity in reranking (0.0-1.0)",
+    )
+
+    use_router: bool = Field(
+        default=os.getenv("USE_ROUTER", "false").lower() == "true",
+        description="Whether to enable query routing for intelligent filtering and optimization"
     )
 
     # DEPRECATED: Use LLM_TEMPERATURE and LLM_MAX_TOKENS instead

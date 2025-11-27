@@ -136,7 +136,7 @@ def chat(
     term_id: Optional[str] = None,
     level: Optional[str] = None,
     model: Optional[str] = None,
-    use_router: bool = True,
+    use_router: Optional[bool] = None,  # None = use settings default
     # Dependencies
     api_key: str = Depends(check_api_key),
     chat_service: ChatService = Depends(get_chat_service),
