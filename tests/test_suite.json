@@ -10,7 +10,7 @@
   "test_cases": [
     {
       "test_id": "transcript_001",
-      "category": "transcript_gpa",
+      "category": "transcript",
       "question": "What was my graduate GPA?",
       "expected_keywords": [
         "4.0"
@@ -24,7 +24,7 @@
     },
     {
       "test_id": "transcript_002",
-      "category": "transcript_gpa",
+      "category": "transcript",
       "question": "What was my undergraduate GPA?",
       "expected_keywords": [
         "3.97"
@@ -38,7 +38,7 @@
     },
     {
       "test_id": "transcript_003",
-      "category": "transcript_credits",
+      "category": "transcript",
       "question": "How many total credits did I earn?",
       "expected_keywords": [
         "169",
@@ -53,7 +53,7 @@
     },
     {
       "test_id": "transcript_004",
-      "category": "transcript_courses",
+      "category": "transcript",
       "question": "What courses did I take in Fall 2022?",
       "expected_keywords": [
         "CS 410",
@@ -71,7 +71,7 @@
     },
     {
       "test_id": "transcript_005",
-      "category": "transcript_courses",
+      "category": "transcript",
       "question": "Did I take CS 410?",
       "expected_keywords": [
         "CS 410",
@@ -86,7 +86,7 @@
     },
     {
       "test_id": "transcript_006",
-      "category": "transcript_degrees",
+      "category": "transcript",
       "question": "What degrees did I earn?",
       "expected_keywords": [
         "Bachelor",
@@ -101,7 +101,7 @@
     },
     {
       "test_id": "transcript_007",
-      "category": "transcript_timing",
+      "category": "transcript",
       "question": "When did I graduate with my Bachelor's degree?",
       "expected_keywords": [
         "April",
@@ -117,7 +117,7 @@
     },
     {
       "test_id": "transcript_008",
-      "category": "transcript_timing",
+      "category": "transcript",
       "question": "When did I graduate with my Master's degree?",
       "expected_keywords": [
         "May",
@@ -199,7 +199,8 @@
       "category": "work_experience",
       "question": "What companies have I worked for?",
       "expected_keywords": [
-        "Maven Wave Partners"
+        "Maven Wave Partners",
+        "University of Alabama at Birmingham"
       ],
       "expected_answer": "Maven Wave Partners and University of Alabama at Birmingham (as Teaching Assistant)",
       "is_impossible": false,
