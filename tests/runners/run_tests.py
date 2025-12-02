@@ -39,8 +39,8 @@ from typing import Any, Dict, List
 
 import requests
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from tests.batch_validator import BatchValidator
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from tests.validators.batch_validator import BatchValidator
 
 
 class TwoPhaseTestRunner:
@@ -54,36 +54,70 @@ class TwoPhaseTestRunner:
         self.api_key = api_key
         self.verbose = verbose
         self.headers = {"X-API-Key": api_key, "Content-Type": "application/json"}
+        self.provider = self._detect_provider()
+
+    def _detect_provider(self) -> str:
+        """Detect which LLM provider the API is using"""
+        try:
+            response = requests.get(
+                f"{self.base_url}health",
+                headers=self.headers,
+                timeout=5
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data.get("provider", "unknown")
+        except Exception as e:
+            print(f"Warning: Could not detect provider from /health endpoint: {e}")
+            return "unknown"
 
     def load_tests(self, filepath: str) -> Dict[str, Any]:
         """Load test suite from JSON file"""
         with open(filepath, "r", encoding="utf-8") as f:
             return json.load(f)
 
-    def make_request(self, question: str) -> Dict[str, Any]:
-        """Make API request to RAG system"""
+    def make_request(self, question: str, max_retries: int = 2) -> Dict[str, Any]:
+        """Make API request to RAG system with retry logic
+
+        Args:
+            question: Question to ask
+            max_retries: Maximum number of retry attempts (default 2)
+
+        Returns:
+            Dict with success status, data/error, and response_time
+        """
         url = f"{self.base_url}chat"
         payload = {"question": question}
 
-        start_time = time.time()
-        try:
-            response = requests.post(
-                url, json=payload, headers=self.headers, timeout=30
-            )
-            response_time = time.time() - start_time
-            response.raise_for_status()
+        for attempt in range(max_retries + 1):
+            start_time = time.time()
+            try:
+                response = requests.post(
+                    url, json=payload, headers=self.headers, timeout=30
+                )
+                response_time = time.time() - start_time
+                response.raise_for_status()
 
-            return {
-                "success": True,
-                "data": response.json(),
-                "response_time": response_time,
-            }
-        except requests.exceptions.RequestException as e:
-            return {
-                "success": False,
-                "error": str(e),
-                "response_time": time.time() - start_time,
-            }
+                return {
+                    "success": True,
+                    "data": response.json(),
+                    "response_time": response_time,
+                }
+            except requests.exceptions.RequestException as e:
+                response_time = time.time() - start_time
+
+                # If this was the last attempt, return error
+                if attempt == max_retries:
+                    return {
+                        "success": False,
+                        "error": str(e),
+                        "response_time": response_time,
+                    }
+
+                # Otherwise, wait a bit and retry
+                if self.verbose:
+                    print(f"\n   Retry {attempt + 1}/{max_retries} after error: {str(e)[:50]}...")
+                time.sleep(2)  # Wait 2 seconds before retry
 
     def collect_answers(
         self,
@@ -118,12 +152,22 @@ class TwoPhaseTestRunner:
             print("No tests match the specified filters!")
             return []
 
+        # Apply delay for all providers to prevent resource contention
+        effective_delay = delay
+        if self.provider == "ollama":
+            delay_reason = "(Ollama local - delay helps prevent GPU/CPU overload)"
+        elif self.provider == "groq":
+            delay_reason = "(Groq cloud - delay for rate limiting)"
+        else:
+            delay_reason = "(Unknown provider - applying delay to be safe)"
+
         print(f"{'='*80}")
         print(f"PHASE 1: COLLECTING ANSWERS")
         print(f"{'='*80}")
         print(f"Running {len(test_cases)} tests...")
-        print(f"Delay between requests: {delay}s (to avoid rate limits)")
-        estimated_time = len(test_cases) * delay / 60
+        print(f"Provider: {self.provider}")
+        print(f"Delay between requests: {effective_delay}s {delay_reason}")
+        estimated_time = len(test_cases) * effective_delay / 60 if effective_delay > 0 else len(test_cases) * 2 / 60
         print(f"Estimated time: {estimated_time:.1f} minutes\n")
 
         results = []
@@ -172,15 +216,62 @@ class TwoPhaseTestRunner:
 
             results.append(result)
 
-            # Delay between requests to avoid rate limits
-            if i < len(test_cases):  # Don't delay after last test
-                time.sleep(delay)
+            # Delay between requests to avoid rate limits (skip for Ollama)
+            if i < len(test_cases) and effective_delay > 0:  # Don't delay after last test
+                time.sleep(effective_delay)
+
+        # Retry failed tests
+        errors = [r for r in results if 'error' in r]
+        if errors:
+            print(f"\n{'='*80}")
+            print(f"RETRYING {len(errors)} FAILED TESTS")
+            print(f"{'='*80}")
+
+            for i, error_result in enumerate(errors, 1):
+                test_id = error_result['test_id']
+                question = error_result['question']
+                print(f"[{i}/{len(errors)}] Retrying {test_id}...", end=" ")
+
+                # Retry the request
+                response = self.make_request(question, max_retries=2)
+
+                if response["success"]:
+                    print("SUCCESS")
+                    # Update the result in the results list
+                    for idx, r in enumerate(results):
+                        if r['test_id'] == test_id:
+                            results[idx] = {
+                                "test_id": test_id,
+                                "category": error_result["category"],
+                                "question": question,
+                                "answer": response["data"].get("answer", ""),
+                                "grounded": response["data"].get("grounded", False),
+                                "num_sources": len(response["data"].get("sources", [])),
+                                "response_time": response["response_time"],
+                                "expected_keywords": error_result.get("expected_keywords", []),
+                                "expected_answer": error_result.get("expected_answer", ""),
+                                "is_impossible": error_result.get("is_impossible", False),
+                                "sources": response["data"].get("sources", [])[:3],
+                            }
+                            break
+                else:
+                    print(f"STILL FAILED: {response['error'][:50]}")
+
+                # Small delay between retries
+                if i < len(errors):
+                    time.sleep(2)
+
+            # Count final errors
+            final_errors = [r for r in results if 'error' in r]
+            print(f"\nRetry complete: {len(errors) - len(final_errors)} recovered, {len(final_errors)} still failed")
 
         # Save collected answers
         output = {
             "timestamp": datetime.now().isoformat(),
             "phase": "collection",
             "total_tests": len(results),
+            "successful_tests": len([r for r in results if 'answer' in r]),
+            "failed_tests": len([r for r in results if 'error' in r]),
             "results": results,
         }
 
@@ -191,6 +282,8 @@ class TwoPhaseTestRunner:
         print(f"PHASE 1 COMPLETE")
         print(f"{'='*80}")
         print(f"Collected {len(results)} answers")
+        print(f"Successful: {output['successful_tests']}")
+        print(f"Failed: {output['failed_tests']}")
         print(f"Saved to: {output_file}\n")
 
         return results
@@ -211,7 +304,9 @@ def main():
         "--api-key", default="dev-key-1", help="API key for authentication"
     )
     parser.add_argument(
-        "--tests", default="tests/test_suite.json", help="Path to test cases JSON file"
+        "--tests",
+        default="tests/fixtures/test_suite.json",
+        help="Path to test cases JSON file (e.g., tests/fixtures/test_suite.json, tests/fixtures/negative_inference_test.json)"
     )
     parser.add_argument(
         "--answers-file", default="test_answers.json", help="File to save/load answers"

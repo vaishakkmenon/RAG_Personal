@@ -136,12 +136,11 @@ def chat(
     term_id: Optional[str] = None,
     level: Optional[str] = None,
     model: Optional[str] = None,
-    use_router: Optional[bool] = None,  # None = use settings default
     # Dependencies
     api_key: str = Depends(check_api_key),
     chat_service: ChatService = Depends(get_chat_service),
 ):
-    """Answer a question using RAG with full routing and filtering.
+    """Answer a question using RAG with filtering and reranking.
 
     Args:
         request: Chat request with question
@@ -157,7 +156,6 @@ def chat(
         term_id: Term ID filter
         level: Level filter
         model: LLM model override
-        use_router: Whether to use query router
         api_key: API key (from dependency)
         chat_service: Chat service (from dependency)
 
@@ -178,5 +176,4 @@ def chat(
         term_id=term_id,
         level=level,
         model=model,
-        use_router=use_router,
     )

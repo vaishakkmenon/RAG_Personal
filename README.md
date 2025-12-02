@@ -28,8 +28,8 @@ A production-ready Retrieval-Augmented Generation (RAG) system for querying pers
         ┌─────────────┼─────────────┬─────────────┐
         ▼             ▼             ▼             ▼
    ┌────────┐   ┌──────────┐   ┌────────┐   ┌─────────┐
-   │ Query  │   │ Retrieval│   │  LLM   │   │Prompt   │
-   │ Router │   │ (Chroma) │   │(Ollama)│   │Builder  │
+   │Negative│   │ Retrieval│   │  LLM   │   │Prompt   │
+   │Inferenc│   │ (Chroma) │   │(Ollama)│   │Builder  │
    └────────┘   └──────────┘   └────────┘   └─────────┘
 ```
 
@@ -44,16 +44,13 @@ A production-ready Retrieval-Augmented Generation (RAG) system for querying pers
   - `certification_handler.py` - Certification-specific logic (~450 lines)
 
 - **`app/services/`** - External service integrations
-  - `llm.py` - Ollama LLM integration
+  - `llm.py` - Ollama/Groq LLM integration
   - `reranker.py` - Hybrid lexical + semantic reranking
-
-- **`app/query_router/`** - Query analysis and routing
-  - `router.py` - Main query router
-  - `patterns.py` - Pattern matching utilities
-  - `route_helpers/` - Query analyzer and response builder
 
 - **`app/retrieval/`** - Vector database operations
   - `store.py` - ChromaDB integration, embeddings, search
+  - `negative_inference_helper.py` - Missing entity detection
+  - `adaptive_threshold.py` - Data-driven threshold calculation
 
 - **`app/prompting/`** - Prompt engineering
   - `builder.py` - Prompt construction and validation
@@ -184,10 +181,12 @@ RAG_Personal/
 │   │   ├── chat_service.py      # Main RAG orchestration
 │   │   └── certification_handler.py  # Cert logic
 │   ├── services/                 # External integrations
-│   │   ├── llm.py               # Ollama client
+│   │   ├── llm.py               # Ollama/Groq client
 │   │   └── reranker.py          # Result reranking
-│   ├── query_router/            # Query analysis
 │   ├── retrieval/               # Vector database
+│   │   ├── store.py             # ChromaDB integration
+│   │   ├── negative_inference_helper.py
+│   │   └── adaptive_threshold.py
 │   ├── prompting/               # Prompt engineering
 │   ├── ingest/                  # Document processing
 │   ├── certifications/          # Cert management
@@ -226,10 +225,13 @@ All settings can be configured via `.env` file or environment variables:
 | `DOCS_DIR` | `./data/mds` | Document directory |
 | `COLLECTION_NAME` | `personal_rag` | ChromaDB collection |
 | `TOP_K` | `5` | Default retrieval count |
-| `MAX_DISTANCE` | `0.50` | Max cosine distance |
-| `NULL_THRESHOLD` | `0.50` | Grounding threshold |
+| `MAX_DISTANCE` | `0.60` | Max cosine distance |
+| `NULL_THRESHOLD` | `0.60` | Grounding threshold |
 | `CHUNK_SIZE` | `450` | Characters per chunk |
 | `CHUNK_OVERLAP` | `90` | Chunk overlap size |
+| `RERANK` | `true` | Enable hybrid reranking |
+| `NEGATIVE_INFERENCE_THRESHOLD` | `0.37` | Entity existence threshold |
+| `NEGATIVE_INFERENCE_METHOD` | `gap_based` | Threshold method |
 
 ### Document Metadata
 
@@ -302,11 +304,11 @@ Headers: X-API-Key: your-api-key
 - ✅ **Ambiguity Detection** - Asks for clarification on vague queries
 - ✅ **Source Citations** - Returns source documents with answers
 
-### Query Routing
-- ✅ **Automatic Query Analysis** - Detects technologies, categories, intents
-- ✅ **Certificate Detection** - Recognizes cert names and aliases
-- ✅ **Parameter Adjustment** - Tunes retrieval based on question type
-- ✅ **Confidence Scoring** - Measures routing confidence
+### Intelligent Retrieval
+- ✅ **Negative Inference Detection** - Automatically detects queries about non-existent entities
+- ✅ **Adaptive Thresholding** - Data-driven entity existence detection using gap analysis
+- ✅ **Query Reformulation** - Reformulates entity queries to category searches when needed
+- ✅ **Context-Aware Processing** - Different thresholds for acronyms, proper nouns, etc.
 
 ### Document Ingestion
 - ✅ **Markdown Processing** - Reads .md and .txt files
@@ -316,7 +318,7 @@ Headers: X-API-Key: your-api-key
 - ✅ **Security Checks** - Path traversal prevention
 
 ### LLM Integration
-- ✅ **Local Hosting** - Ollama for privacy and cost control
+- ✅ **Multi-Provider Support** - Groq (fast inference) and Ollama (local)
 - ✅ **Model Flexibility** - Swap models via config
 - ✅ **Streaming Support** - For real-time responses (if needed)
 - ✅ **Timeout Handling** - Graceful degradation
@@ -364,9 +366,10 @@ docker-compose run test python run_tests.py --api-url http://api:8000
 - ✅ Modular architecture refactoring (970 lines → organized packages)
 - ✅ Clean separation of concerns (API, core, services, utilities)
 - ✅ ChromaDB vector store integration
-- ✅ Ollama LLM integration with streaming
+- ✅ Multi-provider LLM integration (Groq + Ollama)
 - ✅ Hybrid reranking (lexical + semantic)
-- ✅ Query routing with semantic pattern detection
+- ✅ Negative inference detection for missing entities
+- ✅ Adaptive thresholding with statistical analysis
 - ✅ Document ingestion pipeline
 - ✅ Comprehensive configuration management
 - ✅ Docker deployment setup
@@ -384,7 +387,7 @@ docker-compose run test python run_tests.py --api-url http://api:8000
 ### 🎯 System Behavior
 
 **Before Refactoring**:
-- ❌ Keyword detection ("do i have", "transcript", etc.)
+- ❌ Keyword detection and hardcoded routing patterns
 - ❌ Forced response templates
 - ❌ Hardcoded parameter overrides
 - ❌ Certification registry with duplicated data
@@ -393,27 +396,29 @@ docker-compose run test python run_tests.py --api-url http://api:8000
 **After Refactoring** (Current):
 - ✅ Pure semantic search for all queries
 - ✅ LLM generates all responses from context
+- ✅ Intelligent negative inference detection
+- ✅ Data-driven adaptive thresholding
 - ✅ Natural language flexibility
 - ✅ Single source of truth (markdown documents)
 - ✅ Clean, maintainable codebase
 
 ## 🗺️ Roadmap
 
-### Phase 2: Enhanced Semantic Understanding (Next)
+### Phase 2: Enhanced Semantic Understanding (Current)
+- [x] Negative inference detection for missing entities
+- [x] Adaptive thresholding with statistical analysis
+- [x] Query reformulation for better retrieval
 - [ ] Improve system prompt for better focused answers
-- [ ] Add query-specific context window (include question in context)
-- [ ] Embedding-based query classification
 - [ ] LLM-powered intent detection for ambiguous queries
 - [ ] Dynamic clarification generation based on available data
-- [ ] Context-aware parameter tuning
 
 ### Phase 3: Advanced Features
 - [ ] Multi-hop reasoning for complex queries
 - [ ] Conversational context tracking (chat history)
-- [ ] Query reformulation for better retrieval
 - [ ] Fact verification and grounding scores
 - [ ] Comparative analysis (e.g., "compare my AWS and GCP experience")
 - [ ] Support for "what if" and hypothetical queries
+- [ ] Query expansion using LLM-generated variations
 
 ### Phase 4: Production Readiness
 - [ ] Comprehensive test coverage (unit + integration)
@@ -449,7 +454,11 @@ For questions or issues, refer to the documentation or check the analysis files 
 
 ---
 
-**Status**: ✅ **Stable - True RAG Implementation Complete**
-**Version**: 0.4.0
-**Last Updated**: 2025-11-13
-**Phase 1 Refactoring**: COMPLETE (removed 1,116 lines of anti-RAG code)
+**Status**: ✅ **Stable - Advanced RAG with Intelligent Retrieval**
+**Version**: 0.5.0
+**Last Updated**: 2025-12-02
+**Recent Changes**:
+- Removed hardcoded query router (270+ lines)
+- Added negative inference detection
+- Implemented adaptive thresholding
+- Enhanced with data-driven retrieval techniques

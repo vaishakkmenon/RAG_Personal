@@ -1,0 +1,308 @@
+{
+  "metadata": {
+    "version": "1.0.0",
+    "created": "2025-11-27",
+    "description": "Rigorous test suite for validating negative inference functionality",
+    "purpose": "Verify that the system correctly infers negative answers from context, not from prompt examples",
+    "test_categories": [
+      "basic_negative_inference",
+      "context_verification",
+      "anti_memorization"
+    ]
+  },
+  "test_cases": [
+    {
+      "test_id": "neg_001_phd",
+      "category": "basic_negative_inference",
+      "question": "Do I have a PhD?",
+      "expected_answer": "No, Bachelor of Science and Master of Science in Computer Science",
+      "expected_keywords": ["no", "Bachelor", "Master"],
+      "is_impossible": false,
+      "grounded_expected": true,
+      "min_sources": 1,
+      "validation_criteria": {
+        "must_say_no": true,
+        "must_list_actual_degrees": true,
+        "must_retrieve_degree_context": true,
+        "required_source_patterns": [
+          "degree",
+          "Bachelor",
+          "Master"
+        ],
+        "forbidden_patterns": [
+          "I don't know",
+          "not mentioned",
+          "cannot find"
+        ]
+      },
+      "notes": "Core negative inference test - verifies system can infer absence from explicit list"
+    },
+    {
+      "test_id": "neg_002_google",
+      "category": "basic_negative_inference",
+      "question": "Did I work at Google?",
+      "expected_answer": "No, worked at University of Alabama at Birmingham and Maven Wave Partners",
+      "expected_keywords": ["no", "University of Alabama", "Maven Wave"],
+      "is_impossible": false,
+      "grounded_expected": true,
+      "min_sources": 1,
+      "validation_criteria": {
+        "must_say_no": true,
+        "must_list_actual_companies": true,
+        "must_retrieve_work_context": true,
+        "required_source_patterns": [
+          "work",
+          "Maven Wave",
+          "University of Alabama"
+        ],
+        "forbidden_patterns": [
+          "I don't know",
+          "not mentioned"
+        ]
+      },
+      "notes": "Work experience negative inference"
+    },
+    {
+      "test_id": "neg_003_oracle_cert",
+      "category": "basic_negative_inference",
+      "question": "Do I have an Oracle certification?",
+      "expected_answer": "No, CKA, AWS Certified Cloud Practitioner, AWS Certified AI Practitioner",
+      "expected_keywords": ["no", "CKA", "AWS"],
+      "is_impossible": false,
+      "grounded_expected": true,
+      "min_sources": 1,
+      "validation_criteria": {
+        "must_say_no": true,
+        "must_list_actual_certs": true,
+        "must_retrieve_cert_context": true,
+        "required_source_patterns": [
+          "certification",
+          "CKA",
+          "AWS"
+        ],
+        "forbidden_patterns": [
+          "I don't know",
+          "not mentioned"
+        ]
+      },
+      "notes": "Certification negative inference"
+    },
+    {
+      "test_id": "neg_004_mobile_apps",
+      "category": "basic_negative_inference",
+      "question": "Have I built any mobile apps?",
+      "expected_answer": "No, FastAPI RAG Service, GPT From Scratch, Music Genre Classification",
+      "expected_keywords": ["no", "RAG", "GPT", "Music"],
+      "is_impossible": false,
+      "grounded_expected": true,
+      "min_sources": 1,
+      "validation_criteria": {
+        "must_say_no": true,
+        "must_list_actual_projects": true,
+        "must_retrieve_project_context": true,
+        "required_source_patterns": [
+          "project",
+          "RAG",
+          "GPT"
+        ],
+        "forbidden_patterns": [
+          "I don't know",
+          "not mentioned"
+        ]
+      },
+      "notes": "Project negative inference"
+    },
+    {
+      "test_id": "verify_001_context_check",
+      "category": "context_verification",
+      "question": "Do I have a doctorate degree?",
+      "expected_answer": "No, Bachelor of Science and Master of Science",
+      "expected_keywords": ["no", "Bachelor", "Master"],
+      "is_impossible": false,
+      "grounded_expected": true,
+      "min_sources": 1,
+      "validation_criteria": {
+        "must_say_no": true,
+        "must_list_actual_degrees": true,
+        "must_retrieve_degree_context": true,
+        "required_source_patterns": [
+          "degree",
+          "Bachelor",
+          "Master"
+        ],
+        "minimum_source_relevance": 0.7,
+        "must_cite_education_section": true
+      },
+      "notes": "Same as PhD test but with different wording - verifies retrieval consistency"
+    },
+    {
+      "test_id": "verify_002_similar_context",
+      "category": "context_verification",
+      "question": "Did I get a PhD in Computer Science?",
+      "expected_answer": "No, Bachelor of Science and Master of Science in Computer Science",
+      "expected_keywords": ["no", "Bachelor", "Master", "Computer Science"],
+      "is_impossible": false,
+      "grounded_expected": true,
+      "min_sources": 1,
+      "validation_criteria": {
+        "must_say_no": true,
+        "must_list_actual_degrees": true,
+        "must_mention_field": true,
+        "must_retrieve_degree_context": true,
+        "required_source_patterns": [
+          "Computer Science",
+          "degree"
+        ]
+      },
+      "notes": "More specific version - should still trigger negative inference"
+    },
+    {
+      "test_id": "anti_mem_001_not_in_prompt",
+      "category": "anti_memorization",
+      "question": "Did I work at Microsoft?",
+      "expected_answer": "No, worked at University of Alabama at Birmingham and Maven Wave Partners",
+      "expected_keywords": ["no", "University", "Maven Wave"],
+      "is_impossible": false,
+      "grounded_expected": true,
+      "min_sources": 1,
+      "validation_criteria": {
+        "must_say_no": true,
+        "must_list_actual_companies": true,
+        "must_retrieve_work_context": true,
+        "forbidden_patterns": [
+          "I don't know"
+        ]
+      },
+      "notes": "Microsoft is NOT in prompt examples - verifies not memorizing prompt"
+    },
+    {
+      "test_id": "anti_mem_002_not_in_prompt",
+      "category": "anti_memorization",
+      "question": "Do I have a Cisco certification?",
+      "expected_answer": "No, CKA, AWS Certified Cloud Practitioner, AWS Certified AI Practitioner",
+      "expected_keywords": ["no", "CKA", "AWS"],
+      "is_impossible": false,
+      "grounded_expected": true,
+      "min_sources": 1,
+      "validation_criteria": {
+        "must_say_no": true,
+        "must_list_actual_certs": true,
+        "must_retrieve_cert_context": true,
+        "forbidden_patterns": [
+          "I don't know"
+        ]
+      },
+      "notes": "Cisco is NOT in prompt examples - verifies not memorizing prompt"
+    },
+    {
+      "test_id": "anti_mem_003_not_in_prompt",
+      "category": "anti_memorization",
+      "question": "Have I built any blockchain projects?",
+      "expected_answer": "No, FastAPI RAG Service, GPT From Scratch, Music Genre Classification",
+      "expected_keywords": ["no", "RAG", "GPT", "Music"],
+      "is_impossible": false,
+      "grounded_expected": true,
+      "min_sources": 1,
+      "validation_criteria": {
+        "must_say_no": true,
+        "must_list_actual_projects": true,
+        "must_retrieve_project_context": true,
+        "forbidden_patterns": [
+          "I don't know"
+        ]
+      },
+      "notes": "Blockchain is NOT in prompt examples - verifies not memorizing prompt"
+    },
+    {
+      "test_id": "boundary_001_should_refuse",
+      "category": "boundary_cases",
+      "question": "Do I have kids?",
+      "expected_answer": "I don't know. It isn't mentioned in the provided documents.",
+      "expected_keywords": ["don't know", "not mentioned"],
+      "is_impossible": true,
+      "grounded_expected": false,
+      "min_sources": 0,
+      "validation_criteria": {
+        "must_refuse": true,
+        "forbidden_patterns": [
+          "no, ",
+          "yes, "
+        ]
+      },
+      "notes": "Should refuse - no context provides family information list"
+    },
+    {
+      "test_id": "boundary_002_temporal_negative_inference",
+      "category": "boundary_cases",
+      "question": "Did I work at Apple in 2015?",
+      "expected_answer": "No, worked at University of Alabama at Birmingham and Maven Wave Partners",
+      "expected_keywords": ["no", "University", "Maven Wave"],
+      "is_impossible": false,
+      "grounded_expected": true,
+      "min_sources": 1,
+      "validation_criteria": {
+        "must_say_no": true,
+        "must_list_actual_companies": true,
+        "must_retrieve_work_context": true,
+        "required_source_patterns": [
+          "work",
+          "Maven Wave",
+          "University of Alabama"
+        ],
+        "forbidden_patterns": [
+          "I don't know",
+          "not mentioned"
+        ]
+      },
+      "notes": "Should apply negative inference - work history is complete ('two organizations throughout my career') regardless of specific year asked"
+    },
+    {
+      "test_id": "edge_001_degree_variant",
+      "category": "edge_cases",
+      "question": "Do I have an EdD?",
+      "expected_answer": "No, Bachelor of Science and Master of Science in Computer Science",
+      "expected_keywords": ["no", "Bachelor", "Master"],
+      "is_impossible": false,
+      "grounded_expected": true,
+      "min_sources": 1,
+      "validation_criteria": {
+        "must_say_no": true,
+        "must_list_actual_degrees": true
+      },
+      "notes": "EdD (Doctor of Education) - less common degree type"
+    },
+    {
+      "test_id": "edge_002_company_variant",
+      "category": "edge_cases",
+      "question": "Did I intern at Amazon?",
+      "expected_answer": "No, interned at Maven Wave Partners",
+      "expected_keywords": ["no", "Maven Wave"],
+      "is_impossible": false,
+      "grounded_expected": true,
+      "min_sources": 1,
+      "validation_criteria": {
+        "must_say_no": true,
+        "must_mention_actual_internship": true
+      },
+      "notes": "Specifically asking about internship"
+    }
+  ],
+  "validation_instructions": {
+    "how_to_verify_not_memorization": [
+      "Run anti_memorization tests with companies/certs NOT in prompt examples",
+      "If these pass but basic tests fail, system is memorizing prompt",
+      "If all pass, system is correctly using context"
+    ],
+    "how_to_verify_context_usage": [
+      "Check that retrieved sources contain the actual list (degrees, companies, etc.)",
+      "Verify sources are from relevant sections (education, work experience, etc.)",
+      "Confirm distance scores are reasonable (< 0.5 for good matches)"
+    ],
+    "success_criteria": {
+      "all_basic_tests_pass": "System correctly applies negative inference",
+      "all_anti_mem_tests_pass": "System uses context, not memorization",
+      "boundary_tests_refuse": "System doesn't over-apply negative inference",
+      "sources_are_relevant": "Retrieval is working correctly"
+    }
+  }
+}

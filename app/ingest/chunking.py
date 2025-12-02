@@ -62,7 +62,13 @@ def chunk_by_headers(
 
     # Extract doc identifiers
     doc_id, doc_type = extract_doc_id(source_path)
-    version = generate_version_identifier(base_metadata, doc_id)
+
+    # Use version from base_metadata (already set by processor with content-based detection)
+    version = base_metadata.get('version_identifier')
+    if not version:
+        # Fallback: generate if not present (should not happen in normal flow)
+        version = generate_version_identifier(base_metadata, doc_id)
+        logger.warning(f"version_identifier not in metadata for {source_path}, generating: {version}")
 
     # Parse markdown into section structures
     sections = _parse_markdown_sections(text, split_level)
@@ -367,8 +373,7 @@ def _create_chunk_metadata(
     """
     Create complete metadata dictionary for a chunk.
 
-    Preserves all fields required for QueryRouter compatibility and adds
-    new fields for multi-part tracking.
+    Includes all metadata fields for filtering and adds fields for multi-part tracking.
 
     Args:
         base_metadata: Metadata inherited from frontmatter

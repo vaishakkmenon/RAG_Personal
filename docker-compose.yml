@@ -4,6 +4,14 @@ services:
     build: .
     container_name: ragchatbot_api
     working_dir: /workspace
+    # Enable GPU for embedding model (SentenceTransformers)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     ports:
       - "8000:8000"
     environment:

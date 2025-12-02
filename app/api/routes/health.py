@@ -15,11 +15,19 @@ router = APIRouter()
 async def health():
     """Health check endpoint.
 
-    Returns basic system information including model, host, and hostname.
+    Returns basic system information including provider, model, host, and hostname.
     """
+    # Get model based on provider
+    if settings.llm.provider == "ollama":
+        model = settings.llm.ollama_model
+    elif settings.llm.provider == "groq":
+        model = settings.llm.groq_model
+    else:
+        model = "unknown"
+
     return {
         "status": "ok",
-        "model": settings.ollama_model,
-        "ollama_host": settings.ollama_host,
+        "provider": settings.llm.provider,
+        "model": model,
         "socket": socket.gethostname(),
     }

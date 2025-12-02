@@ -122,6 +122,14 @@ class ChatResponse(BaseModel):
         json_schema_extra={"example": True}
     )
 
+    confidence: Optional[float] = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="LLM's confidence score for the answer (0.0-1.0). Higher is more confident.",
+        json_schema_extra={"example": 0.95}
+    )
+
     ambiguity: Optional[AmbiguityMetadata] = Field(
         default=None,
         description="Details about ambiguity detection for this request",

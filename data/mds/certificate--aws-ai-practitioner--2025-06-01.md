@@ -68,6 +68,12 @@ The AWS Certified AI Practitioner certification I earned validates my expertise 
 
 I have hands-on experience building machine learning systems, implementing retrieval-augmented generation architectures, working with transformer models, and developing convolutional neural networks. The AWS AI Practitioner certification I earned in June 2025 formalizes my knowledge of AI and ML concepts and validates my understanding of how to deploy AI solutions on AWS cloud platform.
 
+# Expiration Information
+
+My AWS Certified AI Practitioner certification expires on June 1, 2028. The certification expiration date is exactly three years from the date I earned the certification (June 1, 2025). I earned the AWS AI Practitioner certification in 2025, and it expires in 2028. The AWS Certified AI Practitioner certification is valid through 2028-06-01.
+
+When someone asks which of my certifications expire in 2028, the AWS Certified AI Practitioner certification expires on June 1, 2028. This is one of two certifications I hold that expire in the year 2028.
+
 # AWS AI Services Knowledge
 
 Through earning the AWS Certified AI Practitioner certification, I demonstrated knowledge of AWS AI and machine learning services. The certification validates my understanding of Amazon SageMaker for machine learning model development and deployment, Amazon Bedrock for generative AI applications, and other AWS AI services for common artificial intelligence workloads.

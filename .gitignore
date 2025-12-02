@@ -34,8 +34,9 @@ logs/
 # Ignore Archive
 archive/
 
-# Ignore Claude
+# Ignore AI/Agent Folders
 .claude/
+.agent/
 
 # Ignore docs (Area to hold documents that are provided created by Claude)
 docs/

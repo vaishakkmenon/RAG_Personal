@@ -6,7 +6,7 @@ Handles extracting and normalizing metadata for ChromaDB compatibility.
 
 import logging
 from datetime import date, datetime
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import yaml
 
@@ -202,24 +202,68 @@ def get_existing_versions(doc_id: str, base_version: str) -> List[str]:
         return []
 
 
-def generate_version_identifier(metadata: Dict, doc_id: str) -> str:
+def get_existing_content_hash(doc_id: str, version: str) -> Optional[str]:
     """
-    Generate unique version identifier with same-day collision detection.
+    Get the content hash of an existing document version.
 
-    Handles multiple ingestions of the same document on the same day by
-    auto-incrementing a sequence number.
+    Used to detect if content has actually changed before creating a new version.
+
+    Args:
+        doc_id: Document identifier (e.g., "resume", "certificate-cka")
+        version: Version identifier (e.g., "2025-11-20")
+
+    Returns:
+        Content hash string if found, None otherwise
+    """
+    try:
+        # Import ChromaDB collection here to avoid circular imports
+        from ..retrieval.store import _collection
+
+        # Query chunks for this specific doc_id and version
+        results = _collection.get(
+            where={
+                "$and": [
+                    {"doc_id": {"$eq": doc_id}},
+                    {"version_identifier": {"$eq": version}}
+                ]
+            },
+            limit=1  # We only need one chunk to get the content_hash
+        )
+
+        # Extract content hash from metadata
+        metadatas = results.get('metadatas', [])
+        if metadatas and len(metadatas) > 0:
+            return metadatas[0].get('content_hash')
+
+        return None
+
+    except ImportError:
+        logger.debug("ChromaDB collection not available for content hash checking")
+        return None
+    except Exception as e:
+        logger.warning(f"Error checking content hash for {doc_id}@{version}: {e}")
+        return None
+
+
+def generate_version_identifier(metadata: Dict, doc_id: str, content_hash: Optional[str] = None) -> str:
+    """
+    Generate unique version identifier with content-based change detection.
+
+    Only creates a new version if the content has actually changed. This prevents
+    duplicate versions when re-ingesting unchanged files.
 
     Examples:
-        First ingestion today:  "2025-11-20"
-        Second ingestion today: "2025-11-20.v2"
-        Third ingestion today:  "2025-11-20.v3"
+        First ingestion:           "2025-11-20"
+        Re-ingest (no change):     "2025-11-20" (reuses existing)
+        Re-ingest (content changed): "2025-11-20.v2" (new version)
 
     Args:
         metadata: Document metadata dict
         doc_id: Document identifier for collision checking
+        content_hash: SHA256 hash of the document content (optional)
 
     Returns:
-        Unique version string (e.g., "2025-11-20" or "2025-11-20.v2")
+        Version string (e.g., "2025-11-20" or "2025-11-20.v2")
     """
     # Get base version from metadata
     base_version = normalize_version_identifier(metadata)
@@ -232,7 +276,17 @@ def generate_version_identifier(metadata: Dict, doc_id: str) -> str:
         logger.debug(f"First version for {doc_id}: {base_version}")
         return base_version
 
-    # Same-day update detected - find next sequence number
+    # Version exists - check if content actually changed
+    if content_hash:
+        existing_hash = get_existing_content_hash(doc_id, base_version)
+        if existing_hash and existing_hash == content_hash:
+            # Content unchanged - reuse existing version
+            logger.info(
+                f"Content unchanged for {doc_id}@{base_version}, reusing existing version"
+            )
+            return base_version
+
+    # Content changed or no hash available - find next sequence number
     max_sequence = 1
     for version in existing_versions:
         if version.startswith(base_version):
@@ -250,7 +304,7 @@ def generate_version_identifier(metadata: Dict, doc_id: str) -> str:
     next_version = f"{base_version}.v{next_sequence}"
 
     logger.info(
-        f"Same-day collision detected for {doc_id}: "
+        f"Content changed for {doc_id}: "
         f"base={base_version}, assigned={next_version}"
     )
 

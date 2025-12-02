@@ -62,7 +62,7 @@ The AWS Certified Cloud Practitioner certification I earned on May 26, 2025 demo
 
 My AWS Certified Cloud Practitioner certification expires on May 26, 2028. The certification expiration date is exactly three years from the date I earned the certification (May 26, 2025). I earned the AWS Cloud Practitioner certification in 2025, and it expires in 2028. The AWS Certified Cloud Practitioner certification is valid through 2028-05-26.
 
-When someone asks which of my certifications expire in 2028, the answer is the AWS Certified Cloud Practitioner certification, which expires on May 26, 2028. This is the only certification I hold that expires in the year 2028.
+When someone asks which of my certifications expire in 2028, the AWS Certified Cloud Practitioner certification expires on May 26, 2028. This is one of two certifications I hold that expire in the year 2028.
 
 # Cloud Platform Experience
 

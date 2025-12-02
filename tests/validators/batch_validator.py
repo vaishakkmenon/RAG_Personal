@@ -77,6 +77,7 @@ class BatchValidator:
         validated_results = []
         passed = 0
         failed = 0
+        skipped = 0
 
         for i, result in enumerate(results, 1):
             print(f"[{i}/{len(results)}] Validating {result['test_id']}...", end=' ')
@@ -90,7 +91,11 @@ class BatchValidator:
             result['validation_issues'] = validation['issues']
             result['validation_explanation'] = validation['explanation']
 
-            if validation['passed']:
+            if validation.get('skipped', False):
+                skipped += 1
+                failed += 1  # Count skipped as failed
+                print("SKIPPED (error)")
+            elif validation['passed']:
                 passed += 1
                 print("PASS")
             else:
@@ -111,6 +116,7 @@ class BatchValidator:
                 "total_tests": len(results),
                 "passed": passed,
                 "failed": failed,
+                "skipped": skipped,
                 "pass_rate": (passed / len(results) * 100) if results else 0,
                 "average_score": sum(r['validation']['score'] for r in validated_results) / len(validated_results) if validated_results else 0
             },
@@ -127,6 +133,8 @@ class BatchValidator:
         print(f"Total tests: {len(results)}")
         print(f"Passed: {passed} ({passed/len(results)*100:.1f}%)")
         print(f"Failed: {failed} ({failed/len(results)*100:.1f}%)")
+        if skipped > 0:
+            print(f"Skipped (errors): {skipped}")
         print(f"Average score: {report['summary']['average_score']:.2f}")
         print(f"\nReport saved to: {output_file}")
 
@@ -141,6 +149,26 @@ class BatchValidator:
         Returns:
             Validation dict with passed, score, issues, explanation
         """
+
+        # Check if this result has an error (failed test)
+        if 'error' in result:
+            return {
+                "passed": False,
+                "score": 0.0,
+                "issues": [f"Test failed during collection: {result['error']}"],
+                "explanation": "Test encountered an error and could not be validated",
+                "skipped": True
+            }
+
+        # Check if answer field exists
+        if 'answer' not in result:
+            return {
+                "passed": False,
+                "score": 0.0,
+                "issues": ["Missing 'answer' field in test result"],
+                "explanation": "Test result is malformed (no answer field)",
+                "skipped": True
+            }
 
         question = result['question']
         answer = result['answer']
@@ -212,7 +240,7 @@ EVALUATION CRITERIA:
 1. SEMANTIC CORRECTNESS: Does answer convey the expected meaning/information?
 2. COMPLETENESS: Are all key elements present?
 3. ACCURACY: Is the information factually correct?
-4. PRECISION: Does it directly answer without irrelevant info?
+4. RELEVANCE: Is the information relevant to the question?
 5. NO REFUSAL: Answer shouldn't refuse if information is available
 
 PRIMARY FOCUS: Judge based on whether the answer is SEMANTICALLY CORRECT, not just keyword matching.
@@ -229,10 +257,21 @@ When checking for expected keywords, treat these as EQUIVALENT:
 If the answer contains the SEMANTIC MEANING of expected keywords (even in different format),
 consider it present. Do NOT penalize for format differences.
 
-SCORING:
-- 1.0: Perfect - all expected content, accurate, direct
-- 0.9: Excellent - all expected content with minor format issues
-- 0.7: Good - most expected content, accurate
+CRITICAL - HANDLING ADDITIONAL INFORMATION:
+The "expected answer" and "expected keywords" represent the MINIMUM required content.
+Additional relevant context (dates, GPAs, honors, university names, job titles, etc.) should be:
+- REWARDED as comprehensive and helpful (score 1.0)
+- NOT penalized as "extra" or "irrelevant" information
+- Only penalize truly irrelevant or incorrect information
+
+If an answer includes all expected content PLUS additional accurate, relevant details,
+this is BETTER than a minimal answer - give it a higher score (1.0), not lower.
+
+SCORING GUIDELINES:
+- 1.0: Perfect - all expected content present, accurate. May include helpful additional context.
+- 0.9: Excellent - all expected content, semantically correct, minor wording variations
+- 0.8: Very Good - all key elements present with slight incompleteness
+- 0.7: Good - most expected content present, accurate
 - 0.5: Partial - missing significant content OR some inaccuracies
 - 0.3: Poor - missing most content OR major inaccuracies
 - 0.0: Wrong - completely incorrect OR refuses when it shouldn't

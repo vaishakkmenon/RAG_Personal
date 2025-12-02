@@ -77,16 +77,21 @@ def _process_file(fp: str) -> List[Dict]:
 
         # Extract doc_id and doc_type
         doc_id, doc_type = extract_doc_id(fp)
+
+        # Calculate content hash for change detection
+        content_hash = hashlib.sha256(body.encode("utf-8")).hexdigest()
+
         metadata.update(
             {
                 "doc_id": doc_id,
                 "doc_type": doc_type,
+                "content_hash": content_hash,
                 "ingestion_timestamp": datetime.now().isoformat(),
             }
         )
 
-        # Generate version identifier with collision detection
-        version = generate_version_identifier(metadata, doc_id)
+        # Generate version identifier with content-based change detection
+        version = generate_version_identifier(metadata, doc_id, content_hash)
         metadata["version_identifier"] = version
 
         # Determine split level based on doc_type

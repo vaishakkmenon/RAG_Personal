@@ -13,8 +13,7 @@ from fastapi import HTTPException, status
 from ..models import ChatRequest, ChatResponse, ChatSource, AmbiguityMetadata
 from ..monitoring import time_execution_info
 from ..prompting import build_clarification_message, create_default_prompt_builder
-from ..query_router import route_query
-from ..retrieval import search, multi_query_search, multi_domain_search
+from ..retrieval import search
 from ..services.llm import generate_with_ollama
 from ..services.reranker import rerank_chunks
 from ..settings import settings
@@ -31,30 +30,75 @@ except ImportError:
     logger.debug("Metrics not available for chat service")
 
 
+def _is_chitchat(question: str) -> tuple[bool, str]:
+    """Detect conversational/social interactions that don't need retrieval.
+
+    Args:
+        question: User's question
+
+    Returns:
+        Tuple of (is_chitchat, response_message)
+    """
+    q = question.strip().lower()
+
+    # Greetings
+    greetings = {'hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening', 'howdy', 'greetings'}
+    if any(greeting == q or q.startswith(greeting + ' ') or q.startswith(greeting + '!') for greeting in greetings):
+        return True, "Hello! I can help answer questions about your background, experience, certifications, and education. What would you like to know?"
+
+    # Gratitude
+    if any(word in q for word in ['thank you', 'thanks', 'thx', 'appreciate', 'grateful']):
+        return True, "You're welcome! Is there anything else you'd like to know?"
+
+    # Farewells
+    farewells = {'bye', 'goodbye', 'see you', 'later', 'farewell'}
+    if any(farewell in q for farewell in farewells):
+        return True, "Goodbye! Feel free to come back if you have more questions."
+
+    return False, ""
+
+
+def _is_truly_ambiguous(question: str) -> bool:
+    """Detect ONLY obviously vague questions (1-2 words).
+
+    Catches the clear-cut cases where questions are too short to be meaningful.
+    Lets the LLM handle gray areas via the system prompt.
+
+    Args:
+        question: User's question
+
+    Returns:
+        True if question is obviously too vague (1-2 words with filler)
+    """
+    q = question.strip()
+
+    # Empty or just punctuation
+    if not q or len(q) <= 2:
+        return True
+
+    # Remove punctuation and split into words
+    words = q.replace('?', '').replace('.', '').replace('!', '').strip().split()
+
+    # Single word queries (always vague)
+    if len(words) <= 1:
+        return True
+
+    # Two words with filler words (very likely vague)
+    if len(words) == 2:
+        filler_words = {'my', 'the', 'a', 'an', 'your'}
+        if any(word.lower() in filler_words for word in words):
+            return True  # "My experience?", "The background?"
+
+    # Everything else: let the LLM decide via system prompt
+    return False
+
+
 class ChatService:
     """Service for handling RAG chat requests."""
 
     def __init__(self):
         """Initialize chat service."""
         self.prompt_builder = create_default_prompt_builder()
-
-    def _merge_params(
-        self, manual: Dict[str, Any], routed: Dict[str, Any], defaults: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Merge manual overrides with routed params and defaults.
-
-        Args:
-            manual: Manual parameter overrides
-            routed: Parameters from query router
-            defaults: Default parameters
-
-        Returns:
-            Merged parameters dict
-        """
-        result = defaults.copy()
-        result.update(routed)
-        result.update({k: v for k, v in manual.items() if v is not None})
-        return result
 
     def _format_sources(self, chunks: List[dict]) -> List[Dict[str, Any]]:
         """Format chunks for the prompt builder.
@@ -114,7 +158,6 @@ class ChatService:
         term_id: Optional[str] = None,
         level: Optional[str] = None,
         model: Optional[str] = None,
-        use_router: Optional[bool] = None,
     ) -> ChatResponse:
         """Handle a chat request with RAG.
 
@@ -132,7 +175,6 @@ class ChatService:
             term_id: Term ID filter
             level: Level filter
             model: LLM model override
-            use_router: Whether to use query router
 
         Returns:
             ChatResponse with answer and metadata
@@ -179,47 +221,24 @@ class ChatService:
 
         logger.info(f"Question: {request.question}")
 
-        # Determine if we should use router (use settings default if not specified)
-        should_use_router = (
-            use_router if use_router is not None else settings.retrieval.use_router
-        )
-
-        # Route query if enabled
-        if should_use_router:
-            routed_params = route_query(request.question)
-
-            params = self._merge_params(
-                manual={
-                    "doc_type": doc_type,
-                    "term_id": term_id,
-                    "top_k": top_k,
-                    "null_threshold": null_threshold,
-                    "max_distance": max_distance,
-                    "rerank": rerank,
-                    "rerank_lex_weight": rerank_lex_weight,
-                    "temperature": temperature,
-                    "max_tokens": max_tokens,
-                },
-                routed=routed_params,
-                defaults=params,
+        # STEP 1: Check for chitchat (greetings, thanks, etc.)
+        is_chitchat, chitchat_response = _is_chitchat(request.question)
+        if is_chitchat:
+            logger.info(f"Chitchat detected: '{request.question}'")
+            return ChatResponse(
+                answer=chitchat_response,
+                sources=[],
+                grounded=False,
+                ambiguity=AmbiguityMetadata(
+                    is_ambiguous=False,
+                    score=0.0,
+                    clarification_requested=False,
+                ),
             )
 
-            logger.info(
-                f"Routed parameters: doc_type={params.get('doc_type')}, top_k={params.get('top_k')}"
-            )
-        else:
-            routed_params = {}
-            logger.info(f"Using default parameters: {params}")
-
-        # Check for ambiguity from router
-        if should_use_router and params.get("is_ambiguous"):
-            logger.info(
-                "Ambiguous query detected; prompting user for clarification",
-                extra={
-                    "question": request.question,
-                    "ambiguity_score": params.get("ambiguity_score"),
-                },
-            )
+        # STEP 2: Check for ambiguity BEFORE retrieval
+        if _is_truly_ambiguous(request.question):
+            logger.info(f"Pre-retrieval: Question is too vague: '{request.question}'")
             clarification = build_clarification_message(
                 request.question, self.prompt_builder.config
             )
@@ -229,10 +248,11 @@ class ChatService:
                 grounded=False,
                 ambiguity=AmbiguityMetadata(
                     is_ambiguous=True,
-                    score=max(params.get("ambiguity_score", 0.0), 0.8),
+                    score=0.9,
                     clarification_requested=True,
                 ),
             )
+
 
         # Build metadata filter
         metadata_filter = {
@@ -245,6 +265,24 @@ class ChatService:
             if v is not None
         }
 
+        # Check for negative inference opportunity
+        # If the question asks about a specific entity that doesn't exist in the KB,
+        # search for the category instead to find complete lists
+        from ..retrieval.negative_inference_helper import detect_negative_inference_opportunity
+
+        neg_inf_result = detect_negative_inference_opportunity(request.question)
+        search_query = request.question
+
+        if neg_inf_result and neg_inf_result['is_negative_inference_candidate']:
+            # Use category search instead of entity search
+            search_query = neg_inf_result['suggested_category_search']
+            logger.info(
+                f"Negative inference detected: '{request.question}' → "
+                f"searching for category: '{search_query}'"
+            )
+            missing = [e['entity'] for e in neg_inf_result['missing_entities']]
+            logger.info(f"Missing entities: {missing}")
+
         # Retrieve chunks (use multi-domain if domains available and enabled)
         # If reranking is enabled, retrieve more chunks initially for better reranking
         retrieval_k = params["top_k"]
@@ -256,24 +294,12 @@ class ChatService:
             )
 
         try:
-            enable_multi_domain = params.get("enable_multi_domain", False)
-            domain_configs = params.get("domain_configs", [])
-
-            if enable_multi_domain and domain_configs:
-                logger.info(f"Using multi-domain retrieval across {len(domain_configs)} domains")
-                chunks = multi_domain_search(
-                    query=request.question,
-                    domain_configs=domain_configs,
-                    k=retrieval_k,
-                    max_distance=params["max_distance"],
-                )
-            else:
-                chunks = search(
-                    query=request.question,
-                    k=retrieval_k,
-                    max_distance=params["max_distance"],
-                    metadata_filter=metadata_filter if metadata_filter else None,
-                )
+            chunks = search(
+                query=search_query,
+                k=retrieval_k,
+                max_distance=params["max_distance"],
+                metadata_filter=metadata_filter if metadata_filter else None,
+            )
         except Exception as e:
             logger.error(f"Retrieval failed: {e}")
             raise HTTPException(
@@ -281,18 +307,10 @@ class ChatService:
                 detail="Failed to retrieve documents",
             )
 
-        # Post-filter by section prefix if requested
-        if use_router and routed_params.get("post_filter_section_prefix"):
-            section_prefix = routed_params["post_filter_section_prefix"]
-            original_count = len(chunks)
-            chunks = [
-                c
-                for c in chunks
-                if c.get("metadata", {}).get("section", "").startswith(section_prefix)
-            ]
-            logger.info(
-                f"Section prefix filter '{section_prefix}': {original_count} → {len(chunks)} chunks"
-            )
+        # DEBUG: Log retrieved chunk distances
+        if chunks:
+            distances = [c.get('distance', 'N/A') for c in chunks[:5]]
+            logger.info(f"Retrieved {len(chunks)} chunks, top 5 distances: {distances}")
 
         # Optional reranking
         if params["rerank"] and chunks:
@@ -312,32 +330,7 @@ class ChatService:
         # Grounding check - no chunks
         if not chunks:
             logger.warning("No chunks retrieved")
-
-            # Check if question is truly vague (only after retrieval failed)
-            is_structured = params.get('is_structured_summary', False)
-            heuristic_ambiguous, _ = self.prompt_builder.is_ambiguous(
-                request.question,
-                is_structured_summary=is_structured
-            )
-            if heuristic_ambiguous:
-                logger.info(
-                    "No chunks found AND question is vague; asking for clarification"
-                )
-                clarification = build_clarification_message(
-                    request.question, self.prompt_builder.config
-                )
-                return ChatResponse(
-                    answer=clarification,
-                    sources=[],
-                    grounded=False,
-                    ambiguity=AmbiguityMetadata(
-                        is_ambiguous=True,
-                        score=0.9,
-                        clarification_requested=True,
-                    ),
-                )
-
-            # Question is specific but no relevant docs found
+            # Question is specific (passed ambiguity check) but no relevant docs found
             return ChatResponse(
                 answer="I don't know. I couldn't find any relevant information in my documents.",
                 sources=[],
@@ -359,9 +352,10 @@ class ChatService:
             logger.info(
                 f"Refusing: best distance {best_distance:.3f} > threshold {params['null_threshold']}"
             )
+            # Keep sources for transparency even when refusing
             return ChatResponse(
                 answer="I don't know. I couldn't find sufficiently relevant information in my documents to answer this question confidently.",
-                sources=[],
+                sources=self._build_chat_sources(chunks),  # Keep sources for debugging
                 grounded=False,
                 ambiguity=AmbiguityMetadata(
                     is_ambiguous=params.get("is_ambiguous", False),
@@ -371,10 +365,16 @@ class ChatService:
             )
 
         # Standard RAG flow
-        return self._handle_standard_query(request.question, params, chunks)
+        return self._handle_standard_query(
+            request.question, params, chunks, neg_inf_result
+        )
 
     def _handle_standard_query(
-        self, question: str, params: Dict[str, Any], chunks: List[dict]
+        self,
+        question: str,
+        params: Dict[str, Any],
+        chunks: List[dict],
+        neg_inf_result: Optional[Dict[str, Any]] = None
     ) -> ChatResponse:
         """Handle standard RAG query with LLM generation.
 
@@ -382,6 +382,7 @@ class ChatService:
             question: User's question
             params: Query parameters
             chunks: Retrieved chunks
+            neg_inf_result: Optional negative inference detection result
 
         Returns:
             ChatResponse
@@ -389,11 +390,35 @@ class ChatService:
         # Prepare context for prompt builder
         formatted_chunks = self._format_sources(chunks)
 
+        # Prepare negative inference hint if detected
+        negative_inference_hint = None
+        if neg_inf_result and neg_inf_result.get('is_negative_inference_candidate'):
+            # Map category search query to human-readable category name
+            category_map = {
+                'work experience': 'employers/companies',
+                'certifications': 'professional certifications',
+                'personal projects': 'personal projects',
+                'education': 'degrees',
+            }
+
+            category_search = neg_inf_result.get('suggested_category_search', '')
+            category_name = 'items'
+            for key, value in category_map.items():
+                if key in category_search.lower():
+                    category_name = value
+                    break
+
+            negative_inference_hint = {
+                'missing_entities': [e['entity'] for e in neg_inf_result['missing_entities']],
+                'category': category_name
+            }
+
         # Build and validate prompt
         prompt_result = self.prompt_builder.build_prompt(
             question=question,
             context_chunks=formatted_chunks,
-            keywords=params.get('all_keywords', [])
+            keywords=params.get('all_keywords', []),
+            negative_inference_hint=negative_inference_hint
         )
 
         # Handle ambiguous questions or missing context
@@ -434,11 +459,13 @@ class ChatService:
             model=params.get("model"),
         )
 
-        answer = (response_text or "").strip()
+        # Use natural language response directly
+        answer = response_text.strip()
         logger.info(f"Generated answer: {answer[:100]}...")
 
         # Check for refusal
         if self.prompt_builder.is_refusal(answer):
+            logger.info("Answer is a refusal")
             return ChatResponse(
                 answer=answer,
                 sources=[],
@@ -450,27 +477,30 @@ class ChatService:
                 ),
             )
 
-        # Check if clarification is needed
-        if params.get("is_ambiguous"):
-            if self.prompt_builder.needs_clarification(answer):
-                logger.info(
-                    "Ambiguity flagged but answer lacked clarification; returning clarification prompt"
-                )
-                clarification = build_clarification_message(
-                    question, self.prompt_builder.config
-                )
-                return ChatResponse(
-                    answer=clarification,
-                    sources=[],
-                    grounded=False,
-                    ambiguity=AmbiguityMetadata(
-                        is_ambiguous=True,
-                        score=max(params.get("ambiguity_score", 0.0), 0.8),
-                        clarification_requested=True,
-                    ),
-                )
+        # Check if answer is a clarification request (heuristic)
+        clarification_indicators = [
+            "i can help with:",
+            "what would you like to know",
+            "could you clarify",
+            "please specify",
+            "which aspect"
+        ]
+        is_clarification = any(indicator in answer.lower() for indicator in clarification_indicators)
 
-        # Return successful response
+        if is_clarification:
+            logger.info("Answer appears to be a clarification request")
+            return ChatResponse(
+                answer=answer,
+                sources=[],
+                grounded=False,
+                ambiguity=AmbiguityMetadata(
+                    is_ambiguous=True,
+                    score=0.8,
+                    clarification_requested=True,
+                ),
+            )
+
+        # Return successful grounded response
         return ChatResponse(
             answer=answer,
             sources=self._build_chat_sources(chunks),

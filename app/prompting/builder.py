@@ -5,11 +5,9 @@ Handles building and validating prompts with safety guards.
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
-from ..query_router.patterns import PatternMatcher
-from ..settings import QueryRouterSettings, settings
-from .clarification import build_clarification_message
+from ..settings import settings
 from .config import PromptConfig, PromptResult
 
 logger = logging.getLogger(__name__)
@@ -76,72 +74,13 @@ class PromptBuilder:
             config: Optional PromptConfig instance
         """
         self.config = config or PromptConfig()
-        # Initialize pattern matchers for ambiguity detection
-        router_settings = QueryRouterSettings()
-        self.tech_matcher = PatternMatcher(router_settings.technology_terms)
-        self.category_matcher = PatternMatcher(router_settings.categories)
-        self.question_matcher = PatternMatcher(router_settings.question_patterns)
-
-    def _contains_technology(self, question: str) -> bool:
-        """Check if question mentions specific technologies."""
-        return len(self.tech_matcher.find_matches(question)) > 0
-
-    def _matches_concrete_category(self, question: str) -> bool:
-        """Check if question matches concrete categories."""
-        return len(self.category_matcher.find_matches(question)) > 0
-
-    def _is_specific_question_type(self, question: str) -> bool:
-        """Check if question follows specific question patterns."""
-        return len(self.question_matcher.find_matches(question)) > 0
-
-    def is_ambiguous(self, question: str, is_structured_summary: bool = False) -> Tuple[bool, str]:
-        """Check if a question is ambiguous or too vague.
-
-        Args:
-            question: The user's question
-            is_structured_summary: Whether router detected structured summary intent
-
-        Returns:
-            Tuple of (is_ambiguous, reason)
-        """
-        question = (question or "").strip()
-
-        # Basic validation
-        if not question:
-            return True, "Question cannot be empty"
-
-        if len(question.split()) < self.config.min_question_length:
-            return True, "Question is too short"
-
-        # Structured summaries are NOT ambiguous (have clear intent + scope)
-        if is_structured_summary:
-            return False, ""
-
-        # Early exit: Check for disambiguating signals
-        if self._contains_technology(question):
-            return False, ""  # Question mentions specific technology
-
-        if self._matches_concrete_category(question):
-            return False, ""  # Question asks about concrete category
-
-        if self._is_specific_question_type(question):
-            return False, ""  # Question follows specific pattern
-
-        # Check for ambiguous phrases
-        lower_question = question.lower()
-        for phrase in self.config.ambiguous_phrases:
-            if phrase in lower_question:
-                return True, f"Question contains ambiguous phrase: {phrase}"
-
-        # Check for vague questions without specifics
-        first_word = lower_question.split()[0]
-        if first_word in self.config.vague_question_words and len(question.split()) < 5:
-            return True, "Question is too vague, please be more specific"
-
-        return False, ""
 
     def build_prompt(
-        self, question: str, context_chunks: List[Dict[str, Any]], keywords: Optional[List[str]] = None
+        self,
+        question: str,
+        context_chunks: List[Dict[str, Any]],
+        keywords: Optional[List[str]] = None,
+        negative_inference_hint: Optional[Dict[str, Any]] = None
     ) -> PromptResult:
         """Build a prompt with the given question and context chunks.
 
@@ -149,6 +88,8 @@ class PromptBuilder:
             question: The user's question
             context_chunks: Retrieved context chunks
             keywords: Optional list of keywords to guide LLM focus
+            negative_inference_hint: Optional hint about negative inference opportunity
+                Dict with keys: 'missing_entities', 'category'
 
         Returns:
             PromptResult with the constructed prompt
@@ -163,13 +104,28 @@ class PromptBuilder:
                 keyword_str = ", ".join(keywords)
                 question_section += f"\n[Focus areas: {keyword_str}]"
 
+            # Add negative inference hint if provided
+            if negative_inference_hint:
+                missing = negative_inference_hint.get('missing_entities', [])
+                category = negative_inference_hint.get('category', 'items')
+
+                if missing:
+                    entities_str = ", ".join(missing)
+                    hint = (
+                        f"\n\n[IMPORTANT INSTRUCTION: The question asks about '{entities_str}' which does not appear in the provided context. "
+                        f"However, the context DOES contain a complete list of {category}. "
+                        f"You MUST apply NEGATIVE INFERENCE by examining the complete list and answering 'No' with what IS present. "
+                        f"Do NOT say 'I don't know' - instead, use the complete list to infer the negative answer.]"
+                    )
+                    question_section += hint
+
             # Build prompt sections
             prompt_sections = [
                 self.config.system_prompt.strip(),
                 self.config.certification_guidelines.strip(),
                 context,
                 "QUESTION:",
-                question_section,  # Now includes keyword annotation if present
+                question_section,  # Now includes keyword annotation and negative inference hint if present
                 "ANSWER:",
             ]
 
