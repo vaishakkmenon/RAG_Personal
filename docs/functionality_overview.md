@@ -141,3 +141,28 @@ curl http://localhost:8000/health
 
 **Samples**: `GET /samples?n=5`
 - Returns random chunks from the database to verify data integrity.
+
+## ⚠️ Known Limitations
+
+### Ambiguity Detection
+The system includes ambiguity detection to handle vague queries (e.g., single-word questions, incomplete questions). However, this feature is **not aggressive enough**:
+
+- May attempt to answer ambiguous questions when it should request clarification
+- Can provide overly broad, generic, or unexpected answers to vague queries
+- Should reject more unclear questions but currently tries to answer them
+
+**Why this limitation exists:**
+The system uses a **simple rule-based approach** (checking word count and filler words) instead of sophisticated LLM-based ambiguity detection for two key reasons:
+
+1. **Token Budget**: To maximize the number of queries within token limits, the prompt must be kept short. Adding extensive ambiguity detection instructions would consume valuable input tokens.
+2. **Cost/Latency**: More sophisticated ambiguity detection would require an additional LLM call before the main RAG pipeline, adding cost and latency. The current design keeps the system free and fast by using a single LLM call per query.
+
+**Trade-off**: The system prioritizes **availability** (always attempt to answer) and **efficiency** (minimal token usage, single LLM call) over **precision** (only answer perfectly clear queries).
+
+**Example behaviors:**
+- ✅ Expected: "What certifications do I hold?" → Direct, specific answer
+- ⚠️ Current behavior: "My experience?" → Attempts to answer with broad summary (should ask for clarification)
+- ⚠️ Current behavior: "Projects?" → Provides generic project info (should ask which aspect)
+
+**Impact on testing:**
+If you're running automated tests, be aware that some tests may receive answers that don't match expectations because the system attempts to answer ambiguous questions instead of requesting clarification. Responses may be overly broad or generic rather than targeted to what was actually intended.

@@ -384,6 +384,12 @@ docker-compose run test python run_tests.py --api-url http://api:8000
 ✅ No hardcoded templates or keyword forcing
 ```
 
+**Known Issues**:
+- ⚠️ **Ambiguity Detection**: The system's ambiguity detection is not aggressive enough, meaning it may attempt to answer vague or ambiguous questions when it should ask for clarification instead. This can result in responses that don't match expectations or provide overly broad/generic answers.
+  - **Why**: To keep the system free and maximize query capacity, the prompt is kept short to stay within input token limits. More sophisticated ambiguity detection would require an additional LLM call before the main RAG pipeline, which would add cost and latency.
+  - **Trade-off**: The current rule-based approach (checking word count and filler words) allows some ambiguous queries to pass through to prioritize availability over precision.
+- ⚠️ **Test Sensitivity**: Tests may receive unexpected responses when the system attempts to answer ambiguous questions instead of requesting clarification, leading to answers that don't precisely match expected outputs.
+
 ### 🎯 System Behavior
 
 **Before Refactoring**:

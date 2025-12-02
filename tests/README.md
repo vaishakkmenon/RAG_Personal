@@ -2,6 +2,22 @@
 
 Organized test suite for the Personal RAG System.
 
+## ⚠️ Important Note on Test Results
+
+**Expected Behavior**: Some tests may not pass as expected because the system's ambiguity detection is **not aggressive enough**. The system may attempt to answer vague or ambiguous questions when it should request clarification instead.
+
+**Common scenarios**:
+- Short questions (e.g., "My projects?") receive answers instead of clarification requests
+- Vague queries get broad/generic responses that may not match expected specific answers
+- Tests may receive "close but not quite right" answers because the system guesses at ambiguous intent
+
+**Why this limitation exists**:
+- **Token Budget**: To maximize queries within input token limits, prompts are kept short. Sophisticated ambiguity detection would consume valuable tokens.
+- **Cost/Latency**: More accurate ambiguity detection would require an additional LLM call before the main RAG pipeline, adding cost and latency. The current design uses only 1 LLM call per query to keep the system free and fast.
+- **Design Trade-off**: The system prioritizes **availability** (always try to answer), **efficiency** (minimal tokens), and **cost** (free operation) over **precision** (only answer clear queries).
+
+See the main documentation for more details.
+
 ## Directory Structure
 
 ```

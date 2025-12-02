@@ -122,3 +122,47 @@ All configuration is managed via `pydantic` in `app/settings.py` and can be over
 -   ✅ **Multi-Provider LLM**: Implemented and configurable (Groq/Ollama).
 -   ✅ **Observability**: Prometheus metrics exposed at `/metrics`.
 -   ❌ **Multi-turn Conversation**: Not currently supported (stateless API).
+
+## ⚠️ Known Issues & Limitations
+
+### Ambiguity Detection Insufficient
+The system's ambiguity detection (implemented in `chat_service.py`) is **not aggressive enough**:
+
+**Problem**: Pre-retrieval ambiguity checks are too lenient, allowing vague or ambiguous questions to proceed to retrieval and generation when they should request clarification instead.
+
+**Symptoms**:
+- Questions like "My experience?" or "Projects?" attempt to answer instead of asking for clarification
+- Responses may be overly broad, generic, or not match user intent
+- Some automated tests receive unexpected answers because the system guesses at ambiguous intent
+- The system tries to answer when it should recognize insufficient information
+
+**Current Implementation** (`chat_service.py:261-275`):
+```python
+if _is_truly_ambiguous(request.question):
+    # Only catches extremely vague cases (1-2 words)
+    # Simple rule-based check: word count + filler words
+```
+
+**Why This Design Choice:**
+
+The system uses **simple rule-based ambiguity detection** instead of sophisticated LLM-based detection for practical reasons:
+
+1. **Token Budget Constraints**:
+   - To maximize queries within token limits, prompts must be kept concise
+   - Extensive ambiguity detection instructions would consume valuable input tokens
+   - Each token used for detection reduces tokens available for context chunks
+
+2. **Cost & Latency Optimization**:
+   - Sophisticated ambiguity detection would require an **additional LLM call** before the main RAG pipeline
+   - Current design: 1 LLM call per query (fast, free)
+   - Enhanced design: 2 LLM calls per query (slower, costlier)
+   - The system prioritizes keeping operations free and responsive
+
+3. **Single-Pass Architecture**:
+   - The entire RAG pipeline completes in one LLM invocation
+   - Pre-retrieval → Retrieval → Generation → Response (single flow)
+   - Adding LLM-based ambiguity detection would require two-phase processing
+
+**Trade-off**: The current implementation prioritizes **availability** (always try to answer), **efficiency** (minimal tokens, single LLM call), and **cost** (free to operate) over **precision** (only answer clear queries). This means users get responses to ambiguous queries, but those responses may not match their actual intent.
+
+**Impact on Testing**: If running test suites, expect some tests to receive answers that don't match expected outputs because the system attempts to answer ambiguous questions instead of requesting clarification. This is an intentional design constraint to keep the system efficient and free to operate.
