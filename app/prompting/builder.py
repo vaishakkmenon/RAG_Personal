@@ -63,6 +63,32 @@ def _format_context(chunks: List[Dict[str, Any]]) -> str:
 
     return "\n\n".join(parts)
 
+def _format_conversation_history(history: List[Dict[str, str]]) -> str:
+    """Format conversation history for inclusion in prompt.
+
+    Args:
+        history: List of dicts with 'role' and 'content' keys
+                Example: [
+                    {"role": "user", "content": "What's my GPA?"},
+                    {"role": "assistant", "content": "Your GPA is 4.00."}
+                ]
+
+    Returns:
+        Formatted conversation history string
+    """
+    if not history:
+        return ""
+    
+    formatted_turns = []
+    for turn in history:
+        role = turn.get("role", "").upper()
+        content = turn.get("content", "").strip()
+        if content:
+            formatted_turns.append(f"{role}: {content}")
+
+    if formatted_turns:
+        return "PREVIOUS CONVERSATION:\n" + "\n\n".join(formatted_turns) + "\n"
+    return ""
 
 class PromptBuilder:
     """Handles construction and validation of prompts with safety guards."""
@@ -80,7 +106,8 @@ class PromptBuilder:
         question: str,
         context_chunks: List[Dict[str, Any]],
         keywords: Optional[List[str]] = None,
-        negative_inference_hint: Optional[Dict[str, Any]] = None
+        negative_inference_hint: Optional[Dict[str, Any]] = None,
+        conversation_history: Optional[List[Dict[str, str]]] = None
     ) -> PromptResult:
         """Build a prompt with the given question and context chunks.
 
@@ -90,6 +117,7 @@ class PromptBuilder:
             keywords: Optional list of keywords to guide LLM focus
             negative_inference_hint: Optional hint about negative inference opportunity
                 Dict with keys: 'missing_entities', 'category'
+            conversation_history: Optional list of previous conversation turns
 
         Returns:
             PromptResult with the constructed prompt
@@ -97,6 +125,11 @@ class PromptBuilder:
         try:
             # Format context with metadata injection
             context = _format_context(context_chunks)
+
+            # Format conversation history
+            history_text = ""
+            if conversation_history:
+                history_text = _format_conversation_history(conversation_history)
 
             # Format question with optional keyword guidance
             question_section = question.strip()
@@ -123,6 +156,7 @@ class PromptBuilder:
             prompt_sections = [
                 self.config.system_prompt.strip(),
                 self.config.certification_guidelines.strip(),
+                history_text,
                 context,
                 "QUESTION:",
                 question_section,  # Now includes keyword annotation and negative inference hint if present
