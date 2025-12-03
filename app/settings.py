@@ -111,6 +111,69 @@ class RetrievalSettings(BaseModel):
     )
 
 
+class SessionSettings(BaseModel):
+    """Session management configuration."""
+    
+    # Storage backend
+    storage_backend: str = Field(
+        default=os.getenv("SESSION_STORAGE_BACKEND", "redis"),
+        description="Session storage backend: 'redis' or 'memory'"
+    )
+    redis_url: str = Field(
+        default=os.getenv("REDIS_URL", "redis://localhost:6379/0"),
+        description="Redis connection URL"
+    )
+    
+    # Session limits
+    max_total_sessions: int = Field(
+        default=int(os.getenv("SESSION_MAX_TOTAL", "1000")),
+        description="Maximum total active sessions"
+    )
+    max_sessions_per_ip: int = Field(
+        default=int(os.getenv("SESSION_MAX_PER_IP", "5")),
+        description="Maximum sessions per IP address"
+    )
+    
+    # Rate limiting
+    queries_per_hour: int = Field(
+        default=int(os.getenv("SESSION_QUERIES_PER_HOUR", "10")),
+        description="Maximum queries per session per hour (0 = disabled)"
+    )
+    
+    # TTL and cleanup
+    ttl_seconds: int = Field(
+        default=int(os.getenv("SESSION_TTL_SECONDS", "21600")),  # 6 hours
+        description="Session TTL in seconds"
+    )
+    cleanup_interval_seconds: int = Field(
+        default=int(os.getenv("SESSION_CLEANUP_INTERVAL", "1800")),  # 30 minutes
+        description="Cleanup interval in seconds"
+    )
+    
+    # History limits (token budget management)
+    max_history_tokens: int = Field(
+        default=int(os.getenv("SESSION_MAX_HISTORY_TOKENS", "200")),
+        description="Maximum tokens to allocate for conversation history"
+    )
+    max_history_turns: int = Field(
+        default=int(os.getenv("SESSION_MAX_HISTORY_TURNS", "5")),
+        description="Maximum number of conversation turns to keep"
+    )
+    
+    # Validation
+    @validator("storage_backend")
+    def validate_storage_backend(cls, v):
+        if v not in ["redis", "memory"]:
+            raise ValueError("storage_backend must be 'redis' or 'memory'")
+        return v
+    
+    @validator("ttl_seconds", "cleanup_interval_seconds")
+    def validate_positive_seconds(cls, v):
+        if v <= 0:
+            raise ValueError("Value must be positive")
+        return v
+
+
 class MetadataInjectionSettings(BaseModel):
     """Configuration for metadata injection into LLM context."""
 
@@ -307,6 +370,11 @@ class Settings(BaseModel):
     metadata_injection: MetadataInjectionSettings = Field(
         default_factory=MetadataInjectionSettings,
         description="Metadata injection configuration",
+    )
+
+    session: SessionSettings = Field(
+        default_factory=SessionSettings,
+        description="Session management configuration"
     )
 
     class Config:
