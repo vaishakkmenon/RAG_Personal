@@ -1,0 +1,133 @@
+name: RAGChatBot
+services:
+  api:
+    build: .
+    container_name: ragchatbot_api
+    working_dir: /workspace
+    # Enable GPU for embedding model (SentenceTransformers)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    ports:
+      - "8000:8000"
+    environment:
+      - WATCHFILES_FORCE_POLLING=1
+      - HF_HOME=/home/nonroot/.cache/huggingface
+      - OLLAMA_HOST=http://ollama:11434
+      - UVICORN_WORKERS=2
+      # LLM Provider Settings (explicitly pass from .env)
+      - LLM_PROVIDER=${LLM_PROVIDER:-ollama}
+      - LLM_GROQ_API_KEY=${LLM_GROQ_API_KEY:-}
+      - LLM_GROQ_MODEL=${LLM_GROQ_MODEL:-llama-3.1-8b-instant}
+      - LLM_OLLAMA_HOST=http://ollama:11434
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.1}
+      - LLM_MAX_TOKENS=${LLM_MAX_TOKENS:-1000}
+      # Session Management (Redis)
+      - SESSION_STORAGE_BACKEND=${SESSION_STORAGE_BACKEND:-redis}
+      - SESSION_REDIS_URL=${SESSION_REDIS_URL:-redis://redis:6379/0}
+      - SESSION_MAX_TOTAL_SESSIONS=${SESSION_MAX_TOTAL_SESSIONS:-1000}
+      - SESSION_MAX_SESSIONS_PER_IP=${SESSION_MAX_SESSIONS_PER_IP:-5}
+      - SESSION_QUERIES_PER_HOUR=${SESSION_QUERIES_PER_HOUR:-10}
+      - SESSION_TTL_SECONDS=${SESSION_TTL_SECONDS:-21600}
+      - SESSION_MAX_HISTORY_TOKENS=${SESSION_MAX_HISTORY_TOKENS:-250}
+      - SESSION_MAX_HISTORY_TURNS=${SESSION_MAX_HISTORY_TURNS:-5}
+    env_file:
+      - .env
+    volumes:
+      - ./:/workspace
+      - ./.env:/workspace/.env:ro
+      - ./hf_cache:/home/nonroot/.cache/huggingface
+    depends_on:
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    cap_drop: ["ALL"]
+    tmpfs:
+      - /tmp
+    user: "65532:65532"
+    command: ["/opt/venv/bin/python", "-m", "uvicorn", "app.main:app",
+              "--host", "0.0.0.0", "--port", "8000",
+              "--workers", "${UVICORN_WORKERS:-2}"]
+    healthcheck:
+      test: ["CMD", "/opt/venv/bin/python","-c","import socket; s=socket.socket(); s.settimeout(2); s.connect(('127.0.0.1',8000)); print('ok')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ragchatbot_ollama
+    # --- GPU enablement (Compose v2) ---
+    gpus: all
+    # For older setups, also works:
+    # runtime: nvidia
+    environment:
+      - OLLAMA_HOST=http://0.0.0.0:11434
+      - OLLAMA_NUM_PARALLEL=4         # keep 1 while evaluating; raise later if needed
+      - OLLAMA_MAX_LOADED_MODELS=1
+      - OLLAMA_LLM_LIBRARY=cublas     # prefer CUDA (GPU) instead of CPU
+      - NVIDIA_VISIBLE_DEVICES=all    # belt-and-suspenders
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    volumes:
+      - ollama_models:/root/.ollama
+    ports:
+      - "11434:11434"
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: ragchatbot_redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  test:
+    build:
+      context: .
+      target: test
+    container_name: ragchatbot_test
+    working_dir: /workspace
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - API_URL=http://api:8000
+    env_file:
+      - .env
+    volumes:
+      - ./:/workspace
+      - ./hf_cache:/home/nonroot/.cache/huggingface
+    depends_on:
+      api:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: ["ALL"]
+    tmpfs:
+      - /tmp
+    user: "65532:65532"
+    # command: ["/opt/venv/bin/python", "/workspace/run_tests.py", "--api-url", "http://api:8000", "--api-key", "${API_KEY}"]
+
+volumes:
+  ollama_models:
+  redis_data:

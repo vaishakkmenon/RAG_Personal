@@ -1,0 +1,410 @@
+# ============================================================================
+# Personal RAG System - Oracle Cloud Always Free Optimized
+# ============================================================================
+# Optimizations for ARM64 (Ampere A1) with 4 OCPUs, 24GB RAM, 200GB storage
+# Designed for: No GPU, CPU inference, ARM architecture
+# ============================================================================
+
+name: personal-rag-system
+
+services:
+  # ==========================================================================
+  # FastAPI API Service - ARM64 optimized
+  # ==========================================================================
+  api:
+    build:
+      context: .
+      target: runtime
+      platforms:
+        - linux/arm64/v8  # Explicitly build for ARM64
+    image: personal-rag-system:latest
+    container_name: rag_api
+    hostname: api
+    
+    # Only expose API port (Redis and Ollama are internal only)
+    ports:
+      - "8000:8000"
+    
+    environment:
+      # ============ Application Settings ============
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - PYTHONUNBUFFERED=1
+      
+      # ============ LLM Provider Configuration ============
+      # Primary: Groq (cloud API)
+      - LLM_PROVIDER=${LLM_PROVIDER:-groq}
+      - LLM_GROQ_API_KEY=${LLM_GROQ_API_KEY:?ERROR: LLM_GROQ_API_KEY is required}
+      - LLM_GROQ_MODEL=${LLM_GROQ_MODEL:-llama-3.1-70b-versatile}
+      
+      # Fallback: Ollama (local CPU inference on ARM)
+      - LLM_FALLBACK_PROVIDER=ollama
+      - LLM_OLLAMA_HOST=http://ollama:11434
+      - LLM_OLLAMA_MODEL=${LLM_OLLAMA_MODEL:-llama3.1:8b}
+      
+      # LLM generation parameters
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.1}
+      - LLM_MAX_TOKENS=${LLM_MAX_TOKENS:-1000}
+      
+      # ============ Session Management (Redis) ============
+      - SESSION_STORAGE_BACKEND=${SESSION_STORAGE_BACKEND:-redis}
+      - SESSION_REDIS_URL=redis://redis:6379/0
+      - SESSION_MAX_TOTAL_SESSIONS=${SESSION_MAX_TOTAL_SESSIONS:-1000}
+      - SESSION_MAX_SESSIONS_PER_IP=${SESSION_MAX_SESSIONS_PER_IP:-5}
+      - SESSION_QUERIES_PER_HOUR=${SESSION_QUERIES_PER_HOUR:-10}
+      - SESSION_TTL_SECONDS=${SESSION_TTL_SECONDS:-21600}
+      - SESSION_MAX_HISTORY_TOKENS=${SESSION_MAX_HISTORY_TOKENS:-250}
+      - SESSION_MAX_HISTORY_TURNS=${SESSION_MAX_HISTORY_TURNS:-5}
+      
+      # ============ HuggingFace Cache ============
+      - HF_HOME=/home/nonroot/.cache/huggingface
+      
+      # ============ Uvicorn Server Config ============
+      # Oracle Cloud: 4 OCPUs available
+      # Formula: (2 x cores) + 1 = 9, but keep at 4-6 for other services
+      - UVICORN_WORKERS=${UVICORN_WORKERS:-4}
+    
+    env_file:
+      - .env
+    
+    volumes:
+      # Application code (development only, remove in production)
+      - ./app:/workspace/app:ro
+      
+      # Data directories (mount to block volume in production)
+      - ${DATA_PATH:-./data}/chroma:/workspace/data/chroma
+      - ${DATA_PATH:-./data}/docs:/workspace/data/docs
+      
+      # HuggingFace cache (persistent, can be large)
+      - hf_cache:/home/nonroot/.cache/huggingface
+    
+    depends_on:
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp:noexec,nosuid,nodev,size=256m  # Increased for ARM
+    user: "65532:65532"
+    
+    command: 
+      - /opt/venv/bin/python
+      - -m
+      - uvicorn
+      - app.main:app
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+      - --workers
+      - "${UVICORN_WORKERS:-4}"
+      - --log-level
+      - "${LOG_LEVEL:-info}"
+    
+    healthcheck:
+      test: 
+        - CMD
+        - /opt/venv/bin/python
+        - -c
+        - "import socket; s=socket.socket(); s.settimeout(5); s.connect(('127.0.0.1', 8000)); s.close(); print('✅ API healthy')"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    
+    restart: always  # Oracle Cloud: always restart
+    
+    # Resource limits optimized for Oracle Always Free
+    # Total available: 4 OCPUs, 24 GB RAM
+    # API allocation: 1.5 OCPUs, 4 GB RAM
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"    # Smaller logs for limited storage
+        max-file: "2"     # Keep fewer files
+        labels: "service=api"
+
+  # ==========================================================================
+  # Redis Service - Optimized for ARM and limited storage
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine  # Alpine is ARM-compatible
+    platform: linux/arm64/v8  # Explicit ARM64
+    container_name: rag_redis
+    hostname: redis
+    
+    command: 
+      - redis-server
+      - --appendonly yes
+      - --appendfsync everysec
+      - --maxmemory 256mb              # Conservative for 1000 sessions
+      - --maxmemory-policy allkeys-lru
+      - --save 60 1                    # RDB snapshot (small overhead)
+      - --stop-writes-on-bgsave-error no  # Don't stop on disk errors
+      - --rdb-save-incremental-fsync yes  # Better for slow disks
+      - --loglevel notice
+      - --tcp-backlog 128              # Lower for ARM
+      - --timeout 300
+      - --tcp-keepalive 60
+    
+    # ⚠️ DO NOT EXPOSE Redis publicly on Oracle Cloud
+    # ports:
+    #   - "6379:6379"  # COMMENTED OUT - internal only
+    expose:
+      - "6379"  # Internal network only
+    
+    volumes:
+      # In production: mount to block volume
+      # -v /mnt/block_storage/redis:/data
+      - redis_data:/data
+    
+    healthcheck:
+      test: 
+        - CMD
+        - redis-cli
+        - --raw
+        - incr
+        - ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    
+    security_opt:
+      - no-new-privileges:true
+    
+    restart: always
+    
+    # Resource limits for Redis
+    # Allocation: 0.3 OCPUs, 512 MB RAM (with 256MB data limit)
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+        labels: "service=redis"
+
+  # ==========================================================================
+  # Ollama Service - ARM64 CPU-only optimized
+  # ==========================================================================
+  ollama:
+    image: ollama/ollama:latest
+    platform: linux/arm64/v8  # Explicit ARM64
+    container_name: rag_ollama
+    hostname: ollama
+    
+    environment:
+      # Ollama server configuration
+      - OLLAMA_HOST=0.0.0.0:11434
+      - OLLAMA_ORIGINS=*
+      
+      # CPU optimization for ARM (no GPU)
+      - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL:-1}  # Conservative on ARM
+      - OLLAMA_MAX_LOADED_MODELS=1
+      - OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE:-24h}
+      
+      # ARM-specific optimizations
+      - OLLAMA_NUM_THREAD=4           # Use all 4 OCPUs
+      - OLLAMA_RUNNERS_DIR=/tmp/runners  # Use tmpfs for speed
+    
+    # ⚠️ DO NOT EXPOSE Ollama publicly on Oracle Cloud
+    # ports:
+    #   - "11434:11434"  # COMMENTED OUT - internal only
+    expose:
+      - "11434"  # Internal network only
+    
+    volumes:
+      # In production: mount to block volume (models are 5-10GB)
+      # -v /mnt/block_storage/ollama:/root/.ollama
+      - ollama_models:/root/.ollama
+    
+    # Optimized startup for ARM with better error handling
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        
+        echo "🚀 Starting Ollama on ARM64 (CPU-only)..."
+        /bin/ollama serve &
+        OLLAMA_PID=$!
+        
+        echo "⏳ Waiting for Ollama to be ready (may take 30-60s on first start)..."
+        for i in $(seq 1 60); do
+          if curl -s http://localhost:11434/api/version > /dev/null 2>&1; then
+            echo "✅ Ollama server ready on ARM64"
+            break
+          fi
+          if [ $i -eq 60 ]; then
+            echo "❌ ERROR: Ollama failed to start within 60 seconds"
+            echo "Check disk space: df -h"
+            exit 1
+          fi
+          sleep 1
+        done
+        
+        echo "📥 Pulling model: ${LLM_OLLAMA_MODEL:-llama3.1:8b} (this may take 10-20 minutes on first run)..."
+        if ollama pull "${LLM_OLLAMA_MODEL:-llama3.1:8b}"; then
+          echo "✅ Model ready for CPU inference on ARM"
+        else
+          echo "⚠️  WARNING: Failed to pull model"
+          echo "Disk usage: $(df -h /root/.ollama | tail -1)"
+          echo "Will retry on first request"
+        fi
+        
+        echo "✅ Ollama ready (ARM64 CPU mode)"
+        wait $OLLAMA_PID
+    
+    healthcheck:
+      test: 
+        - CMD-SHELL
+        - "curl -f http://localhost:11434/api/version || exit 1"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 180s  # Longer for ARM model loading
+    
+    restart: always
+    
+    # Resource limits for Ollama on ARM
+    # Allocation: 2 OCPUs, 10 GB RAM (for 8B model)
+    # Note: 8B model needs ~8GB RAM on ARM
+    deploy:
+      resources:
+        limits:
+          cpus: '2.5'
+          memory: 12G
+        reservations:
+          cpus: '1.5'
+          memory: 8G
+    
+    # Tmpfs for faster model execution
+    tmpfs:
+      - /tmp/runners:size=2g,mode=1777
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+        labels: "service=ollama"
+
+# ============================================================================
+# Named Volumes - Oracle Cloud storage optimization
+# ============================================================================
+volumes:
+  # Redis data (small, ~100-500MB)
+  redis_data:
+    driver: local
+    name: rag_redis_data
+    # In production, mount to block volume:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /mnt/block_storage/redis
+  
+  # Ollama models (large, 5-10GB per model)
+  ollama_models:
+    driver: local
+    name: rag_ollama_models
+    # In production, MUST mount to block volume:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /mnt/block_storage/ollama
+  
+  # HuggingFace cache (moderate, 1-2GB)
+  hf_cache:
+    driver: local
+    name: rag_hf_cache
+
+# ============================================================================
+# Networks - Default bridge is fine for Oracle Cloud
+# ============================================================================
+# Using default network is sufficient for Oracle Cloud
+# All services communicate via service names (dns)
+
+# ============================================================================
+# Oracle Cloud Deployment Notes
+# ============================================================================
+# 
+# 1. FIREWALL CONFIGURATION
+#    - Security List: Allow inbound 8000/tcp (API only)
+#    - iptables: sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 8000 -j ACCEPT
+#    - DO NOT expose Redis (6379) or Ollama (11434) publicly
+#
+# 2. STORAGE CONFIGURATION
+#    - Boot volume: 50GB (limited)
+#    - Create block volume: 100GB for models and data
+#    - Mount: sudo mount /dev/oracleoci/oraclevdb /mnt/block_storage
+#    - Update docker-compose.yml with block volume paths
+#
+# 3. RESOURCE ALLOCATION
+#    - Total: 4 OCPUs, 24 GB RAM
+#    - API: 1.5 OCPUs, 4 GB
+#    - Redis: 0.3 OCPUs, 512 MB
+#    - Ollama: 2 OCPUs, 12 GB
+#    - System overhead: 0.2 OCPUs, 7.5 GB
+#
+# 4. ARM CONSIDERATIONS
+#    - All images must support ARM64
+#    - Ollama uses CPU-only (no GPU on Always Free)
+#    - Expect slower inference (3-8s vs 1-3s with GPU)
+#
+# 5. MONITORING
+#    - Check disk: df -h (models are large!)
+#    - Check memory: free -h
+#    - Check logs: docker-compose logs -f
+#    - Check resources: docker stats
+#
+# 6. REVERSE PROXY (RECOMMENDED)
+#    - Use Caddy or Nginx for HTTPS
+#    - Automatic HTTPS with Let's Encrypt
+#    - Better security and performance
+#
+# ============================================================================
+# Deployment Commands
+# ============================================================================
+#
+# Initial setup:
+#   sudo yum install -y docker-compose
+#   sudo systemctl enable docker
+#   sudo systemctl start docker
+#   sudo usermod -aG docker $USER
+#
+# Deploy:
+#   docker-compose up --build -d
+#
+# Monitor:
+#   docker-compose logs -f
+#   docker stats
+#   df -h
+#
+# Update:
+#   git pull
+#   docker-compose up --build -d
+#
+# ============================================================================

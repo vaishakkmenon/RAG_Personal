@@ -1,102 +1,467 @@
-name: RAGChatBot
+# ============================================================================
+# Personal RAG System - Docker Compose Configuration
+# ============================================================================
+# Services:
+#   - api:    FastAPI backend with ChromaDB
+#   - redis:  Session storage and caching
+#   - ollama: Local LLM inference (fallback)
+#   - test:   Testing environment
+# ============================================================================
+
+name: personal-rag-system
+
 services:
+  # ==========================================================================
+  # FastAPI API Service - Main application
+  # ==========================================================================
   api:
-    build: .
-    container_name: ragchatbot_api
-    working_dir: /workspace
-    # Enable GPU for embedding model (SentenceTransformers)
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    ports:
-      - "8000:8000"
-    environment:
-      - WATCHFILES_FORCE_POLLING=1
-      - HF_HOME=/home/nonroot/.cache/huggingface
-      - OLLAMA_HOST=http://ollama:11434
-      - UVICORN_WORKERS=2
-      # LLM Provider Settings (explicitly pass from .env)
-      - LLM_PROVIDER=${LLM_PROVIDER:-ollama}
-      - LLM_GROQ_API_KEY=${LLM_GROQ_API_KEY:-}
-      - LLM_GROQ_MODEL=${LLM_GROQ_MODEL:-llama-3.1-8b-instant}
-      - LLM_OLLAMA_HOST=http://ollama:11434
-      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.1}
-      - LLM_MAX_TOKENS=${LLM_MAX_TOKENS:-1000}
-    env_file:
-      - .env
-    volumes:
-      - ./:/workspace
-      - ./.env:/workspace/.env:ro
-      - ./hf_cache:/home/nonroot/.cache/huggingface
-    depends_on:
-      - ollama
-    security_opt:
-      - no-new-privileges:true
-    read_only: true
-    cap_drop: ["ALL"]
-    tmpfs:
-      - /tmp
-    user: "65532:65532"
-    command: ["/opt/venv/bin/python", "-m", "uvicorn", "app.main:app",
-              "--host", "0.0.0.0", "--port", "8000",
-              "--workers", "${UVICORN_WORKERS:-2}"]
-    healthcheck:
-      test: ["CMD", "/opt/venv/bin/python","-c","import socket; s=socket.socket(); s.settimeout(2); s.connect(('127.0.0.1',8000)); print('ok')"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-    restart: unless-stopped
-
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ragchatbot_ollama
-    # --- GPU enablement (Compose v2) ---
-    gpus: all
-    # For older setups, also works:
-    # runtime: nvidia
-    environment:
-      - OLLAMA_HOST=http://0.0.0.0:11434
-      - OLLAMA_NUM_PARALLEL=4         # keep 1 while evaluating; raise later if needed
-      - OLLAMA_MAX_LOADED_MODELS=1
-      - OLLAMA_LLM_LIBRARY=cublas     # prefer CUDA (GPU) instead of CPU
-      - NVIDIA_VISIBLE_DEVICES=all    # belt-and-suspenders
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-    volumes:
-      - ollama_models:/root/.ollama
-    ports:
-      - "11434:11434"
-    restart: unless-stopped
-
-  test:
     build:
       context: .
-      target: test
-    container_name: ragchatbot_test
-    working_dir: /workspace
+      target: runtime
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+    image: personal-rag-system:latest
+    container_name: rag_api
+    hostname: api
+    
+    # Port mapping: host:container
+    ports:
+      - "${API_PORT:-8000}:8000"
+    
+    # Environment variables (with sensible defaults)
     environment:
-      - OLLAMA_HOST=http://ollama:11434
-      - API_URL=http://api:8000
+      # ============ Application Settings ============
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - PYTHONUNBUFFERED=1
+      - WATCHFILES_FORCE_POLLING=1
+      
+      # ============ LLM Provider Configuration ============
+      # Primary: Groq (cloud API)
+      - LLM_PROVIDER=${LLM_PROVIDER:-groq}
+      - LLM_GROQ_API_KEY=${LLM_GROQ_API_KEY:-}
+      - LLM_GROQ_MODEL=${LLM_GROQ_MODEL:-llama-3.1-70b-versatile}
+      
+      # Fallback: Ollama (local inference)
+      - LLM_FALLBACK_PROVIDER=ollama
+      - LLM_OLLAMA_HOST=http://ollama:11434
+      - LLM_OLLAMA_MODEL=${LLM_OLLAMA_MODEL:-llama3.1:8b}
+      
+      # LLM generation parameters
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.1}
+      - LLM_MAX_TOKENS=${LLM_MAX_TOKENS:-1000}
+      
+      # ============ Session Management (Redis) ============
+      - SESSION_STORAGE_BACKEND=${SESSION_STORAGE_BACKEND:-redis}
+      - SESSION_REDIS_URL=redis://redis:6379/0
+      - SESSION_MAX_TOTAL_SESSIONS=${SESSION_MAX_TOTAL_SESSIONS:-1000}
+      - SESSION_MAX_SESSIONS_PER_IP=${SESSION_MAX_SESSIONS_PER_IP:-5}
+      - SESSION_QUERIES_PER_HOUR=${SESSION_QUERIES_PER_HOUR:-10}
+      - SESSION_TTL_SECONDS=${SESSION_TTL_SECONDS:-21600}
+      - SESSION_MAX_HISTORY_TOKENS=${SESSION_MAX_HISTORY_TOKENS:-250}
+      - SESSION_MAX_HISTORY_TURNS=${SESSION_MAX_HISTORY_TURNS:-5}
+      
+      # ============ HuggingFace Cache ============
+      - HF_HOME=/home/nonroot/.cache/huggingface
+      
+      # ============ Uvicorn Server Config ============
+      - UVICORN_WORKERS=${UVICORN_WORKERS:-2}
+      - UVICORN_LOG_LEVEL=${LOG_LEVEL:-info}
+    
+    # Load additional env vars from .env file
     env_file:
       - .env
+    
+    # Volume mounts
     volumes:
-      - ./:/workspace
-      - ./hf_cache:/home/nonroot/.cache/huggingface
+      # Application code (for development hot-reload)
+      - ./app:/workspace/app:ro
+      
+      # Environment file (read-only)
+      - ./.env:/workspace/.env:ro
+      
+      # Data directories
+      - ./data/chroma:/workspace/data/chroma
+      - ./data/docs:/workspace/data/docs
+      
+      # HuggingFace model cache (persistent)
+      - hf_cache:/home/nonroot/.cache/huggingface
+    
+    # Service dependencies (with health checks)
     depends_on:
-      api:
+      redis:
         condition: service_healthy
       ollama:
         condition: service_started
+    
+    # Security hardening
     security_opt:
       - no-new-privileges:true
-    cap_drop: ["ALL"]
+    
+    read_only: true
+    
+    # Drop all capabilities (principle of least privilege)
+    cap_drop:
+      - ALL
+    
+    # Writable /tmp for runtime files
     tmpfs:
-      - /tmp
+      - /tmp:noexec,nosuid,nodev,size=128m
+    
+    # Run as non-root user (nonroot:nonroot = 65532:65532)
     user: "65532:65532"
-    # command: ["/opt/venv/bin/python", "/workspace/run_tests.py", "--api-url", "http://api:8000", "--api-key", "${API_KEY}"]
+    
+    # Override default CMD if needed
+    command: 
+      - /opt/venv/bin/python
+      - -m
+      - uvicorn
+      - app.main:app
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+      - --workers
+      - "${UVICORN_WORKERS:-2}"
+      - --log-level
+      - "${LOG_LEVEL:-info}"
+    
+    # Health check (critical for depends_on conditions)
+    healthcheck:
+      test: 
+        - CMD
+        - /opt/venv/bin/python
+        - -c
+        - "import socket; s=socket.socket(); s.settimeout(5); s.connect(('127.0.0.1', 8000)); s.close(); print('✅ API healthy')"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Resource limits (optional, uncomment for production)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 4G
+    #     reservations:
+    #       cpus: '1.0'
+    #       memory: 2G
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=api"
 
+  # ==========================================================================
+  # Redis Service - Session storage and caching
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: rag_redis
+    hostname: redis
+    
+    # Redis server configuration
+    command: 
+      - redis-server
+      - --appendonly yes                    # Enable AOF persistence
+      - --appendfsync everysec              # Fsync every second (balanced)
+      - --maxmemory 256mb                   # Memory limit
+      - --maxmemory-policy allkeys-lru      # Eviction policy
+      - --save 60 1                         # RDB snapshot: every 60s if 1 key changed
+      - --loglevel notice                   # Logging level
+      - --tcp-backlog 511                   # Connection queue size
+      - --timeout 300                       # Close idle connections after 5min
+      - --tcp-keepalive 300                 # TCP keepalive
+    
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    
+    volumes:
+      - redis_data:/data
+    
+    # Health check (critical for API service dependency)
+    healthcheck:
+      test: 
+        - CMD
+        - redis-cli
+        - --raw
+        - incr
+        - ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Resource limits (optional)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.5'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=redis"
+
+  # ==========================================================================
+  # Ollama Service - Local LLM inference (fallback provider)
+  # ==========================================================================
+  ollama:
+    image: ollama/ollama:latest
+    container_name: rag_ollama
+    hostname: ollama
+    
+    # GPU support (uncomment if GPU available)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    
+    # Alternative GPU syntax (older Docker)
+    # runtime: nvidia
+    
+    environment:
+      # Ollama server configuration
+      - OLLAMA_HOST=0.0.0.0:11434
+      - OLLAMA_ORIGINS=*
+      
+      # Performance tuning
+      - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL:-2}      # Concurrent requests
+      - OLLAMA_MAX_LOADED_MODELS=1                          # Only load one model
+      - OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE:-24h}        # Keep model in memory
+      
+      # GPU settings (if available)
+      # - OLLAMA_LLM_LIBRARY=cublas                         # Use CUDA
+      # - NVIDIA_VISIBLE_DEVICES=all
+      # - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    
+    volumes:
+      - ollama_models:/root/.ollama
+    
+    # Startup script to pull model
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        echo "Starting Ollama server..."
+        /bin/ollama serve &
+        OLLAMA_PID=$$!
+        
+        echo "Waiting for Ollama server to be ready..."
+        echo "Timeout: 300 seconds (5 minutes)"
+        START_TIME=$$(date +%s)
+        
+        for i in $$(seq 1 300); do
+          # Use 'ollama list' instead of curl (curl not available in container)
+          if ollama list >/dev/null 2>&1; then
+            ELAPSED=$$(($$(date +%s) - $$START_TIME))
+            echo "Ollama server is ready"
+            echo "Time to start: $$ELAPSED seconds"
+            break
+          fi
+          if [ $$i -eq 300 ]; then
+            ELAPSED=$$(($$(date +%s) - $$START_TIME))
+            echo "ERROR: Ollama server failed to start within 300 seconds"
+            echo "Elapsed time: $$ELAPSED seconds"
+            exit 1
+          fi
+          # Progress indicator every 10 seconds
+          if [ $$(($$i % 10)) -eq 0 ]; then
+            echo "Still waiting... $$i seconds elapsed"
+          fi
+          sleep 1
+        done
+        
+        echo "Pulling model: $${LLM_OLLAMA_MODEL:-llama3.1:8b}..."
+        MODEL_START=$$(date +%s)
+        if ollama pull "$${LLM_OLLAMA_MODEL:-llama3.1:8b}"; then
+          MODEL_TIME=$$(($$(date +%s) - $$MODEL_START))
+          echo "Model pulled successfully"
+          echo "Time to pull model: $$MODEL_TIME seconds"
+        else
+          echo "WARNING: Failed to pull model, will retry on first request"
+        fi
+        
+        echo "Ollama ready to serve requests"
+        wait $$OLLAMA_PID
+    
+    # Health check - monitors Ollama continuously
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s          # Check every 30 seconds
+      timeout: 10s           # Fail if takes >10s
+      retries: 3             # Mark unhealthy after 3 failures
+      start_period: 300s     # 5 minute grace period on startup
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Resource limits (adjust based on model size)
+    # For llama3.1:8b, recommend at least 8GB RAM
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '4.0'
+    #       memory: 12G
+    #     reservations:
+    #       cpus: '2.0'
+    #       memory: 8G
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=ollama"
+
+  # ==========================================================================
+  # Test Service - Run automated tests
+  # ==========================================================================
+  # IMPORTANT: This service uses 'test' profile and won't start automatically
+  # Usage: docker-compose --profile test up test
+  #    or: docker-compose run --rm test
+  test:
+    profiles: ["test"]  # Only starts when 'test' profile is active
+    build:
+      context: .
+      target: test
+    image: personal-rag-system:test
+    container_name: rag_test
+    hostname: test
+    
+    environment:
+      - PYTHONUNBUFFERED=1
+      - API_URL=http://api:8000
+      - OLLAMA_HOST=http://ollama:11434
+      - LOG_LEVEL=DEBUG
+    
+    env_file:
+      - .env
+    
+    volumes:
+      # Mount test files
+      - ./tests:/workspace/tests:ro
+      - ./app:/workspace/app:ro
+      - ./pytest.ini:/workspace/pytest.ini:ro
+      
+      # HuggingFace cache
+      - hf_cache:/home/nonroot/.cache/huggingface
+    
+    depends_on:
+      api:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    
+    cap_drop:
+      - ALL
+    
+    tmpfs:
+      - /tmp:noexec,nosuid,nodev,size=128m
+    
+    user: "65532:65532"
+    
+    # Override to run specific tests
+    # command: ["/opt/venv/bin/python", "-m", "pytest", "-v", "--tb=short"]
+    
+    # Don't restart test service
+    restart: "no"
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "1"
+        labels: "service=test"
+
+# ============================================================================
+# Named Volumes - Persistent data storage
+# ============================================================================
 volumes:
+  # Redis data persistence (AOF + RDB)
+  redis_data:
+    driver: local
+    name: rag_redis_data
+  
+  # Ollama model storage (large files ~5-10GB)
   ollama_models:
+    driver: local
+    name: rag_ollama_models
+  
+  # HuggingFace model cache (embeddings)
+  hf_cache:
+    driver: local
+    name: rag_hf_cache
+
+# ============================================================================
+# Networks (optional - Docker Compose creates default network)
+# ============================================================================
+# Uncomment to use custom network with specific configuration
+# networks:
+#   rag_network:
+#     driver: bridge
+#     ipam:
+#       config:
+#         - subnet: 172.28.0.0/16
+
+# ============================================================================
+# Usage Instructions
+# ============================================================================
+# Start all services:
+#   docker-compose up -d
+#
+# View logs:
+#   docker-compose logs -f
+#   docker-compose logs -f api
+#   docker-compose logs -f redis
+#   docker-compose logs -f ollama
+#
+# Check health:
+#   docker-compose ps
+#
+# Run tests:
+#   docker-compose run --rm test
+#
+# Stop all services:
+#   docker-compose down
+#
+# Remove all data (WARNING: deletes volumes):
+#   docker-compose down -v
+#
+# Rebuild after code changes:
+#   docker-compose up --build -d
+# ============================================================================
