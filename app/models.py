@@ -32,14 +32,20 @@ class IngestResponse(BaseModel):
 
 class ChatRequest(BaseModel):
     """Request to answer a question using RAG."""
-    
+
     question: str = Field(
         min_length=1,
         max_length=2000,
         description="The user's question to be answered using the ingested documents.",
         json_schema_extra={"example": "What was my graduate GPA?"}
     )
-    
+
+    session_id: Optional[str] = Field(
+        default=None,
+        description="Optional session ID for conversation continuity. If not provided, a new session will be created.",
+        json_schema_extra={"example": "550e8400-e29b-41d4-a716-446655440000"}
+    )
+
     @field_validator('question')
     @classmethod
     def strip_and_validate(cls, v: str) -> str:
@@ -95,7 +101,7 @@ class AmbiguityMetadata(BaseModel):
 
 class ChatResponse(BaseModel):
     """Response containing the answer and supporting sources."""
-    
+
     answer: str = Field(
         description="The LLM's final answer to the user's question",
         json_schema_extra={
@@ -104,7 +110,7 @@ class ChatResponse(BaseModel):
             )
         }
     )
-    
+
     sources: List[ChatSource] = Field(
         description="List of supporting source chunks with distance scores",
         json_schema_extra={"example": [
@@ -116,7 +122,7 @@ class ChatResponse(BaseModel):
             }
         ]}
     )
-    
+
     grounded: bool = Field(
         description="Whether the answer is grounded in retrieved documents (True) or refused due to low confidence (False)",
         json_schema_extra={"example": True}
@@ -140,6 +146,11 @@ class ChatResponse(BaseModel):
                 "clarification_requested": True
             }
         }
+    )
+
+    session_id: str = Field(
+        description="Session ID for this conversation. Use this in subsequent requests to maintain conversation history.",
+        json_schema_extra={"example": "550e8400-e29b-41d4-a716-446655440000"}
     )
 
 
