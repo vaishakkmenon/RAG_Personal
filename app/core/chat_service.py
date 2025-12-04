@@ -17,6 +17,8 @@ from ..retrieval import search
 from ..services.llm import generate_with_ollama
 from ..services.reranker import rerank_chunks
 from ..settings import settings
+from ..storage import create_session_store, Session
+from ..storage.utils import mask_session_id
 
 logger = logging.getLogger(__name__)
 
@@ -92,13 +94,34 @@ def _is_truly_ambiguous(question: str) -> bool:
     # Everything else: let the LLM decide via system prompt
     return False
 
+def _get_client_ip(request: ChatRequest) -> Optional[str]:
+    """Extract client IP from request.
+
+    In production, this would come from FastAPI's Request object.
+    For now, we'll get it from the route layer (Phase 7).
+
+    Args:
+        request: Chat request
+
+    Returns:
+        IP address or None
+    """
+    # This will be properly implemented in Phase 7 when we have access to FastAPI Request
+    # For now, return None (sessions will still work, just no IP-based limiting)
+    return None
 
 class ChatService:
     """Service for handling RAG chat requests."""
 
-    def __init__(self):
+    def __init__(self, session_store=None):
         """Initialize chat service."""
         self.prompt_builder = create_default_prompt_builder()
+
+        if session_store is None:
+            session_store = create_session_store()
+
+        self.session_store = session_store
+        logger.info(f"ChatService initialized with {type(session_store).__name__}")
 
     def _format_sources(self, chunks: List[dict]) -> List[Dict[str, Any]]:
         """Format chunks for the prompt builder.
@@ -181,10 +204,10 @@ class ChatService:
         """
         # Apply defaults from settings if not provided
         temperature = (
-            temperature if temperature is not None else settings.retrieval.temperature
+            temperature if temperature is not None else settings.llm.temperature
         )
         max_tokens = (
-            max_tokens if max_tokens is not None else settings.retrieval.max_tokens
+            max_tokens if max_tokens is not None else settings.llm.max_tokens
         )
         # Don't pass model parameter - let LLM service use its configured default
         # Passing None lets the service choose based on provider
@@ -219,16 +242,56 @@ class ChatService:
             "ambiguity_score": 0.0,
         }
 
+        try:
+            session = self.session_store.get_or_create_session(
+                session_id=request.session_id,
+                ip_address=_get_client_ip(request),
+                user_agent=None  # Will be added in Phase 7
+            )
+            logger.info(f"Session: {mask_session_id(session.session_id)} "
+                f"(created: {session.created_at.strftime('%Y-%m-%d %H:%M:%S')})")
+        except HTTPException as e:
+            # Session limit exceeded or rate limit hit
+            logger.error(f"Session creation failed: {e.detail}")
+            raise
+        except Exception as e:
+            # Unexpected error - log but don't block the request
+            logger.error(f"Session management error: {e}")
+            # Create a temporary session for this request
+            import uuid
+            from datetime import datetime
+            session = Session(
+                session_id=str(uuid.uuid4()),
+                created_at=datetime.now(),
+                last_accessed=datetime.now()
+            )
+        
+        if not self.session_store.check_rate_limit(session):
+            logger.warning(f"Rate limit exceeded for session: {mask_session_id(session.session_id)}")
+            raise HTTPException(status_code=429, detail="Rate limit exceeded")
+
+        conversation_history = session.get_truncated_history()
+        logger.info(f"Conversation history: {len(conversation_history)} messages")
+        
         logger.info(f"Question: {request.question}")
 
         # STEP 1: Check for chitchat (greetings, thanks, etc.)
         is_chitchat, chitchat_response = _is_chitchat(request.question)
         if is_chitchat:
             logger.info(f"Chitchat detected: '{request.question}'")
+
+            try:
+                session.add_turn("user", request.question)
+                session.add_turn("assistant", chitchat_response)
+                self.session_store.update_session(session)
+            except Exception as e:
+                logger.error(f"Failed to update session for chitchat: {e}")
+
             return ChatResponse(
                 answer=chitchat_response,
                 sources=[],
                 grounded=False,
+                session_id=session.session_id,
                 ambiguity=AmbiguityMetadata(
                     is_ambiguous=False,
                     score=0.0,
@@ -246,6 +309,7 @@ class ChatService:
                 answer=clarification,
                 sources=[],
                 grounded=False,
+                session_id=session.session_id,
                 ambiguity=AmbiguityMetadata(
                     is_ambiguous=True,
                     score=0.9,
@@ -335,6 +399,7 @@ class ChatService:
                 answer="I don't know. I couldn't find any relevant information in my documents.",
                 sources=[],
                 grounded=False,
+                session_id=session.session_id,
                 ambiguity=AmbiguityMetadata(
                     is_ambiguous=False,
                     score=0.0,
@@ -357,6 +422,7 @@ class ChatService:
                 answer="I don't know. I couldn't find sufficiently relevant information in my documents to answer this question confidently.",
                 sources=self._build_chat_sources(chunks),  # Keep sources for debugging
                 grounded=False,
+                session_id=session.session_id,
                 ambiguity=AmbiguityMetadata(
                     is_ambiguous=params.get("is_ambiguous", False),
                     score=params.get("ambiguity_score", 0.0),
@@ -366,7 +432,7 @@ class ChatService:
 
         # Standard RAG flow
         return self._handle_standard_query(
-            request.question, params, chunks, neg_inf_result
+            request.question, params, chunks, session, conversation_history, neg_inf_result
         )
 
     def _handle_standard_query(
@@ -374,6 +440,8 @@ class ChatService:
         question: str,
         params: Dict[str, Any],
         chunks: List[dict],
+        session: "Session",
+        conversation_history: List[Dict[str, str]],
         neg_inf_result: Optional[Dict[str, Any]] = None
     ) -> ChatResponse:
         """Handle standard RAG query with LLM generation.
@@ -382,6 +450,8 @@ class ChatService:
             question: User's question
             params: Query parameters
             chunks: Retrieved chunks
+            session: Session object
+            conversation_history: Conversation history
             neg_inf_result: Optional negative inference detection result
 
         Returns:
@@ -418,7 +488,8 @@ class ChatService:
             question=question,
             context_chunks=formatted_chunks,
             keywords=params.get('all_keywords', []),
-            negative_inference_hint=negative_inference_hint
+            negative_inference_hint=negative_inference_hint,
+            conversation_history=conversation_history,
         )
 
         # Handle ambiguous questions or missing context
@@ -431,6 +502,7 @@ class ChatService:
                 answer=clarification,
                 sources=[],
                 grounded=False,
+                session_id=session.session_id,
                 ambiguity=AmbiguityMetadata(
                     is_ambiguous=True,
                     score=max(params.get("ambiguity_score", 0.0), 0.85),
@@ -444,6 +516,7 @@ class ChatService:
                 answer="I don't know. I couldn't find sufficiently relevant information in my documents to answer this question confidently.",
                 sources=[],
                 grounded=False,
+                session_id=session.session_id,
                 ambiguity=AmbiguityMetadata(
                     is_ambiguous=params.get("is_ambiguous", False),
                     score=params.get("ambiguity_score", 0.0),
@@ -470,6 +543,7 @@ class ChatService:
                 answer=answer,
                 sources=[],
                 grounded=False,
+                session_id=session.session_id,
                 ambiguity=AmbiguityMetadata(
                     is_ambiguous=params.get("is_ambiguous", False),
                     score=params.get("ambiguity_score", 0.0),
@@ -493,6 +567,7 @@ class ChatService:
                 answer=answer,
                 sources=[],
                 grounded=False,
+                session_id=session.session_id,
                 ambiguity=AmbiguityMetadata(
                     is_ambiguous=True,
                     score=0.8,
@@ -500,11 +575,22 @@ class ChatService:
                 ),
             )
 
+        try:
+            session.add_turn("user", question)
+            session.add_turn("assistant", answer)
+            self.session_store.update_session(session)
+            logger.info(f"Updated session {mask_session_id(session.session_id)} "
+                        f"(total turns: {len(session.history)})")
+        except Exception as e:
+            # Log error but don't fail the request
+            logger.error(f"Failed to update session history: {e}")
+
         # Return successful grounded response
         return ChatResponse(
             answer=answer,
             sources=self._build_chat_sources(chunks),
             grounded=True,
+            session_id=session.session_id,
             ambiguity=AmbiguityMetadata(
                 is_ambiguous=params.get("is_ambiguous", False),
                 score=params.get("ambiguity_score", 0.0),
