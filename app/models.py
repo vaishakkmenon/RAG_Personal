@@ -7,7 +7,7 @@ Defines request/response schemas for:
 - Error responses
 """
 
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -99,6 +99,51 @@ class AmbiguityMetadata(BaseModel):
     )
 
 
+class RewriteMetadata(BaseModel):
+    """Metadata about query rewriting performed on the user's question."""
+
+    original_query: str = Field(
+        description="Original user query before rewriting"
+    )
+
+    rewritten_query: str = Field(
+        description="Rewritten query after pattern matching"
+    )
+
+    pattern_name: str = Field(
+        description="Name of the matched pattern (e.g., 'negative_inference')"
+    )
+
+    pattern_type: str = Field(
+        description="Type of pattern matching used (e.g., 'regex_list', 'keyword_presence')"
+    )
+
+    matched_entities: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Entities extracted during pattern matching"
+    )
+
+    rewrite_hint: Optional[str] = Field(
+        default=None,
+        description="Hint about the rewrite strategy applied"
+    )
+
+    metadata_filter_addition: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Additional metadata filters to apply to retrieval"
+    )
+
+    latency_ms: float = Field(
+        description="Time taken for pattern matching and rewriting (milliseconds)"
+    )
+
+    confidence: float = Field(
+        ge=0.0,
+        le=1.0,
+        description="Confidence score of pattern match (0.0-1.0)"
+    )
+
+
 class ChatResponse(BaseModel):
     """Response containing the answer and supporting sources."""
 
@@ -151,6 +196,11 @@ class ChatResponse(BaseModel):
     session_id: str = Field(
         description="Session ID for this conversation. Use this in subsequent requests to maintain conversation history.",
         json_schema_extra={"example": "550e8400-e29b-41d4-a716-446655440000"}
+    )
+
+    rewrite_metadata: Optional[RewriteMetadata] = Field(
+        default=None,
+        description="Query rewriting metadata (if query was rewritten by pattern matching)"
     )
 
 

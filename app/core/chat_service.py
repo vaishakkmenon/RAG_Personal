@@ -10,8 +10,10 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException, status
 
-from ..models import ChatRequest, ChatResponse, ChatSource, AmbiguityMetadata
+from ..models import ChatRequest, ChatResponse, ChatSource, AmbiguityMetadata, RewriteMetadata
 from ..monitoring import time_execution_info
+from ..monitoring.pattern_analytics import get_pattern_analytics
+from ..monitoring.pattern_suggester import get_pattern_suggester
 from ..prompting import build_clarification_message, create_default_prompt_builder
 from ..retrieval import search
 from ..services.llm import generate_with_ollama
@@ -109,6 +111,64 @@ def _get_client_ip(request: ChatRequest) -> Optional[str]:
     # This will be properly implemented in Phase 7 when we have access to FastAPI Request
     # For now, return None (sessions will still work, just no IP-based limiting)
     return None
+
+def _build_context_query(conversation_history: List[Dict[str, str]], max_turns: int = 2) -> Optional[str]:
+    """Build a context query from recent conversation history.
+
+    Args:
+        conversation_history: List of conversation turns
+        max_turns: Maximum number of recent turns to include
+
+    Returns:
+        Context query string or None if no history
+    """
+    if not conversation_history:
+        return None
+
+    # Take last N turns (both user and assistant)
+    recent_turns = conversation_history[-max_turns * 2:]  # Each turn is user + assistant
+
+    # Extract only user questions for context (avoid hallucinated assistant responses)
+    user_queries = [
+        turn["content"]
+        for turn in recent_turns
+        if turn.get("role") == "user" and turn.get("content", "").strip()
+    ]
+
+    if not user_queries:
+        return None
+
+    # Combine recent user questions
+    context_query = " ".join(user_queries)
+    logger.info(f"Built context query from {len(user_queries)} previous question(s)")
+    return context_query
+
+def _merge_and_dedupe_chunks(chunks_1: List[dict], chunks_2: List[dict]) -> List[dict]:
+    """Merge and deduplicate chunks from two retrieval passes.
+
+    Args:
+        chunks_1: Chunks from first retrieval pass
+        chunks_2: Chunks from second retrieval pass
+
+    Returns:
+        Merged and deduplicated list of chunks
+    """
+    # Use chunk ID for deduplication
+    seen_ids = set()
+    merged = []
+
+    # Process all chunks, maintaining order preference (chunks_1 first)
+    for chunk in chunks_1 + chunks_2:
+        chunk_id = chunk.get("id")
+        if chunk_id and chunk_id not in seen_ids:
+            seen_ids.add(chunk_id)
+            merged.append(chunk)
+        elif not chunk_id:
+            # If no ID, include it (shouldn't happen but handle gracefully)
+            merged.append(chunk)
+
+    logger.info(f"Merged chunks: {len(chunks_1)} + {len(chunks_2)} = {len(merged)} (after deduplication)")
+    return merged
 
 class ChatService:
     """Service for handling RAG chat requests."""
@@ -292,6 +352,7 @@ class ChatService:
                 sources=[],
                 grounded=False,
                 session_id=session.session_id,
+                rewrite_metadata=None,
                 ambiguity=AmbiguityMetadata(
                     is_ambiguous=False,
                     score=0.0,
@@ -310,6 +371,7 @@ class ChatService:
                 sources=[],
                 grounded=False,
                 session_id=session.session_id,
+                rewrite_metadata=None,
                 ambiguity=AmbiguityMetadata(
                     is_ambiguous=True,
                     score=0.9,
@@ -329,25 +391,50 @@ class ChatService:
             if v is not None
         }
 
+        # ===== QUERY REWRITING =====
+        # Apply pattern-based query rewriting before retrieval
+        from ..retrieval.query_rewriter import get_query_rewriter
+
+        rewriter = get_query_rewriter()
+        rewritten_query, rewrite_metadata = rewriter.rewrite_query(
+            request.question,
+            metadata_filter=metadata_filter
+        )
+
+        # Merge metadata filter enhancements from rewrite
+        if rewrite_metadata and rewrite_metadata.metadata_filter_addition:
+            metadata_filter.update(rewrite_metadata.metadata_filter_addition)
+
+        # Use rewritten query for retrieval
+        search_query = rewritten_query
+
+        # Log rewrite if pattern matched
+        if rewrite_metadata:
+            logger.info(
+                f"Query rewritten by '{rewrite_metadata.pattern_name}': "
+                f"'{request.question[:50]}...' → '{rewritten_query[:50]}...' "
+                f"(latency: {rewrite_metadata.latency_ms:.2f}ms, confidence: {rewrite_metadata.confidence:.2f})"
+            )
+        # ===== END QUERY REWRITING =====
+
         # Check for negative inference opportunity
         # If the question asks about a specific entity that doesn't exist in the KB,
         # search for the category instead to find complete lists
         from ..retrieval.negative_inference_helper import detect_negative_inference_opportunity
 
-        neg_inf_result = detect_negative_inference_opportunity(request.question)
-        search_query = request.question
+        neg_inf_result = detect_negative_inference_opportunity(search_query)
 
         if neg_inf_result and neg_inf_result['is_negative_inference_candidate']:
             # Use category search instead of entity search
             search_query = neg_inf_result['suggested_category_search']
             logger.info(
-                f"Negative inference detected: '{request.question}' → "
+                f"Negative inference detected: '{rewritten_query}' → "
                 f"searching for category: '{search_query}'"
             )
             missing = [e['entity'] for e in neg_inf_result['missing_entities']]
             logger.info(f"Missing entities: {missing}")
 
-        # Retrieve chunks (use multi-domain if domains available and enabled)
+        # Retrieve chunks with hybrid retrieval if conversation history exists
         # If reranking is enabled, retrieve more chunks initially for better reranking
         retrieval_k = params["top_k"]
         if params["rerank"]:
@@ -358,12 +445,36 @@ class ChatService:
             )
 
         try:
-            chunks = search(
+            # Primary retrieval: current question
+            chunks_primary = search(
                 query=search_query,
                 k=retrieval_k,
                 max_distance=params["max_distance"],
                 metadata_filter=metadata_filter if metadata_filter else None,
             )
+            logger.info(f"Primary retrieval: {len(chunks_primary)} chunks")
+
+            # Secondary retrieval: conversation context (if exists)
+            chunks_context = []
+            if conversation_history:
+                context_query = _build_context_query(conversation_history, max_turns=1)
+                if context_query:
+                    # Retrieve fewer chunks for context (about 40% of primary)
+                    context_k = max(2, retrieval_k // 2)
+                    chunks_context = search(
+                        query=context_query,
+                        k=context_k,
+                        max_distance=params["max_distance"],
+                        metadata_filter=metadata_filter if metadata_filter else None,
+                    )
+                    logger.info(f"Context retrieval: {len(chunks_context)} chunks")
+
+            # Merge and deduplicate
+            if chunks_context:
+                chunks = _merge_and_dedupe_chunks(chunks_primary, chunks_context)
+            else:
+                chunks = chunks_primary
+
         except Exception as e:
             logger.error(f"Retrieval failed: {e}")
             raise HTTPException(
@@ -374,7 +485,7 @@ class ChatService:
         # DEBUG: Log retrieved chunk distances
         if chunks:
             distances = [c.get('distance', 'N/A') for c in chunks[:5]]
-            logger.info(f"Retrieved {len(chunks)} chunks, top 5 distances: {distances}")
+            logger.info(f"Retrieved {len(chunks)} chunks (merged), top 5 distances: {distances}")
 
         # Optional reranking
         if params["rerank"] and chunks:
@@ -394,12 +505,34 @@ class ChatService:
         # Grounding check - no chunks
         if not chunks:
             logger.warning("No chunks retrieved")
+
+            # ===== ANALYTICS: Failed query (no chunks) =====
+            if settings.query_rewriter.analytics_enabled:
+                analytics = get_pattern_analytics()
+                suggester = get_pattern_suggester()
+
+                analytics.log_query(
+                    query=request.question,
+                    rewrite_metadata=rewrite_metadata,
+                    retrieval_distance=None,
+                    grounded=False
+                )
+
+                suggester.capture_failed_query(
+                    query=request.question,
+                    distance=None,
+                    pattern_matched=rewrite_metadata.pattern_name if rewrite_metadata else None,
+                    grounded=False
+                )
+            # ===== END ANALYTICS =====
+
             # Question is specific (passed ambiguity check) but no relevant docs found
             return ChatResponse(
                 answer="I don't know. I couldn't find any relevant information in my documents.",
                 sources=[],
                 grounded=False,
                 session_id=session.session_id,
+                rewrite_metadata=rewrite_metadata,
                 ambiguity=AmbiguityMetadata(
                     is_ambiguous=False,
                     score=0.0,
@@ -409,20 +542,47 @@ class ChatService:
 
         # Grounding check - distance threshold
         best_distance = chunks[0]["distance"]
-        logger.info(
-            f"Best chunk distance: {best_distance:.3f}, threshold: {params['null_threshold']}"
-        )
 
-        if best_distance > params["null_threshold"]:
+        # Handle None distance (from BM25/hybrid search)
+        if best_distance is None:
+            logger.info("Best chunk has no distance (BM25/hybrid search) - skipping distance check")
+        else:
+            logger.info(
+                f"Best chunk distance: {best_distance:.3f}, threshold: {params['null_threshold']}"
+            )
+
+        if best_distance is not None and best_distance > params["null_threshold"]:
             logger.info(
                 f"Refusing: best distance {best_distance:.3f} > threshold {params['null_threshold']}"
             )
+
+            # ===== ANALYTICS: Failed query (distance > threshold) =====
+            if settings.query_rewriter.analytics_enabled:
+                analytics = get_pattern_analytics()
+                suggester = get_pattern_suggester()
+
+                analytics.log_query(
+                    query=request.question,
+                    rewrite_metadata=rewrite_metadata,
+                    retrieval_distance=best_distance,
+                    grounded=False
+                )
+
+                suggester.capture_failed_query(
+                    query=request.question,
+                    distance=best_distance,
+                    pattern_matched=rewrite_metadata.pattern_name if rewrite_metadata else None,
+                    grounded=False
+                )
+            # ===== END ANALYTICS =====
+
             # Keep sources for transparency even when refusing
             return ChatResponse(
                 answer="I don't know. I couldn't find sufficiently relevant information in my documents to answer this question confidently.",
                 sources=self._build_chat_sources(chunks),  # Keep sources for debugging
                 grounded=False,
                 session_id=session.session_id,
+                rewrite_metadata=rewrite_metadata,
                 ambiguity=AmbiguityMetadata(
                     is_ambiguous=params.get("is_ambiguous", False),
                     score=params.get("ambiguity_score", 0.0),
@@ -432,7 +592,7 @@ class ChatService:
 
         # Standard RAG flow
         return self._handle_standard_query(
-            request.question, params, chunks, session, conversation_history, neg_inf_result
+            request.question, params, chunks, session, conversation_history, neg_inf_result, rewrite_metadata
         )
 
     def _handle_standard_query(
@@ -442,7 +602,8 @@ class ChatService:
         chunks: List[dict],
         session: "Session",
         conversation_history: List[Dict[str, str]],
-        neg_inf_result: Optional[Dict[str, Any]] = None
+        neg_inf_result: Optional[Dict[str, Any]] = None,
+        rewrite_metadata: Optional[RewriteMetadata] = None
     ) -> ChatResponse:
         """Handle standard RAG query with LLM generation.
 
@@ -503,6 +664,7 @@ class ChatService:
                 sources=[],
                 grounded=False,
                 session_id=session.session_id,
+                rewrite_metadata=rewrite_metadata,
                 ambiguity=AmbiguityMetadata(
                     is_ambiguous=True,
                     score=max(params.get("ambiguity_score", 0.0), 0.85),
@@ -517,6 +679,7 @@ class ChatService:
                 sources=[],
                 grounded=False,
                 session_id=session.session_id,
+                rewrite_metadata=rewrite_metadata,
                 ambiguity=AmbiguityMetadata(
                     is_ambiguous=params.get("is_ambiguous", False),
                     score=params.get("ambiguity_score", 0.0),
@@ -544,6 +707,7 @@ class ChatService:
                 sources=[],
                 grounded=False,
                 session_id=session.session_id,
+                rewrite_metadata=rewrite_metadata,
                 ambiguity=AmbiguityMetadata(
                     is_ambiguous=params.get("is_ambiguous", False),
                     score=params.get("ambiguity_score", 0.0),
@@ -568,6 +732,7 @@ class ChatService:
                 sources=[],
                 grounded=False,
                 session_id=session.session_id,
+                rewrite_metadata=rewrite_metadata,
                 ambiguity=AmbiguityMetadata(
                     is_ambiguous=True,
                     score=0.8,
@@ -585,12 +750,28 @@ class ChatService:
             # Log error but don't fail the request
             logger.error(f"Failed to update session history: {e}")
 
+        # ===== ANALYTICS: Successful grounded response =====
+        if settings.query_rewriter.analytics_enabled:
+            best_distance = chunks[0]["distance"] if chunks else None
+
+            analytics = get_pattern_analytics()
+            analytics.log_query(
+                query=question,
+                rewrite_metadata=rewrite_metadata,
+                retrieval_distance=best_distance,
+                grounded=True
+            )
+
+            # Note: Don't capture in suggester for successful queries
+        # ===== END ANALYTICS =====
+
         # Return successful grounded response
         return ChatResponse(
             answer=answer,
             sources=self._build_chat_sources(chunks),
             grounded=True,
             session_id=session.session_id,
+            rewrite_metadata=rewrite_metadata,
             ambiguity=AmbiguityMetadata(
                 is_ambiguous=params.get("is_ambiguous", False),
                 score=params.get("ambiguity_score", 0.0),

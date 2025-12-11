@@ -13,7 +13,7 @@ from datetime import datetime
 from app.retrieval import add_documents
 from app.settings import ingest_settings
 from app.ingest.chunking import (
-    chunk_by_headers,
+    smart_chunk,
     extract_doc_id,
 )
 from app.ingest.discovery import find_files
@@ -100,8 +100,8 @@ def _process_file(fp: str) -> List[Dict]:
         # as well as individual terms like "Fall Term 2022"
         split_level = 2 if doc_type == "transcript_analysis" else 2
 
-        # NEW: Single-stage header-based chunking (replaces two-stage process)
-        all_chunks = chunk_by_headers(
+        # Smart chunking: routes to term-based for transcripts, header-based for others
+        all_chunks = smart_chunk(
             text=body,
             base_metadata=metadata,
             source_path=fp,

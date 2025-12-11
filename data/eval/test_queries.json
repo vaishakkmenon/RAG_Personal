@@ -1,0 +1,508 @@
+{
+  "retrieval_tests": [
+    {
+      "id": "grades-001",
+      "query": "What courses did I get a B grade in?",
+      "expected_chunks": [
+        "transcript-analysis@2025-09-23#spring-term-2022"
+      ],
+      "difficulty": "hard",
+      "category": "entity_attribute",
+      "description": "THE KEY TEST - Specific entity (CS 350) with attribute (B grade)"
+    },
+    {
+      "id": "grades-002",
+      "query": "Was CS 350 the only class to lower my GPA?",
+      "expected_chunks": [
+        "transcript-analysis@2025-09-23#spring-term-2022"
+      ],
+      "difficulty": "hard",
+      "category": "comparison",
+      "description": "Follow-up question requiring context"
+    },
+    {
+      "id": "gpa-001",
+      "query": "What is my GPA?",
+      "expected_chunks": [
+        "transcript-analysis@2025-09-23#overall-academic-performance",
+        "transcript-analysis@2025-09-23#notable-academic-achievements"
+      ],
+      "difficulty": "easy",
+      "category": "general",
+      "description": "Simple factual question"
+    },
+    {
+      "id": "gpa-002",
+      "query": "What is my graduate GPA?",
+      "expected_chunks": [
+        "transcript-analysis@2025-09-23#overall-academic-performance"
+      ],
+      "difficulty": "medium",
+      "category": "specific",
+      "description": "Specific GPA (graduate vs undergraduate)"
+    },
+    {
+      "id": "gpa-003",
+      "query": "What was my undergraduate GPA?",
+      "expected_chunks": [
+        "transcript-analysis@2025-09-23#overall-academic-performance",
+        "transcript-analysis@2025-09-23#notable-academic-achievements"
+      ],
+      "difficulty": "medium",
+      "category": "specific",
+      "description": "Undergraduate GPA specifically"
+    },
+    {
+      "id": "cert-001",
+      "query": "What Kubernetes certifications do I have?",
+      "expected_chunks": [
+        "certificate-cka@2024-06-26#certification-summary",
+        "resume@2025-09-23#certifications-certifications-summary",
+        "resume@2025-09-23#certifications-certified-kubernetes-administrator-cka",
+        "certificate-cka@2024-06-26#practical-experience"
+      ],
+      "difficulty": "medium",
+      "category": "entity_list",
+      "description": "Kubernetes certifications"
+    },
+    {
+      "id": "cert-002",
+      "query": "When does my CKA certification expire?",
+      "expected_chunks": [
+        "certificate-cka@2024-06-26#certification-details"
+      ],
+      "difficulty": "medium",
+      "category": "entity_attribute",
+      "description": "CKA expiration date (2026-06-26)"
+    },
+    {
+      "id": "cert-003",
+      "query": "What AWS certifications do I have?",
+      "expected_chunks": [
+        "certificate-aws-cloud-practitioner@2025-05-26#certification-details",
+        "certificate-aws-ai-practitioner@2025-06-01#certification-details",
+        "resume@2025-09-23#certifications-certifications-summary"
+      ],
+      "difficulty": "medium",
+      "category": "entity_list",
+      "description": "AWS certifications - NEW TEST"
+    },
+    {
+      "id": "cert-004",
+      "query": "When does my AWS Cloud Practitioner certification expire?",
+      "expected_chunks": [
+        "certificate-aws-cloud-practitioner@2025-05-26#expiration-information"
+      ],
+      "difficulty": "medium",
+      "category": "entity_attribute",
+      "description": "AWS CCP expiration (2028-05-26) - NEW TEST"
+    },
+    {
+      "id": "cert-005",
+      "query": "Do I have an AWS AI Practitioner certification?",
+      "expected_chunks": [
+        "certificate-aws-ai-practitioner@2025-06-01#certification-details",
+        "resume@2025-09-23#certifications-certifications-summary"
+      ],
+      "difficulty": "medium",
+      "category": "entity_verification",
+      "description": "AWS AI Practitioner verification - NEW TEST"
+    },
+    {
+      "id": "cert-006",
+      "query": "Which of my certifications expire in 2028?",
+      "expected_chunks": [
+        "certificate-aws-cloud-practitioner@2025-05-26#expiration-information",
+        "certificate-aws-ai-practitioner@2025-06-01#expiration-information"
+      ],
+      "difficulty": "hard",
+      "category": "temporal_filtering",
+      "description": "Certifications by expiration year - NEW TEST"
+    },
+    {
+      "id": "cert-007",
+      "query": "What is my CKA credential ID?",
+      "expected_chunks": [
+        "certificate-cka@2024-06-26#certification-details"
+      ],
+      "difficulty": "hard",
+      "category": "entity_attribute",
+      "description": "Specific credential ID lookup - NEW TEST"
+    },
+    {
+      "id": "work-001",
+      "query": "Where have I worked?",
+      "expected_chunks": [
+        "resume@2025-09-23#professional-experience-professional-experience-summary"
+      ],
+      "difficulty": "easy",
+      "category": "general",
+      "description": "General work history"
+    },
+    {
+      "id": "work-002",
+      "query": "What did I do at UAB?",
+      "expected_chunks": [
+        "resume@2025-09-23#professional-experience-computer-science-teaching-assistant-university-of-alabama-at-birmingham-aug-2022-may-2025"
+      ],
+      "difficulty": "medium",
+      "category": "entity_specific",
+      "description": "FIXED - Was asking about Clemson, should be UAB"
+    },
+    {
+      "id": "work-003",
+      "query": "How many internships did I do at Maven Wave?",
+      "expected_chunks": [
+        "resume@2025-09-23#professional-experience-infrastructure-intern-maven-wave-partners-jun-2023-aug-2023"
+      ],
+      "difficulty": "hard",
+      "category": "counting",
+      "description": "Count internships (answer: 3) - NEW TEST"
+    },
+    {
+      "id": "work-004",
+      "query": "When was my first internship at Maven Wave?",
+      "expected_chunks": [
+        "resume@2025-09-23#professional-experience-infrastructure-intern-maven-wave-partners-jun-2022-aug-2022"
+      ],
+      "difficulty": "medium",
+      "category": "temporal",
+      "description": "First internship timing (Summer 2021) - NEW TEST"
+    },
+    {
+      "id": "edu-001",
+      "query": "What degrees do I have?",
+      "expected_chunks": [
+        "transcript-analysis@2025-09-23#notable-academic-achievements",
+        "transcript-analysis@2025-09-23#academic-distinctions",
+        "resume@2025-09-23#education-degrees-earned",
+        "resume@2025-09-23#education-education-summary"
+      ],
+      "difficulty": "easy",
+      "category": "general",
+      "description": "Education overview"
+    },
+    {
+      "id": "edu-002",
+      "query": "When did I graduate with my undergraduate degree?",
+      "expected_chunks": [
+        "transcript-analysis@2025-09-23#spring-term-2024-final-undergraduate-term"
+      ],
+      "difficulty": "medium",
+      "category": "entity_attribute",
+      "description": "Undergraduate graduation date (April 27, 2024)"
+    },
+    {
+      "id": "edu-003",
+      "query": "When did I graduate with my Master's degree?",
+      "expected_chunks": [
+        "transcript-analysis@2025-09-23#spring-2025",
+        "resume@2025-09-23#education-degrees-earned"
+      ],
+      "difficulty": "medium",
+      "category": "entity_attribute",
+      "description": "Graduate graduation date (May 1, 2025) - NEW TEST"
+    },
+    {
+      "id": "course-001",
+      "query": "What AI courses have I taken?",
+      "expected_chunks": [
+        "transcript-analysis@2025-09-23#fall-2023",
+        "transcript-analysis@2025-09-23#fall-term-2023-dual-enrollment-graduate-courses"
+      ],
+      "difficulty": "medium",
+      "category": "topic_search",
+      "description": "Courses by subject area"
+    },
+    {
+      "id": "course-002",
+      "query": "Did I take CS 350?",
+      "expected_chunks": [
+        "transcript-analysis@2025-09-23#spring-term-2022"
+      ],
+      "difficulty": "medium",
+      "category": "entity_verification",
+      "description": "Verify specific course"
+    },
+    {
+      "id": "course-003",
+      "query": "What graduate AI/ML courses did I take?",
+      "expected_chunks": [
+        "transcript-analysis@2025-09-23#fall-2023",
+        "transcript-analysis@2025-09-23#fall-2024",
+        "transcript-analysis@2025-09-23#fall-term-2023-dual-enrollment-graduate-courses"
+      ],
+      "difficulty": "medium",
+      "category": "topic_filtering",
+      "description": "Graduate-specific course filtering - NEW TEST"
+    },
+    {
+      "id": "course-004",
+      "query": "Did I take Natural Language Processing?",
+      "expected_chunks": [
+        "transcript-analysis@2025-09-23#fall-2023",
+        "transcript-analysis@2025-09-23#fall-term-2023-dual-enrollment-graduate-courses"
+      ],
+      "difficulty": "medium",
+      "category": "entity_verification",
+      "description": "Specific graduate course verification - NEW TEST"
+    },
+    {
+      "id": "negative-001",
+      "query": "Do I have a PhD?",
+      "expected_chunks": [
+        "transcript-analysis@2025-09-23#notable-academic-achievements",
+        "transcript-analysis@2025-09-23#academic-distinctions",
+        "resume@2025-09-23#education-degrees-earned"
+      ],
+      "difficulty": "hard",
+      "category": "negative_inference",
+      "description": "Negative inference from complete list"
+    },
+    {
+      "id": "negative-002",
+      "query": "Do I have Azure certifications?",
+      "expected_chunks": [
+        "certificate-aws-cloud-practitioner@2025-05-26#certification-summary",
+        "certificate-aws-ai-practitioner@2025-06-01#certification-summary",
+        "certificate-cka@2024-06-26#certification-summary",
+        "resume@2025-09-23#certifications-certifications-summary"
+      ],
+      "difficulty": "hard",
+      "category": "negative_inference",
+      "description": "FIXED - Negative inference for truly missing cert (Azure)"
+    },
+    {
+      "id": "skills-001",
+      "query": "What programming languages do I know?",
+      "expected_chunks": [
+        "resume@2025-09-23#header",
+        "resume@2025-09-23#technical-skills-programming-languages"
+      ],
+      "difficulty": "easy",
+      "category": "general",
+      "description": "Technical skills list"
+    },
+    {
+      "id": "skills-002",
+      "query": "Do I know Python?",
+      "expected_chunks": [
+        "resume@2025-09-23#header",
+        "resume@2025-09-23#technical-skills-programming-languages"
+      ],
+      "difficulty": "easy",
+      "category": "entity_verification",
+      "description": "Verify specific skill"
+    },
+    {
+      "id": "skills-003",
+      "query": "Do I have Terraform experience?",
+      "expected_chunks": [
+        "resume@2025-09-23#professional-experience-infrastructure-intern-maven-wave-partners-jun-2023-aug-2023",
+        "resume@2025-09-23#technical-skills-devops-and-cloud-platform-experience"
+      ],
+      "difficulty": "easy",
+      "category": "entity_verification",
+      "description": "Verify DevOps tool experience - NEW TEST"
+    },
+    {
+      "id": "project-001",
+      "query": "What personal projects have I built?",
+      "expected_chunks": [
+        "resume@2025-09-23#professional-summary",
+        "resume@2025-09-23#personal-projects-personal-projects-summary"
+      ],
+      "difficulty": "easy",
+      "category": "general",
+      "description": "Personal projects overview"
+    },
+    {
+      "id": "project-002",
+      "query": "Tell me about my RAG project",
+      "expected_chunks": [
+        "resume@2025-09-23#professional-summary",
+        "resume@2025-09-23#personal-projects-fastapi-rag-service"
+      ],
+      "difficulty": "medium",
+      "category": "entity_specific",
+      "description": "Specific project details - NEW TEST"
+    },
+    {
+      "id": "project-003",
+      "query": "Did I build a GPT model from scratch?",
+      "expected_chunks": [
+        "resume@2025-09-23#professional-summary",
+        "resume@2025-09-23#personal-projects-gpt-from-scratch"
+      ],
+      "difficulty": "medium",
+      "category": "entity_verification",
+      "description": "Verify specific project - NEW TEST"
+    },
+    {
+      "id": "term-001",
+      "query": "What courses did I take in Fall 2022?",
+      "expected_chunks": [
+        "transcript-analysis@2025-09-23#fall-term-2022"
+      ],
+      "difficulty": "medium",
+      "category": "temporal",
+      "description": "Courses by specific term"
+    },
+    {
+      "id": "term-002",
+      "query": "What was my GPA in Spring 2022?",
+      "expected_chunks": [
+        "transcript-analysis@2025-09-23#spring-term-2022"
+      ],
+      "difficulty": "hard",
+      "category": "temporal_attribute",
+      "description": "Specific attribute in specific time period"
+    },
+    {
+      "id": "honors-001",
+      "query": "Did I graduate with honors?",
+      "expected_chunks": [
+        "transcript-analysis@2025-09-23#notable-academic-achievements",
+        "transcript-analysis@2025-09-23#academic-distinctions"
+      ],
+      "difficulty": "medium",
+      "category": "entity_verification",
+      "description": "Verify honors/awards"
+    },
+    {
+      "id": "honors-002",
+      "query": "Did I graduate Summa Cum Laude?",
+      "expected_chunks": [
+        "transcript-analysis@2025-09-23#notable-academic-achievements",
+        "transcript-analysis@2025-09-23#academic-distinctions"
+      ],
+      "difficulty": "medium",
+      "category": "entity_verification",
+      "description": "Specific honors distinction - NEW TEST"
+    }
+  ],
+  "answer_quality_tests": [
+    {
+      "id": "answer-001",
+      "query": "What is my graduate GPA?",
+      "expected_facts": [
+        "4.00",
+        "graduate"
+      ],
+      "must_not_contain": [
+        "3.97",
+        "undergraduate"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "id": "answer-002",
+      "query": "What courses did I get a B grade in?",
+      "expected_facts": [
+        "CS 350",
+        "Automata",
+        "B",
+        "Spring"
+      ],
+      "must_not_contain": [
+        "Fall Term 2022"
+      ],
+      "difficulty": "hard",
+      "notes": "KEY TEST - Should say Spring Term 2022, not Fall"
+    },
+    {
+      "id": "answer-003",
+      "query": "Do I have a PhD?",
+      "expected_facts": [
+        "No",
+        "Bachelor",
+        "Master"
+      ],
+      "must_not_contain": [
+        "PhD",
+        "doctorate",
+        "Yes"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "id": "answer-004",
+      "query": "When does my CKA certification expire?",
+      "expected_facts": [
+        "2026",
+        "June"
+      ],
+      "must_not_contain": [
+        "2028",
+        "2024",
+        "May"
+      ],
+      "difficulty": "medium",
+      "notes": "FIXED - CKA expires in 2026, not 2028"
+    },
+    {
+      "id": "answer-005",
+      "query": "What Kubernetes certifications do I have?",
+      "expected_facts": [
+        "CKA",
+        "Certified Kubernetes Administrator"
+      ],
+      "must_not_contain": [
+        "CKAD",
+        "AWS",
+        "Azure"
+      ],
+      "difficulty": "easy",
+      "notes": "FIXED - Only has CKA, not CKAD"
+    },
+    {
+      "id": "answer-006",
+      "query": "What AWS certifications do I have?",
+      "expected_facts": [
+        "AWS Certified Cloud Practitioner",
+        "AWS Certified AI Practitioner",
+        "CCP"
+      ],
+      "must_not_contain": [
+        "Solutions Architect",
+        "Developer Associate"
+      ],
+      "difficulty": "easy",
+      "notes": "NEW TEST - AWS certifications"
+    },
+    {
+      "id": "answer-007",
+      "query": "Which certifications expire in 2028?",
+      "expected_facts": [
+        "AWS Cloud Practitioner",
+        "AWS AI Practitioner",
+        "2028"
+      ],
+      "must_not_contain": [
+        "CKA",
+        "2026"
+      ],
+      "difficulty": "hard",
+      "notes": "NEW TEST - Both AWS certs expire 2028"
+    },
+    {
+      "id": "answer-008",
+      "query": "How many summer internships did I complete?",
+      "expected_facts": [
+        "three",
+        "3",
+        "Maven Wave",
+        "2021",
+        "2022",
+        "2023"
+      ],
+      "must_not_contain": [
+        "two",
+        "four",
+        "one"
+      ],
+      "difficulty": "medium",
+      "notes": "NEW TEST - Counting test"
+    }
+  ]
+}

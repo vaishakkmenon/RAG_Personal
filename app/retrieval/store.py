@@ -6,6 +6,7 @@ Handles semantic search, document storage, and metadata filtering.
 
 import logging
 import random
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import chromadb
@@ -15,6 +16,14 @@ from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunct
 from ..settings import settings
 
 logger = logging.getLogger(__name__)
+
+# Import BM25 for hybrid search
+try:
+    from .bm25_search import BM25Index, reciprocal_rank_fusion
+    BM25_AVAILABLE = True
+except ImportError:
+    BM25_AVAILABLE = False
+    logger.warning("BM25 not available - hybrid search disabled")
 
 # Configuration
 EMBED_MODEL: str = settings.embed_model
@@ -41,6 +50,22 @@ _collection = _client.get_or_create_collection(
 logger.info(
     f"Collection '{COLLECTION_NAME}' ready with {_collection.count()} documents"
 )
+
+# Initialize BM25 index for hybrid search
+_bm25_index = None
+if BM25_AVAILABLE:
+    bm25_index_path = Path(CHROMA_PATH) / "bm25_index.pkl"
+    if bm25_index_path.exists():
+        _bm25_index = BM25Index(index_path=str(bm25_index_path))
+        if _bm25_index.load_index():
+            logger.info(f"BM25 hybrid search enabled ({_bm25_index.documents and len(_bm25_index.documents)} docs)")
+        else:
+            _bm25_index = None
+            logger.warning("BM25 index file found but failed to load")
+    else:
+        logger.info(f"BM25 index not found at {bm25_index_path} - run build_bm25_index.py to enable hybrid search")
+else:
+    logger.info("BM25 library not installed - hybrid search disabled")
 
 
 # Helpers
@@ -89,14 +114,16 @@ def search(
     k: Optional[int] = None,
     max_distance: Optional[float] = None,
     metadata_filter: Optional[Dict[str, Any]] = None,
+    use_hybrid: bool = True,
 ) -> List[dict]:
-    """Retrieve top-k chunks within a distance threshold.
+    """Retrieve top-k chunks using hybrid search (BM25 + semantic) or semantic only.
 
     Args:
         query: User's question or search text
         k: Number of results to return
         max_distance: Maximum cosine distance threshold
         metadata_filter: Optional dict for filtering
+        use_hybrid: Whether to use BM25 + semantic (default True)
 
     Returns:
         List of dicts with keys: id, text, source, distance, metadata
@@ -108,6 +135,31 @@ def search(
 
     k = k or TOP_K_DEFAULT
     max_dist = MAX_DISTANCE_DEFAULT if max_distance is None else max_distance
+
+    # Use hybrid search if BM25 is available and enabled
+    if use_hybrid and _bm25_index is not None:
+        return _hybrid_search(query, k, max_dist, metadata_filter)
+    else:
+        return _semantic_search(query, k, max_dist, metadata_filter)
+
+
+def _semantic_search(
+    query: str,
+    k: int,
+    max_dist: float,
+    metadata_filter: Optional[Dict[str, Any]] = None,
+) -> List[dict]:
+    """Perform semantic-only search using ChromaDB.
+
+    Args:
+        query: Search query
+        k: Number of results
+        max_dist: Maximum distance threshold
+        metadata_filter: Optional metadata filter
+
+    Returns:
+        List of results
+    """
 
     # Add query instruction for BGE v1.5 models
     query_text = query
@@ -166,10 +218,52 @@ def search(
             continue
 
     logger.info(
-        f"Search '{query[:50]}...': {len(output)}/{len(ids)} results within max_distance {max_dist:.3f}"
+        f"Semantic search '{query[:50]}...': {len(output)}/{len(ids)} results within max_distance {max_dist:.3f}"
     )
 
     return output
+
+
+def _hybrid_search(
+    query: str,
+    k: int,
+    max_dist: float,
+    metadata_filter: Optional[Dict[str, Any]] = None,
+) -> List[dict]:
+    """Perform hybrid search combining BM25 and semantic search.
+
+    Args:
+        query: Search query
+        k: Number of final results
+        max_dist: Maximum distance threshold for semantic results
+        metadata_filter: Optional metadata filter
+
+    Returns:
+        Merged results using RRF
+    """
+    # Retrieve more candidates for better fusion
+    bm25_k = k * 4  # Get 4x candidates from BM25
+    semantic_k = k * 4  # Get 4x candidates from semantic
+
+    # BM25 search
+    bm25_results = _bm25_index.search(query, k=bm25_k)
+    logger.info(f"BM25 retrieved {len(bm25_results)} candidates")
+
+    # Semantic search
+    semantic_results = _semantic_search(query, semantic_k, max_dist, metadata_filter)
+    logger.info(f"Semantic retrieved {len(semantic_results)} candidates")
+
+    # Merge using RRF
+    merged = reciprocal_rank_fusion([bm25_results, semantic_results], k=60)
+
+    # Return top K
+    final_results = merged[:k]
+
+    logger.info(
+        f"Hybrid search '{query[:50]}...': {len(final_results)} results (merged from BM25 + semantic)"
+    )
+
+    return final_results
 
 
 def get_sample_chunks(n: int = 10) -> List[dict]:

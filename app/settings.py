@@ -174,6 +174,55 @@ class SessionSettings(BaseModel):
         return v
 
 
+class QueryRewriterSettings(BaseModel):
+    """Configuration for query rewriting system."""
+
+    enabled: bool = Field(
+        default=os.getenv("QUERY_REWRITER_ENABLED", "true").lower() == "true",
+        description="Enable/disable query rewriting"
+    )
+
+    pattern_config_path: str = Field(
+        default=os.getenv("QUERY_REWRITER_CONFIG", "config/query_patterns.yaml"),
+        description="Path to pattern configuration YAML"
+    )
+
+    hot_reload: bool = Field(
+        default=os.getenv("QUERY_REWRITER_HOT_RELOAD", "true").lower() == "true",
+        description="Enable hot-reloading of pattern config"
+    )
+
+    hot_reload_interval_seconds: int = Field(
+        default=int(os.getenv("QUERY_REWRITER_RELOAD_INTERVAL", "60")),
+        description="Hot-reload check interval (seconds)"
+    )
+
+    analytics_enabled: bool = Field(
+        default=os.getenv("QUERY_REWRITER_ANALYTICS", "true").lower() == "true",
+        description="Enable pattern analytics tracking"
+    )
+
+    analytics_storage_path: str = Field(
+        default=os.getenv("QUERY_REWRITER_ANALYTICS_PATH", "data/analytics/pattern_effectiveness.json"),
+        description="Path to analytics JSON file"
+    )
+
+    failed_queries_storage_path: str = Field(
+        default=os.getenv("QUERY_REWRITER_FAILED_PATH", "data/analytics/failed_queries.json"),
+        description="Path to failed queries JSON file"
+    )
+
+    max_latency_ms: float = Field(
+        default=float(os.getenv("QUERY_REWRITER_MAX_LATENCY", "10.0")),
+        description="Maximum allowed latency for query rewriting (ms)"
+    )
+
+    capture_failed_threshold: float = Field(
+        default=float(os.getenv("QUERY_REWRITER_FAILED_THRESHOLD", "0.5")),
+        description="Distance threshold for capturing failed queries"
+    )
+
+
 class MetadataInjectionSettings(BaseModel):
     """Configuration for metadata injection into LLM context."""
 
@@ -375,6 +424,11 @@ class Settings(BaseModel):
     session: SessionSettings = Field(
         default_factory=SessionSettings,
         description="Session management configuration"
+    )
+
+    query_rewriter: QueryRewriterSettings = Field(
+        default_factory=QueryRewriterSettings,
+        description="Query rewriting configuration"
     )
 
     class Config:

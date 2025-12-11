@@ -75,14 +75,19 @@ services:
     volumes:
       # Application code (for development hot-reload)
       - ./app:/workspace/app:ro
-      
+
+      # Scripts for evaluation and utilities
+      - ./scripts:/workspace/scripts:ro
+
       # Environment file (read-only)
       - ./.env:/workspace/.env:ro
-      
+
       # Data directories
       - ./data/chroma:/workspace/data/chroma
       - ./data/docs:/workspace/data/docs
-      
+      - ./data/mds:/workspace/data/mds:ro
+      - ./data/eval:/workspace/data/eval
+
       # HuggingFace model cache (persistent)
       - hf_cache:/home/nonroot/.cache/huggingface
     

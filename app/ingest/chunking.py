@@ -162,6 +162,379 @@ def chunk_by_headers(
     return all_chunks
 
 
+# ============================================================================
+# NEW: Smart Chunking with Document-Type Routing
+# ============================================================================
+
+
+def smart_chunk(
+    text: str,
+    base_metadata: Dict[str, Any],
+    source_path: str,
+    chunk_size: int = None,
+    overlap: int = None,
+    split_level: int = 2,
+) -> List[Dict[str, Any]]:
+    """
+    Route to appropriate chunking strategy based on document type.
+
+    For transcript_analysis documents: Uses term-based chunking to create
+    focused, self-contained chunks for each academic term.
+
+    For other documents (resume, certificate, etc.): Uses header-based chunking.
+
+    Args:
+        text: Markdown body text (after frontmatter extraction)
+        base_metadata: Metadata from YAML frontmatter
+        source_path: Original file path
+        chunk_size: Target chunk size in characters
+        overlap: Overlap between consecutive chunks
+        split_level: Header level to split at (for header-based chunking)
+
+    Returns:
+        List of chunk dicts with 'text' and 'metadata' keys
+    """
+    doc_type = base_metadata.get("doc_type", "")
+
+    if doc_type == "transcript_analysis":
+        logger.info(f"Using term-based chunking for transcript: {source_path}")
+        return chunk_by_terms(
+            text=text,
+            base_metadata=base_metadata,
+            source_path=source_path,
+        )
+    else:
+        logger.info(f"Using header-based chunking for {doc_type}: {source_path}")
+        return chunk_by_headers(
+            text=text,
+            base_metadata=base_metadata,
+            source_path=source_path,
+            chunk_size=chunk_size,
+            overlap=overlap,
+            split_level=split_level,
+        )
+
+
+def chunk_by_terms(
+    text: str,
+    base_metadata: Dict[str, Any],
+    source_path: str,
+) -> List[Dict[str, Any]]:
+    """
+    Chunk transcript documents by academic term boundaries.
+
+    Creates one chunk per academic term (e.g., "Fall 2023", "Spring 2024"),
+    keeping all courses for that term together. This produces larger but
+    more focused chunks for better retrieval.
+
+    Also creates separate chunks for non-term sections like:
+    - Academic Summary (Degrees Earned, Overall Performance)
+    - Academic Specialization Analysis
+    - Skills & Knowledge Areas
+
+    Args:
+        text: Markdown body text
+        base_metadata: Metadata from YAML frontmatter
+        source_path: Original file path
+
+    Returns:
+        List of chunk dicts with enriched term metadata
+    """
+    from ..settings import ingest_settings
+
+    # Extract doc identifiers
+    doc_id, doc_type = extract_doc_id(source_path)
+
+    # Get version from base_metadata
+    version = base_metadata.get('version_identifier')
+    if not version:
+        version = generate_version_identifier(base_metadata, doc_id)
+        logger.warning(f"version_identifier not in metadata for {source_path}, generating: {version}")
+
+    all_chunks = []
+    chunk_idx = 0
+
+    # Parse the document into program sections (Graduate, Undergraduate, etc.)
+    # and then into term sections within each program
+    lines = text.split('\n')
+    current_program = None
+    current_section_type = None  # 'term', 'summary', 'analysis'
+    current_section_header = None
+    current_section_content = []
+    current_term_info = {}
+
+    # Track L1 and L2 headers for context
+    current_l1 = None
+    current_l2 = None
+
+    for line in lines:
+        # Check for headers
+        header_match = re.match(r'^(#{1,6})\s+(.+)$', line)
+
+        if header_match:
+            level = len(header_match.group(1))
+            title = header_match.group(2).strip()
+
+            if level == 1:
+                # L1 header: Major section (Academic Summary, Graduate Program, etc.)
+                # Save previous section if exists
+                if current_section_content and current_section_header:
+                    chunk = _create_term_chunk(
+                        header=current_section_header,
+                        content='\n'.join(current_section_content),
+                        base_metadata=base_metadata,
+                        doc_id=doc_id,
+                        doc_type=doc_type,
+                        version=version,
+                        chunk_idx=chunk_idx,
+                        term_info=current_term_info,
+                        program=current_program,
+                        section_type=current_section_type,
+                    )
+                    if chunk:
+                        all_chunks.append(chunk)
+                        chunk_idx += 1
+
+                current_l1 = title
+                current_l2 = None
+
+                # Determine program from L1 header
+                if 'graduate' in title.lower():
+                    current_program = 'graduate'
+                elif 'undergraduate' in title.lower():
+                    current_program = 'undergraduate'
+                elif 'summary' in title.lower() or 'academic summary' in title.lower():
+                    current_program = None
+                    current_section_type = 'summary'
+                elif 'specialization' in title.lower() or 'skills' in title.lower():
+                    current_section_type = 'analysis'
+
+                # Reset for new major section
+                current_section_header = line
+                current_section_content = []
+                current_term_info = {}
+                if 'summary' not in title.lower() and 'specialization' not in title.lower() and 'skills' not in title.lower():
+                    current_section_type = None
+
+            elif level == 2:
+                # L2 header: Sub-section (Graduate Summary, Coursework by Term, etc.)
+                # Save previous section if it was a term
+                if current_section_type == 'term' and current_section_content:
+                    chunk = _create_term_chunk(
+                        header=current_section_header,
+                        content='\n'.join(current_section_content),
+                        base_metadata=base_metadata,
+                        doc_id=doc_id,
+                        doc_type=doc_type,
+                        version=version,
+                        chunk_idx=chunk_idx,
+                        term_info=current_term_info,
+                        program=current_program,
+                        section_type='term',
+                    )
+                    if chunk:
+                        all_chunks.append(chunk)
+                        chunk_idx += 1
+
+                current_l2 = title
+                current_section_header = line
+                current_section_content = []
+
+                # Check if this is a coursework section (will contain terms)
+                if 'coursework' in title.lower() and 'term' in title.lower():
+                    current_section_type = 'coursework_container'
+                elif 'summary' in title.lower():
+                    current_section_type = 'summary'
+                elif 'transfer' in title.lower():
+                    current_section_type = 'transfer'
+                else:
+                    current_section_type = 'other'
+
+                current_term_info = {}
+
+            elif level == 3:
+                # L3 header: Term headers (Fall 2023, Spring 2024, etc.)
+                # Save previous term if exists
+                if current_section_type == 'term' and current_section_content:
+                    chunk = _create_term_chunk(
+                        header=current_section_header,
+                        content='\n'.join(current_section_content),
+                        base_metadata=base_metadata,
+                        doc_id=doc_id,
+                        doc_type=doc_type,
+                        version=version,
+                        chunk_idx=chunk_idx,
+                        term_info=current_term_info,
+                        program=current_program,
+                        section_type='term',
+                    )
+                    if chunk:
+                        all_chunks.append(chunk)
+                        chunk_idx += 1
+
+                # Parse term info from header
+                current_term_info = _parse_term_info(title)
+                current_section_header = line
+                current_section_content = []
+                current_section_type = 'term'
+
+            else:
+                # L4+ headers: Add to current section content
+                current_section_content.append(line)
+        else:
+            # Regular content line
+            current_section_content.append(line)
+
+    # Don't forget the last section
+    if current_section_content and current_section_header:
+        chunk = _create_term_chunk(
+            header=current_section_header,
+            content='\n'.join(current_section_content),
+            base_metadata=base_metadata,
+            doc_id=doc_id,
+            doc_type=doc_type,
+            version=version,
+            chunk_idx=chunk_idx,
+            term_info=current_term_info,
+            program=current_program,
+            section_type=current_section_type or 'other',
+        )
+        if chunk:
+            all_chunks.append(chunk)
+
+    logger.info(f"Created {len(all_chunks)} term-based chunks from {source_path}")
+    return all_chunks
+
+
+def _parse_term_info(header_text: str) -> Dict[str, Any]:
+    """
+    Parse term information from a header like "Fall 2023" or "Spring Term 2024".
+
+    Args:
+        header_text: The term header text (without ### prefix)
+
+    Returns:
+        Dict with keys: term_name, term_year, term_season, is_dual_enrollment
+    """
+    info = {
+        'term_name': header_text.strip(),
+        'term_year': None,
+        'term_season': None,
+        'is_dual_enrollment': False,
+        'is_final_term': False,
+    }
+
+    text_lower = header_text.lower()
+
+    # Check for special annotations
+    if 'dual enrollment' in text_lower:
+        info['is_dual_enrollment'] = True
+    if 'final' in text_lower:
+        info['is_final_term'] = True
+
+    # Extract year (4-digit number)
+    year_match = re.search(r'\b(20\d{2})\b', header_text)
+    if year_match:
+        info['term_year'] = int(year_match.group(1))
+
+    # Extract season
+    if 'fall' in text_lower:
+        info['term_season'] = 'fall'
+    elif 'spring' in text_lower:
+        info['term_season'] = 'spring'
+    elif 'summer' in text_lower:
+        info['term_season'] = 'summer'
+    elif 'winter' in text_lower:
+        info['term_season'] = 'winter'
+
+    return info
+
+
+def _create_term_chunk(
+    header: str,
+    content: str,
+    base_metadata: Dict[str, Any],
+    doc_id: str,
+    doc_type: str,
+    version: str,
+    chunk_idx: int,
+    term_info: Dict[str, Any],
+    program: Optional[str],
+    section_type: str,
+) -> Optional[Dict[str, Any]]:
+    """
+    Create a chunk dictionary for a term or section.
+
+    Args:
+        header: The section header line (with # prefix)
+        content: The section content
+        base_metadata: Base metadata from frontmatter
+        doc_id: Document identifier
+        doc_type: Document type
+        version: Version identifier
+        chunk_idx: Chunk index counter
+        term_info: Parsed term information (from _parse_term_info)
+        program: 'graduate', 'undergraduate', or None
+        section_type: 'term', 'summary', 'transfer', 'analysis', 'other'
+
+    Returns:
+        Chunk dict or None if content is empty
+    """
+    content = content.strip()
+    if not content:
+        return None
+
+    # Build full text with header
+    full_text = f"{header}\n\n{content}"
+
+    # Generate section slug from header
+    header_text = re.sub(r'^#+\s*', '', header).strip()
+    section_slug = slugify(header_text)
+
+    # Build metadata
+    metadata = {
+        **base_metadata,
+        "doc_id": doc_id,
+        "doc_type": doc_type,
+        "version_identifier": version,
+        "section": header_text,
+        "section_slug": section_slug,
+        "section_doc_id": f"{doc_id}@{version}#{section_slug}",
+        "section_name": header_text,
+        "section_type": section_type,
+        "is_multipart": False,
+        "total_parts": 1,
+    }
+
+    # Add term-specific metadata
+    if term_info:
+        if term_info.get('term_name'):
+            metadata['term_name'] = term_info['term_name']
+        if term_info.get('term_year'):
+            metadata['term_year'] = term_info['term_year']
+        if term_info.get('term_season'):
+            metadata['term_season'] = term_info['term_season']
+        if term_info.get('is_dual_enrollment'):
+            metadata['is_dual_enrollment'] = True
+        if term_info.get('is_final_term'):
+            metadata['is_final_term'] = True
+
+    # Add program metadata
+    if program:
+        metadata['program'] = program
+
+    # Remove None values (ChromaDB doesn't accept them)
+    metadata = {k: v for k, v in metadata.items() if v is not None}
+
+    chunk_id = f"{doc_id}@{version}#{section_slug}:{chunk_idx}"
+
+    return {
+        'text': full_text.strip(),
+        'metadata': metadata,
+        'id': chunk_id,
+    }
+
+
 def _parse_markdown_sections(
     text: str,
     split_level: int = 2
