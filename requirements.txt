@@ -25,6 +25,7 @@ pyyaml==6.0.2
 pydantic==2.11.7
 python-dotenv==1.1.1
 python-multipart==0.0.20
+nltk==3.9.1  # Natural language toolkit for improved BM25 tokenization
 
 # --- Metrics ---
 prometheus-client==0.22.1

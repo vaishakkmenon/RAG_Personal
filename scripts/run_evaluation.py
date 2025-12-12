@@ -129,7 +129,7 @@ def print_retrieval_report(results: Dict[str, Any]):
     aggregate = results["aggregate"]
     summary = results["summary"]
 
-    print(f"\n📊 Overall Metrics:")
+    print(f"\nOverall Metrics:")
     print(f"  Total Queries: {summary['total_queries']}")
     print(f"  Pass Rate: {summary['pass_rate']:.1%} ({summary['total_queries'] - summary['failures']}/{summary['total_queries']})")
     print(f"  Found Any: {aggregate['found_any_rate']:.1%}")
@@ -140,7 +140,7 @@ def print_retrieval_report(results: Dict[str, Any]):
     print(f"  NDCG@5:    {aggregate.get('ndcg@5', 0):.3f}")
 
     # By difficulty
-    print(f"\n📈 By Difficulty:")
+    print(f"\nBy Difficulty:")
     for diff, metrics in summary["by_difficulty"].items():
         print(f"  {diff.capitalize()}:")
         print(f"    Count: {metrics['count']}")
@@ -149,7 +149,7 @@ def print_retrieval_report(results: Dict[str, Any]):
 
     # Failures
     if summary["failures"] > 0:
-        print(f"\n❌ Failures ({summary['failures']}):")
+        print(f"\nFailures ({summary['failures']}):")
         for failure in summary["failure_details"][:10]:  # Show first 10
             print(f"  [{failure['test_id']}] {failure['query']}")
             print(f"    Recall@5: {failure['recall@5']:.2f}, Found Any: {failure['found_any']}")
@@ -167,7 +167,7 @@ def print_answer_report(results: Dict[str, Any]):
     aggregate = results["aggregate"]
     summary = results["summary"]
 
-    print(f"\n📊 Overall Metrics:")
+    print(f"\nOverall Metrics:")
     print(f"  Total Queries: {summary['total_queries']}")
     print(f"  Pass Rate: {aggregate['pass_rate']:.1%} ({summary['passed']}/{summary['total_queries']})")
     print(f"  Avg Fact Coverage: {aggregate['avg_fact_coverage']:.1%}")
@@ -175,7 +175,7 @@ def print_answer_report(results: Dict[str, Any]):
 
     # Failures
     if summary["failed"] > 0:
-        print(f"\n❌ Failures ({summary['failed']}):")
+        print(f"\nFailures ({summary['failed']}):")
         for failure in summary["failure_details"][:10]:
             print(f"  [{failure['test_id']}] {failure['query']}")
             print(f"    Fact Coverage: {failure['fact_coverage']:.1%}")
@@ -204,20 +204,20 @@ def compare_results(current: Dict, baseline: Dict):
     current_agg = current["retrieval"]["aggregate"]
     baseline_agg = baseline["retrieval"]["aggregate"]
 
-    print(f"\n📊 Retrieval Metrics:")
+    print(f"\nRetrieval Metrics:")
     metrics = ["recall@1", "recall@3", "recall@5", "mrr", "ndcg@5"]
     for metric in metrics:
         current_val = current_agg.get(metric, 0)
         baseline_val = baseline_agg.get(metric, 0)
         diff = current_val - baseline_val
-        emoji = "✅" if diff >= 0 else "⚠️"
+        emoji = "[OK]" if diff >= 0 else "[WARNING]"
         print(f"  {metric:12s}: {current_val:.3f} (baseline: {baseline_val:.3f}) {emoji} {diff:+.3f}")
 
     current_summary = current["retrieval"]["summary"]
     baseline_summary = baseline["retrieval"]["summary"]
 
     pass_rate_diff = current_summary["pass_rate"] - baseline_summary["pass_rate"]
-    emoji = "✅" if pass_rate_diff >= 0 else "⚠️"
+    emoji = "[OK]" if pass_rate_diff >= 0 else "[WARNING]"
     print(f"\n  Pass Rate:     {current_summary['pass_rate']:.1%} (baseline: {baseline_summary['pass_rate']:.1%}) {emoji} {pass_rate_diff:+.1%}")
 
 

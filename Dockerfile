@@ -50,11 +50,29 @@ RUN /opt/venv/bin/python -m pip install --upgrade pip wheel setuptools \
 RUN /opt/venv/bin/python -c "import fastapi; import chromadb; import redis; print('Core dependencies installed')" \
     || (echo "ERROR: Failed to import core dependencies" && exit 1)
 
+# Download NLTK data (required for BM25 search)
+# - stopwords: For filtering common words in BM25 tokenization
+# - punkt: For sentence tokenization
+RUN mkdir -p /home/nonroot/nltk_data \
+    && /opt/venv/bin/python -c "import nltk; nltk.download('stopwords', download_dir='/home/nonroot/nltk_data'); nltk.download('punkt', download_dir='/home/nonroot/nltk_data'); nltk.download('punkt_tab', download_dir='/home/nonroot/nltk_data')" \
+    && chown -R nonroot:nonroot /home/nonroot/nltk_data
+
+# Pre-download embedding model (required for semantic search)
+# This avoids download on container start and works with read-only filesystem
+RUN /opt/venv/bin/python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-small-en-v1.5')" \
+    && chown -R nonroot:nonroot /home/nonroot/.cache
+
 # Copy application code
 COPY --chown=nonroot:nonroot app ./app
 
+# Copy scripts (including docker-entrypoint.sh)
+COPY --chown=nonroot:nonroot scripts ./scripts
+
 # Create required directories
 RUN mkdir -p /workspace/data/chroma /workspace/data/docs
+
+# Make entrypoint script executable
+RUN chmod +x /workspace/scripts/docker-entrypoint.sh || true
 
 # Validate app structure
 RUN test -f ./app/main.py || (echo "ERROR: app/main.py not found!" && exit 1)
@@ -102,9 +120,6 @@ ENV VENV=/opt/venv \
 # Create non-root user (if it doesn't exist)
 RUN useradd -m -u 65532 -s /bin/bash nonroot || true
 
-# Create HuggingFace cache directory with correct ownership
-RUN mkdir -p /home/nonroot/.cache/huggingface && chown -R nonroot:nonroot /home/nonroot/.cache
-
 WORKDIR /workspace
 
 # Copy only the virtualenv with production dependencies
@@ -112,6 +127,13 @@ COPY --from=builder --chown=nonroot:nonroot /opt/venv /opt/venv
 
 # Copy only application code (no tests, no dev files)
 COPY --from=builder --chown=nonroot:nonroot /workspace/app ./app
+
+# Copy scripts directory (includes docker-entrypoint.sh and utility scripts)
+COPY --from=builder --chown=nonroot:nonroot /workspace/scripts ./scripts
+
+# Copy NLTK data and HuggingFace cache from builder stage
+COPY --from=builder --chown=nonroot:nonroot /home/nonroot/nltk_data /home/nonroot/nltk_data
+COPY --from=builder --chown=nonroot:nonroot /home/nonroot/.cache /home/nonroot/.cache
 
 # Create directories for runtime data
 RUN mkdir -p /workspace/data/chroma /workspace/data/docs

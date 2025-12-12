@@ -223,6 +223,59 @@ class QueryRewriterSettings(BaseModel):
     )
 
 
+class CrossEncoderSettings(BaseModel):
+    """Cross-encoder reranking configuration (optimized for production)."""
+
+    enabled: bool = Field(
+        default=os.getenv("CROSS_ENCODER_ENABLED", "false").lower() == "true",
+        description="Enable cross-encoder neural reranking"
+    )
+
+    model: str = Field(
+        default=os.getenv("CROSS_ENCODER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2"),
+        description="HuggingFace cross-encoder model"
+    )
+
+    cache_dir: str = Field(
+        default=os.getenv("CROSS_ENCODER_CACHE_DIR", "/tmp/cross-encoder"),
+        description="Directory to cache model files"
+    )
+
+    retrieval_k: int = Field(
+        default=int(os.getenv("CROSS_ENCODER_RETRIEVAL_K", "15")),
+        description="Number of chunks to retrieve before cross-encoder (optimized from 25)"
+    )
+
+    top_k: int = Field(
+        default=int(os.getenv("CROSS_ENCODER_TOP_K", "5")),
+        description="Final number of chunks after cross-encoder reranking"
+    )
+
+    max_latency_ms: float = Field(
+        default=float(os.getenv("CROSS_ENCODER_MAX_LATENCY_MS", "400.0")),
+        description="Maximum acceptable latency (warning threshold)"
+    )
+
+
+class BM25Settings(BaseModel):
+    """BM25 parameter configuration for keyword search optimization."""
+
+    k1: float = Field(
+        default=float(os.getenv("BM25_K1", "1.5")),
+        description="Term frequency saturation parameter (typical: 1.2-2.0)"
+    )
+
+    b: float = Field(
+        default=float(os.getenv("BM25_B", "0.5")),
+        description="Document length normalization parameter (typical: 0-1)"
+    )
+
+    rrf_k: int = Field(
+        default=int(os.getenv("BM25_RRF_K", "60")),
+        description="Reciprocal Rank Fusion parameter for combining rankings"
+    )
+
+
 class MetadataInjectionSettings(BaseModel):
     """Configuration for metadata injection into LLM context."""
 
@@ -429,6 +482,16 @@ class Settings(BaseModel):
     query_rewriter: QueryRewriterSettings = Field(
         default_factory=QueryRewriterSettings,
         description="Query rewriting configuration"
+    )
+
+    cross_encoder: CrossEncoderSettings = Field(
+        default_factory=CrossEncoderSettings,
+        description="Cross-encoder reranking configuration"
+    )
+
+    bm25: BM25Settings = Field(
+        default_factory=BM25Settings,
+        description="BM25 parameter configuration"
     )
 
     class Config:

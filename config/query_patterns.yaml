@@ -1,9 +1,16 @@
 # Query Rewriting Patterns Configuration
 # Patterns are applied in priority order (highest first)
 # First matching pattern wins
+#
+# OPTIMIZATION NOTES (Dec 2025):
+# - Most patterns DISABLED after evaluation showed they cause regressions
+# - Only negative_inference pattern is enabled (helps with "Do I have X?" queries)
+# - See QUERY_EXPANSION_ANALYSIS_AND_RECOMMENDATIONS.md for details
 
 patterns:
-  # PATTERN 1: Negative Inference (Priority: 100 - Highest)
+  # ============================================================================
+  # PATTERN 1: Negative Inference (ENABLED - The Only Pattern That Helps!)
+  # ============================================================================
   # Queries asking about entities that might not exist
   - name: negative_inference
     enabled: true
@@ -24,6 +31,7 @@ patterns:
         azure.*cert: "certifications professional credentials"
         aws.*cert: "certifications professional credentials"
         gcp.*cert: "certifications professional credentials"
+        terraform|docker|kubernetes: "technical skills devops tools infrastructure"
     test_cases:
       - input: "Do I have a PhD?"
         expected_output: "education degrees academic qualifications"
@@ -31,10 +39,16 @@ patterns:
       - input: "Do I have Azure certifications?"
         expected_output: "certifications professional credentials"
 
-  # PATTERN 2: Temporal Filtered Attributes (Priority: 95)
-  # Queries asking for items filtered by temporal attributes
+  # ============================================================================
+  # DISABLED PATTERNS (Cause Regressions)
+  # ============================================================================
+  # All patterns below are disabled due to performance regressions
+  # See evaluation results in EVALUATION_SUMMARY_DEC_2025.md
+
+  # PATTERN 2: Temporal Filtered Attributes (DISABLED)
+  # Problem: Loses temporal context when expanding
   - name: temporal_filtered_attributes
-    enabled: true
+    enabled: false
     priority: 95
     description: "Temporal attribute filtering (Which X expire in Y?)"
     matching:
@@ -42,20 +56,16 @@ patterns:
       rules:
         - pattern: '(?i)which\s+(.+?)\s+expire\s+in\s+(\d{4})'
           extract_groups: [1, 2]
-        - pattern: '(?i)what\s+(.+?)\s+(?:expiring|expire)\s+(?:in|on)\s+(.+?)\?'
-          extract_groups: [1, 2]
       min_score: 0.8
     rewrite_strategy:
       type: list_expansion
       template: "List all certifications with expiration dates"
-    test_cases:
-      - input: "Which certifications expire in 2028?"
-        expected_output: "List all certifications with expiration dates"
 
-  # PATTERN 3: Entity Verification (Priority: 90)
-  # Yes/no questions about specific entities
+  # PATTERN 3: Entity Verification (DISABLED)
+  # Problem: Destroys specific keywords (CS 350, Fall 2022)
+  # Caused 4 queries to go from perfect (1.0) to zero (0.0) recall
   - name: entity_verification
-    enabled: true
+    enabled: false
     priority: 90
     description: "Entity verification (Did I take X?)"
     matching:
@@ -63,26 +73,16 @@ patterns:
       rules:
         - pattern: '(?i)did\s+i\s+take\s+(.+)\?'
           extract_groups: [1]
-        - pattern: '(?i)do\s+i\s+know\s+(.+)\?'
-          extract_groups: [1]
-        - pattern: '(?i)have\s+i\s+(?:taken|completed|done)\s+(.+)\?'
-          extract_groups: [1]
-        - pattern: '(?i)did\s+i\s+(?:graduate|earn)\s+(.+)\?'
-          extract_groups: [1]
       min_score: 0.8
     rewrite_strategy:
       type: list_expansion
       template: "List all courses classes taken enrolled completed"
-    test_cases:
-      - input: "Did I take CS 350?"
-        expected_output: "List all courses classes taken enrolled completed"
-      - input: "Do I know Python?"
-        expected_output: "List all courses classes taken enrolled completed"
 
-  # PATTERN 4: Entity Specific Attributes (Priority: 85)
-  # Queries asking for entities with specific attributes
+  # PATTERN 4: Entity Specific Attributes (DISABLED)
+  # Problem: Loses attribute filters (B grade → all grades)
+  # Caused "What courses did I get a B grade in?" to fail completely
   - name: entity_specific_attributes
-    enabled: true
+    enabled: false
     priority: 85
     description: "Entity attribute filtering (What courses got B grade?)"
     matching:
@@ -90,20 +90,14 @@ patterns:
       rules:
         - pattern: '(?i)what\s+courses.*\s+([A-F][+-]?)\s+grade'
           extract_groups: [1]
-        - pattern: '(?i)(?:which|what)\s+(.+?)\s+(?:with|having)\s+(.+?)\?'
-          extract_groups: [1, 2]
       min_score: 0.7
     rewrite_strategy:
       type: list_expansion
       template: "List all courses with grades and performance"
-    test_cases:
-      - input: "What courses did I get a B grade in?"
-        expected_output: "List all courses with grades and performance"
 
-  # PATTERN 5: Comparison/Context (Priority: 80)
-  # Queries requiring comparison or context
+  # PATTERN 5: Comparison/Context (DISABLED)
   - name: comparison_context
-    enabled: true
+    enabled: false
     priority: 80
     description: "Comparison queries (Was X the only...?)"
     matching:
@@ -111,22 +105,15 @@ patterns:
       rules:
         - pattern: '(?i)was\s+(.+?)\s+the\s+only\s+(.+)\?'
           extract_groups: [1, 2]
-        - pattern: '(?i)(?:compare|versus|vs)\s+(.+)\s+(?:and|to|with)\s+(.+)'
-          extract_groups: [1, 2]
       min_score: 0.8
     rewrite_strategy:
       type: synonym_expansion
       synonyms:
         "only": ["single", "sole", "unique"]
-        "compare": ["versus", "difference", "contrast"]
-    test_cases:
-      - input: "Was CS 350 the only class to lower my GPA?"
-        expected_output: "Was CS 350 the only single sole class to lower my GPA?"
 
-  # PATTERN 6: Counting (Priority: 75)
-  # Queries asking for counts
+  # PATTERN 6: Counting (DISABLED)
   - name: counting
-    enabled: true
+    enabled: false
     priority: 75
     description: "Counting queries (How many X?)"
     matching:
@@ -134,22 +121,14 @@ patterns:
       rules:
         - pattern: '(?i)how\s+many\s+(.+)\?'
           extract_groups: [1]
-        - pattern: '(?i)count\s+(?:of|the)?\s*(.+)'
-          extract_groups: [1]
       min_score: 0.8
     rewrite_strategy:
       type: list_expansion
       template: "List all {entity}"
-    test_cases:
-      - input: "How many internships did I do at Maven Wave?"
-        expected_output: "List all internships"
-      - input: "How many certifications do I have?"
-        expected_output: "List all certifications"
 
-  # PATTERN 7: Temporal (Priority: 70)
-  # Queries scoped to specific time periods
+  # PATTERN 7: Temporal (DISABLED)
   - name: temporal
-    enabled: true
+    enabled: false
     priority: 70
     description: "Temporal queries (What courses in Fall 2022?)"
     matching:
@@ -157,34 +136,15 @@ patterns:
       keywords:
         - "Fall 2022"
         - "Spring 2022"
-        - "Summer 2022"
-        - "Fall 2023"
-        - "Spring 2023"
-        - "Summer 2023"
-        - "Fall 2024"
-        - "Spring 2024"
-        - "Summer 2024"
-        - "Fall 2025"
-        - "Spring 2025"
       min_score: 0.5
     rewrite_strategy:
       type: synonym_expansion
       synonyms:
-        "Fall 2022": ["Fall 2022", "Fall Term 2022", "Autumn 2022", "September 2022", "October 2022", "November 2022", "December 2022"]
-        "Spring 2022": ["Spring 2022", "Spring Term 2022", "January 2022", "February 2022", "March 2022", "April 2022", "May 2022"]
-        "Summer 2022": ["Summer 2022", "Summer Term 2022", "June 2022", "July 2022", "August 2022"]
-        "Fall 2023": ["Fall 2023", "Fall Term 2023", "Autumn 2023"]
-        "Spring 2023": ["Spring 2023", "Spring Term 2023"]
-        "Fall 2024": ["Fall 2024", "Fall Term 2024", "Autumn 2024"]
-        "Spring 2024": ["Spring 2024", "Spring Term 2024"]
-    test_cases:
-      - input: "What courses did I take in Fall 2022?"
-        expected_output: "What courses did I take in Fall 2022 Fall Term 2022 Autumn 2022 September 2022 October 2022 November 2022 December 2022?"
+        "Fall 2022": ["Fall 2022", "Fall Term 2022", "Autumn 2022"]
 
-  # PATTERN 8: Education Level (Priority: 65)
-  # Queries filtering by education level
+  # PATTERN 8: Education Level (DISABLED)
   - name: education_level
-    enabled: true
+    enabled: false
     priority: 65
     description: "Education level queries (What is my graduate GPA?)"
     matching:
@@ -192,24 +152,16 @@ patterns:
       keywords:
         - "graduate GPA"
         - "undergraduate GPA"
-        - "graduate"
-        - "undergraduate"
-        - "grad GPA"
-        - "undergrad GPA"
       min_score: 0.5
     rewrite_strategy:
       type: synonym_expansion
       synonyms:
-        "graduate": ["graduate", "grad", "masters", "MS", "graduate-level"]
-        "undergraduate": ["undergraduate", "undergrad", "bachelor", "BS", "undergraduate-level"]
-    test_cases:
-      - input: "What is my graduate GPA?"
-        expected_output: "What is my graduate grad masters MS graduate-level GPA?"
+        "graduate": ["graduate", "grad", "masters", "MS"]
 
-  # PATTERN 9: Topic-Based (Priority: 60)
-  # Queries filtering by topic or subject area
+  # PATTERN 9: Topic-Based (DISABLED)
+  # Problem: Matches wrong entities (AI courses → AWS AI Practitioner cert)
   - name: topic_based
-    enabled: true
+    enabled: false
     priority: 60
     description: "Topic filtering (What AI courses have I taken?)"
     matching:
@@ -217,23 +169,15 @@ patterns:
       keywords:
         - "AI courses"
         - "ML courses"
-        - "machine learning"
-        - "artificial intelligence"
-        - "AI/ML"
       min_score: 0.5
     rewrite_strategy:
       type: synonym_expansion
       synonyms:
-        "AI": ["AI", "artificial intelligence", "machine learning", "ML", "deep learning", "neural networks", "NLP", "natural language processing", "computer vision"]
-        "ML": ["ML", "machine learning", "AI", "artificial intelligence", "deep learning"]
-    test_cases:
-      - input: "What AI courses have I taken?"
-        expected_output: "What AI artificial intelligence machine learning ML deep learning neural networks NLP natural language processing computer vision courses have I taken?"
+        "AI": ["AI", "artificial intelligence", "machine learning"]
 
-  # PATTERN 10: Specific Entity Details (Priority: 55)
-  # Queries asking for details about a known entity
+  # PATTERN 10: Specific Entity Details (DISABLED)
   - name: specific_entity_details
-    enabled: true
+    enabled: false
     priority: 55
     description: "Entity details (What did I do at UAB?)"
     matching:
@@ -241,22 +185,14 @@ patterns:
       rules:
         - pattern: '(?i)what\s+did\s+i\s+do\s+at\s+(.+)\?'
           extract_groups: [1]
-        - pattern: '(?i)tell\s+me\s+about\s+(?:my)?\s*(.+)'
-          extract_groups: [1]
       min_score: 0.7
     rewrite_strategy:
       type: list_expansion
-      template: "{entity} role responsibilities duration achievements technologies"
-    test_cases:
-      - input: "What did I do at UAB?"
-        expected_output: "UAB role responsibilities duration achievements technologies"
-      - input: "Tell me about my RAG project"
-        expected_output: "RAG project role responsibilities duration achievements technologies"
+      template: "{entity} role responsibilities duration achievements"
 
-  # PATTERN 11: Honors/Awards (Priority: 50)
-  # Queries about honors or awards
+  # PATTERN 11: Honors/Awards (DISABLED)
   - name: honors_awards
-    enabled: true
+    enabled: false
     priority: 50
     description: "Honors verification (Did I graduate with honors?)"
     matching:
@@ -264,25 +200,14 @@ patterns:
       keywords:
         - "honors"
         - "Summa Cum Laude"
-        - "Magna Cum Laude"
-        - "Cum Laude"
-        - "Dean's List"
-        - "awards"
-        - "distinctions"
       min_score: 0.5
     rewrite_strategy:
       type: list_expansion
-      template: "graduation honors academic distinctions awards achievements"
-    test_cases:
-      - input: "Did I graduate with honors?"
-        expected_output: "graduation honors academic distinctions awards achievements"
-      - input: "Did I graduate Summa Cum Laude?"
-        expected_output: "graduation honors academic distinctions awards achievements"
+      template: "graduation honors academic distinctions awards"
 
-  # PATTERN 12: List-Based Inventory (Priority: 40 - Lowest)
-  # Well-formed inventory queries
+  # PATTERN 12: List-Based Inventory (DISABLED)
   - name: list_based_inventory
-    enabled: true
+    enabled: false
     priority: 40
     description: "Inventory queries (What degrees do I have?)"
     matching:
@@ -290,13 +215,6 @@ patterns:
       rules:
         - pattern: '(?i)what\s+(?:degrees|certifications|skills|projects|languages)\s+'
           extract_groups: []
-        - pattern: '(?i)where\s+have\s+i\s+worked'
-          extract_groups: []
       min_score: 0.7
     rewrite_strategy:
-      type: passthrough  # Already well-formed, minimal change
-    test_cases:
-      - input: "What degrees do I have?"
-        expected_output: "What degrees do I have?"
-      - input: "Where have I worked?"
-        expected_output: "Where have I worked?"
+      type: passthrough

@@ -7,6 +7,7 @@ Reciprocal Rank Fusion (RRF) for optimal results.
 
 import logging
 import pickle
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -14,17 +15,40 @@ from rank_bm25 import BM25Okapi
 
 logger = logging.getLogger(__name__)
 
+# Try to import NLTK components for improved tokenization
+try:
+    import nltk
+    # Add NLTK data search paths (for Docker container)
+    nltk.data.path.append('/home/nonroot/nltk_data')  # Persistent location (baked into image)
+    nltk.data.path.append('/tmp/nltk_data')  # Fallback temporary location
+    from nltk.corpus import stopwords
+    from nltk.stem import PorterStemmer
+    NLTK_AVAILABLE = True
+    logger.info("NLTK tokenization enabled")
+except ImportError:
+    logger.warning("NLTK not available. Install with: pip install nltk")
+    logger.warning("Falling back to simple tokenization")
+    NLTK_AVAILABLE = False
+except LookupError:
+    logger.warning("NLTK data not found. Download with: nltk.download('stopwords')")
+    logger.warning("Falling back to simple tokenization")
+    NLTK_AVAILABLE = False
+
 
 class BM25Index:
     """BM25 index for keyword-based document retrieval."""
 
-    def __init__(self, index_path: Optional[str] = None):
+    def __init__(self, index_path: Optional[str] = None, k1: float = 1.5, b: float = 0.5):
         """Initialize BM25 index.
 
         Args:
             index_path: Path to save/load BM25 index (pickle file)
+            k1: Term frequency saturation parameter (typical: 1.2-2.0)
+            b: Document length normalization parameter (typical: 0-1)
         """
         self.index_path = index_path or "data/chroma/bm25_index.pkl"
+        self.k1 = k1
+        self.b = b
         self.bm25: Optional[BM25Okapi] = None
         self.documents: List[Dict[str, Any]] = []
         self.doc_ids: List[str] = []
@@ -43,16 +67,20 @@ class BM25Index:
         # Tokenize documents (simple whitespace tokenization)
         tokenized_corpus = [self._tokenize(doc["text"]) for doc in documents]
 
-        # Build BM25 index
-        self.bm25 = BM25Okapi(tokenized_corpus)
+        # Build BM25 index with tuned parameters
+        self.bm25 = BM25Okapi(tokenized_corpus, k1=self.k1, b=self.b)
 
         logger.info(f"BM25 index built successfully with {len(documents)} documents")
 
     def _tokenize(self, text: str) -> List[str]:
-        """Tokenize text for BM25.
+        """Tokenize text for BM25 with improved processing.
 
-        Simple whitespace + lowercase tokenization.
-        Can be improved with stemming, stopword removal, etc.
+        Features:
+        - Lowercase normalization
+        - Course code preservation (CS 350, CS350, CS-350)
+        - Porter stemming for word variants
+        - Stopword removal (except important tokens)
+        - Punctuation handling
 
         Args:
             text: Input text
@@ -60,8 +88,54 @@ class BM25Index:
         Returns:
             List of tokens
         """
-        # Simple tokenization: lowercase + split on whitespace
-        return text.lower().split()
+        if not NLTK_AVAILABLE:
+            # Fallback to simple tokenization if NLTK not available
+            return text.lower().split()
+
+        # Initialize stemmer and stopwords (lazy initialization)
+        if not hasattr(self, '_stemmer'):
+            self._stemmer = PorterStemmer()
+            # Get English stopwords but exclude some important ones
+            self._stopwords = set(stopwords.words('english'))
+            # Keep interrogative words that are important for queries
+            self._stopwords -= {'what', 'when', 'where', 'which', 'who', 'how', 'did', 'do', 'does'}
+
+        # Lowercase
+        text = text.lower()
+
+        # Preserve course codes: CS 350, CS350, CS-350 → cs350
+        # This regex finds patterns like CS 350, CS-350, CS350
+        text = re.sub(r'\b([a-z]{2,4})\s*[-]?\s*(\d{3,4})\b', r'\1\2', text)
+
+        # Split on whitespace and punctuation (but keep alphanumeric)
+        tokens = re.findall(r'\b[a-z0-9]+\b', text)
+
+        # Filter and stem tokens
+        processed_tokens = []
+        for token in tokens:
+            # Skip very short tokens (except course codes like cs)
+            if len(token) < 2:
+                continue
+
+            # Keep course codes intact (e.g., cs350, cs662)
+            if re.match(r'^[a-z]{2,4}\d{3,4}$', token):
+                processed_tokens.append(token)
+                continue
+
+            # Skip stopwords
+            if token in self._stopwords:
+                continue
+
+            # Keep numbers as-is (grades, years, GPAs)
+            if token.isdigit():
+                processed_tokens.append(token)
+                continue
+
+            # Stem the token
+            stemmed = self._stemmer.stem(token)
+            processed_tokens.append(stemmed)
+
+        return processed_tokens
 
     def search(self, query: str, k: int = 10) -> List[Dict[str, Any]]:
         """Search documents using BM25.

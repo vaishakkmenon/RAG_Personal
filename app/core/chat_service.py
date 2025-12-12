@@ -6,6 +6,7 @@ prompt building, and LLM generation.
 """
 
 import logging
+import time
 from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException, status
@@ -446,11 +447,14 @@ class ChatService:
 
         try:
             # Primary retrieval: current question
+            # Note: use_query_rewriting=False because ChatService handles rewriting
+            # for metadata tracking purposes
             chunks_primary = search(
                 query=search_query,
                 k=retrieval_k,
                 max_distance=params["max_distance"],
                 metadata_filter=metadata_filter if metadata_filter else None,
+                use_query_rewriting=False,  # Already rewritten above
             )
             logger.info(f"Primary retrieval: {len(chunks_primary)} chunks")
 
@@ -466,6 +470,7 @@ class ChatService:
                         k=context_k,
                         max_distance=params["max_distance"],
                         metadata_filter=metadata_filter if metadata_filter else None,
+                        use_query_rewriting=False,  # Context query doesn't need rewriting
                     )
                     logger.info(f"Context retrieval: {len(chunks_context)} chunks")
 
@@ -487,12 +492,12 @@ class ChatService:
             distances = [c.get('distance', 'N/A') for c in chunks[:5]]
             logger.info(f"Retrieved {len(chunks)} chunks (merged), top 5 distances: {distances}")
 
-        # Optional reranking
+        # Reranking (if enabled)
         if params["rerank"] and chunks:
             chunks = rerank_chunks(
                 request.question, chunks, lex_weight=params["rerank_lex_weight"]
             )
-            logger.info(f"Reranked {len(chunks)} chunks")
+            logger.info(f"Hybrid reranker: {len(chunks)} chunks")
 
             # Trim to top_k after reranking
             if len(chunks) > params["top_k"]:

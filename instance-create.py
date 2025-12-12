@@ -1,12 +1,11 @@
 import oci
 import time
-import sys
 from datetime import datetime
 
 # Configuration
 STACK_ID = "ocid1.ormstack.oc1.us-chicago-1.amaaaaaa25vyqvyarqibhyqc5ktare3z4c64rboxbb2sxecxkqksnelnnoxa"
 CONFIG_PROFILE = "DEFAULT"
-RETRY_INTERVAL = 300  # 5 minutes
+BASE_RETRY_INTERVAL = 600  # 10 minutes base (increased from 5)
 LOG_FILE = r"C:\Temp\oci_retry_log.txt"
 
 def log(message):
@@ -24,7 +23,7 @@ def main():
     log(f"{'='*50}")
     log("Starting OCI Stack Auto-Apply Script (Infinite Retry Mode)")
     log(f"Stack ID: {STACK_ID}")
-    log(f"Will retry every {RETRY_INTERVAL // 60} minutes")
+    log(f"Base retry interval: {BASE_RETRY_INTERVAL // 60} minutes")
     log(f"Log file: {LOG_FILE}")
     log("=" * 50)
     
@@ -38,10 +37,21 @@ def main():
         return
     
     attempt = 1
+    consecutive_rate_limits = 0
     
     # Infinite loop - runs until success or manual stop
     while True:
+        # Calculate backoff interval if rate limited
+        if consecutive_rate_limits > 0:
+            # Exponential backoff: 10, 20, 30, 45, 60 minutes max
+            backoff_multiplier = min(consecutive_rate_limits, 6)
+            retry_interval = BASE_RETRY_INTERVAL * backoff_multiplier
+        else:
+            retry_interval = BASE_RETRY_INTERVAL
+        
         log(f"[Attempt {attempt}] {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        if consecutive_rate_limits > 0:
+            log(f"Rate limit backoff active (multiplier: {backoff_multiplier}x)")
         log("Triggering Terraform Apply...")
         
         try:
@@ -56,6 +66,9 @@ def main():
             
             response = rm_client.create_job(create_job_details=create_job_details)
             job_id = response.data.id
+            
+            # Reset rate limit counter on success
+            consecutive_rate_limits = 0
             
             log(f"Job created: {job_id}")
             log("Monitoring job status...")
@@ -85,7 +98,7 @@ def main():
                         for entry in list(logs_response.data)[-5:]:
                             if entry.message:
                                 msg = entry.message.strip()
-                                if msg:
+                                if msg and "capacity" in msg.lower():
                                     log(f"  {msg[:200]}")
                     except Exception as log_err:
                         pass
@@ -98,17 +111,24 @@ def main():
                     break
             
         except oci.exceptions.ServiceError as e:
-            log(f"\nAPI Error: {e.message}")
+            if "TooManyRequests" in str(e.code) or "429" in str(e.status) or "Too many requests" in str(e.message):
+                consecutive_rate_limits += 1
+                log(f"\nRATE LIMITED! (consecutive: {consecutive_rate_limits})")
+                log(f"  Backing off to {retry_interval // 60} minute interval")
+            else:
+                log(f"\nAPI Error: {e.message}")
+                consecutive_rate_limits = 0  # Reset on non-rate-limit errors
         except KeyboardInterrupt:
             log("\n\nScript stopped by user (Ctrl+C)")
             log(f"Total attempts made: {attempt}")
             return
         except Exception as e:
             log(f"\nError: {type(e).__name__}: {str(e)[:200]}")
+            consecutive_rate_limits = 0  # Reset on other errors
         
-        log(f"\nRetrying in {RETRY_INTERVAL // 60} minutes...")
+        log(f"\nRetrying in {retry_interval // 60} minutes...")
         log(f"{'-'*50}\n")
-        time.sleep(RETRY_INTERVAL)
+        time.sleep(retry_interval)
         attempt += 1
 
 if __name__ == "__main__":

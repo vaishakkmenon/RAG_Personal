@@ -115,6 +115,8 @@ def search(
     max_distance: Optional[float] = None,
     metadata_filter: Optional[Dict[str, Any]] = None,
     use_hybrid: bool = True,
+    use_query_rewriting: bool = True,
+    use_cross_encoder: Optional[bool] = None,
 ) -> List[dict]:
     """Retrieve top-k chunks using hybrid search (BM25 + semantic) or semantic only.
 
@@ -124,23 +126,81 @@ def search(
         max_distance: Maximum cosine distance threshold
         metadata_filter: Optional dict for filtering
         use_hybrid: Whether to use BM25 + semantic (default True)
+        use_query_rewriting: Whether to apply pattern-based query rewriting (default True)
+        use_cross_encoder: Whether to use cross-encoder reranking (default from settings)
 
     Returns:
         List of dicts with keys: id, text, source, distance, metadata
     """
-    query = (query or "").strip()
-    if not query:
+    import time
+    from ..settings import settings
+
+    original_query = (query or "").strip()
+    if not original_query:
         logger.info("Search skipped: empty query")
         return []
+
+    # Apply query rewriting if enabled
+    search_query = original_query
+    rewrite_metadata = None
+    if use_query_rewriting and settings.query_rewriter.enabled:
+        try:
+            from .query_rewriter import get_query_rewriter
+            rewriter = get_query_rewriter()
+            rewritten_query, rewrite_metadata = rewriter.rewrite_query(original_query)
+            
+            if rewrite_metadata:
+                search_query = rewritten_query
+                logger.info(
+                    f"Query rewritten by '{rewrite_metadata.pattern_name}': "
+                    f"'{original_query[:40]}...' → '{search_query[:60]}...' "
+                    f"(latency: {rewrite_metadata.latency_ms:.2f}ms)"
+                )
+        except Exception as e:
+            logger.warning(f"Query rewriting failed, using original: {e}")
+            search_query = original_query
+
+    query = search_query
+
+    # Determine if cross-encoder should be used
+    if use_cross_encoder is None:
+        use_cross_encoder = settings.cross_encoder.enabled
 
     k = k or TOP_K_DEFAULT
     max_dist = MAX_DISTANCE_DEFAULT if max_distance is None else max_distance
 
+    # Adjust retrieval k if using cross-encoder (need more candidates)
+    if use_cross_encoder:
+        retrieval_k = settings.cross_encoder.retrieval_k  # Default 15
+        final_k = k
+        logger.info(f"Cross-encoder enabled: retrieving {retrieval_k} candidates for reranking")
+    else:
+        retrieval_k = k
+        final_k = k
+
     # Use hybrid search if BM25 is available and enabled
     if use_hybrid and _bm25_index is not None:
-        return _hybrid_search(query, k, max_dist, metadata_filter)
+        results = _hybrid_search(query, retrieval_k, max_dist, metadata_filter)
     else:
-        return _semantic_search(query, k, max_dist, metadata_filter)
+        results = _semantic_search(query, retrieval_k, max_dist, metadata_filter)
+
+    # Apply cross-encoder reranking if enabled
+    if use_cross_encoder and len(results) > 0:
+        try:
+            from app.services.cross_encoder_reranker import get_cross_encoder_reranker
+            cross_encoder = get_cross_encoder_reranker()
+            results = cross_encoder.rerank(
+                query=query,
+                chunks=results,
+                top_k=settings.cross_encoder.top_k
+            )
+            logger.info(f"Cross-encoder reranked to {len(results)} results")
+        except Exception as e:
+            logger.error(f"Cross-encoder reranking failed: {e}")
+            logger.warning("Falling back to original ranking")
+            results = results[:final_k]
+
+    return results[:final_k]
 
 
 def _semantic_search(
@@ -253,8 +313,8 @@ def _hybrid_search(
     semantic_results = _semantic_search(query, semantic_k, max_dist, metadata_filter)
     logger.info(f"Semantic retrieved {len(semantic_results)} candidates")
 
-    # Merge using RRF
-    merged = reciprocal_rank_fusion([bm25_results, semantic_results], k=60)
+    # Merge using RRF with configurable k parameter
+    merged = reciprocal_rank_fusion([bm25_results, semantic_results], k=settings.bm25.rrf_k)
 
     # Return top K
     final_results = merged[:k]

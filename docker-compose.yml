@@ -59,10 +59,15 @@ services:
       - SESSION_TTL_SECONDS=${SESSION_TTL_SECONDS:-21600}
       - SESSION_MAX_HISTORY_TOKENS=${SESSION_MAX_HISTORY_TOKENS:-250}
       - SESSION_MAX_HISTORY_TURNS=${SESSION_MAX_HISTORY_TURNS:-5}
-      
-      # ============ HuggingFace Cache ============
-      - HF_HOME=/home/nonroot/.cache/huggingface
-      
+
+      # ============ Query Rewriting (Disabled - causes regressions) ============
+      - QUERY_REWRITER_ENABLED=${QUERY_REWRITER_ENABLED:-false}
+
+      # ============ HuggingFace Cache (redirect to writable /tmp) ============
+      - HF_HOME=/tmp/huggingface
+      - TRANSFORMERS_CACHE=/tmp/huggingface
+      - HUGGINGFACE_HUB_CACHE=/tmp/huggingface
+
       # ============ Uvicorn Server Config ============
       - UVICORN_WORKERS=${UVICORN_WORKERS:-2}
       - UVICORN_LOG_LEVEL=${LOG_LEVEL:-info}
@@ -82,14 +87,14 @@ services:
       # Environment file (read-only)
       - ./.env:/workspace/.env:ro
 
+      # Configuration files
+      - ./config:/workspace/config:ro
+
       # Data directories
       - ./data/chroma:/workspace/data/chroma
       - ./data/docs:/workspace/data/docs
       - ./data/mds:/workspace/data/mds:ro
       - ./data/eval:/workspace/data/eval
-
-      # HuggingFace model cache (persistent)
-      - hf_cache:/home/nonroot/.cache/huggingface
     
     # Service dependencies (with health checks)
     depends_on:
@@ -108,15 +113,16 @@ services:
     cap_drop:
       - ALL
     
-    # Writable /tmp for runtime files
+    # Writable /tmp for runtime files and model cache
     tmpfs:
-      - /tmp:noexec,nosuid,nodev,size=128m
+      - /tmp:noexec,nosuid,nodev,size=512m
     
     # Run as non-root user (nonroot:nonroot = 65532:65532)
     user: "65532:65532"
     
-    # Override default CMD if needed
-    command: 
+    # Use entrypoint script for initialization, then start uvicorn
+    entrypoint: ["/bin/bash", "/workspace/scripts/docker-entrypoint.sh"]
+    command:
       - /opt/venv/bin/python
       - -m
       - uvicorn
@@ -375,9 +381,6 @@ services:
       - ./tests:/workspace/tests:ro
       - ./app:/workspace/app:ro
       - ./pytest.ini:/workspace/pytest.ini:ro
-      
-      # HuggingFace cache
-      - hf_cache:/home/nonroot/.cache/huggingface
     
     depends_on:
       api:
@@ -426,11 +429,6 @@ volumes:
   ollama_models:
     driver: local
     name: rag_ollama_models
-  
-  # HuggingFace model cache (embeddings)
-  hf_cache:
-    driver: local
-    name: rag_hf_cache
 
 # ============================================================================
 # Networks (optional - Docker Compose creates default network)
