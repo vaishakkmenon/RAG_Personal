@@ -19,6 +19,7 @@ from ..prompting import build_clarification_message, create_default_prompt_build
 from ..retrieval import search
 from ..services.llm import generate_with_ollama
 from ..services.reranker import rerank_chunks
+from ..services.response_cache import get_response_cache
 from ..settings import settings
 from ..storage import get_session_store, Session
 from ..storage.utils import mask_session_id
@@ -402,8 +403,34 @@ class ChatService:
 
         conversation_history = session.get_truncated_history()
         logger.info(f"Conversation history: {len(conversation_history)} messages")
-        
+
         logger.info(f"Question: {request.question}")
+
+        # ===== RESPONSE CACHING =====
+        # Try to get cached response before doing expensive retrieval/generation
+        response_cache = get_response_cache()
+        cache_params = {
+            "top_k": params["top_k"],
+            "max_distance": params["max_distance"],
+            "temperature": params["temperature"],
+            "model": params["model"],
+            "doc_type": params["doc_type"],
+        }
+
+        cached_response = response_cache.get(
+            question=request.question,
+            session_id=session.session_id if len(conversation_history) > 0 else None,
+            params=cache_params
+        )
+
+        if cached_response:
+            # Cache hit! Return cached response immediately
+            # Add session_id to response
+            cached_response["session_id"] = session.session_id
+
+            # Convert to ChatResponse model
+            return ChatResponse(**cached_response)
+        # ===== END RESPONSE CACHING =====
 
         # STEP 1: Check for chitchat (greetings, thanks, etc.)
         is_chitchat, chitchat_response = _is_chitchat(request.question)
@@ -858,8 +885,8 @@ class ChatService:
             # Note: Don't capture in suggester for successful queries
         # ===== END ANALYTICS =====
 
-        # Return successful grounded response
-        return ChatResponse(
+        # Build successful grounded response
+        response = ChatResponse(
             answer=answer,
             sources=self._build_chat_sources(chunks),
             grounded=True,
@@ -871,6 +898,31 @@ class ChatService:
                 clarification_requested=False,
             ),
         )
+
+        # ===== CACHE RESPONSE =====
+        # Cache grounded responses for future requests
+        # Don't cache conversational responses (they depend on history)
+        response_cache = get_response_cache()
+        cache_session_id = session.session_id if len(conversation_history) > 0 else None
+
+        # Build cache params from params dict
+        cache_params = {
+            "top_k": params.get("top_k"),
+            "max_distance": params.get("max_distance"),
+            "temperature": params.get("temperature"),
+            "model": params.get("model"),
+            "doc_type": params.get("doc_type"),
+        }
+
+        response_cache.set(
+            question=question,
+            response=response.dict(),
+            session_id=cache_session_id,
+            params=cache_params
+        )
+        # ===== END CACHE =====
+
+        return response
 
 
 __all__ = ["ChatService"]

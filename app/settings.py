@@ -257,6 +257,25 @@ class CrossEncoderSettings(BaseModel):
     )
 
 
+class ResponseCacheSettings(BaseModel):
+    """Response cache configuration for common queries."""
+
+    enabled: bool = Field(
+        default=os.getenv("RESPONSE_CACHE_ENABLED", "true").lower() == "true",
+        description="Enable/disable response caching"
+    )
+
+    ttl_seconds: int = Field(
+        default=int(os.getenv("RESPONSE_CACHE_TTL_SECONDS", "3600")),
+        description="Time-to-live for cached responses (seconds)"
+    )
+
+    max_cache_size_mb: int = Field(
+        default=int(os.getenv("RESPONSE_CACHE_MAX_SIZE_MB", "100")),
+        description="Maximum cache size in MB (soft limit)"
+    )
+
+
 class BM25Settings(BaseModel):
     """BM25 parameter configuration for keyword search optimization."""
 
@@ -487,6 +506,11 @@ class Settings(BaseModel):
     cross_encoder: CrossEncoderSettings = Field(
         default_factory=CrossEncoderSettings,
         description="Cross-encoder reranking configuration"
+    )
+
+    response_cache: ResponseCacheSettings = Field(
+        default_factory=ResponseCacheSettings,
+        description="Response cache configuration"
     )
 
     bm25: BM25Settings = Field(
