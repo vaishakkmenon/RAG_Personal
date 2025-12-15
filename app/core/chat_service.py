@@ -63,14 +63,18 @@ def _is_chitchat(question: str) -> tuple[bool, str]:
     return False, ""
 
 
-def _is_truly_ambiguous(question: str) -> bool:
+def _is_truly_ambiguous(question: str, conversation_history: Optional[List[Dict[str, str]]] = None) -> bool:
     """Detect ONLY obviously vague questions (1-2 words).
 
     Catches the clear-cut cases where questions are too short to be meaningful.
     Lets the LLM handle gray areas via the system prompt.
 
+    If conversation history exists, be more lenient with short questions since
+    they may be valid follow-ups that rely on context.
+
     Args:
         question: User's question
+        conversation_history: Optional conversation history for context-aware detection
 
     Returns:
         True if question is obviously too vague (1-2 words with filler)
@@ -84,7 +88,17 @@ def _is_truly_ambiguous(question: str) -> bool:
     # Remove punctuation and split into words
     words = q.replace('?', '').replace('.', '').replace('!', '').strip().split()
 
-    # Single word queries (always vague)
+    # If we have conversation history, be more lenient with short questions
+    # They might be valid context-dependent follow-ups
+    if conversation_history and len(conversation_history) > 0:
+        # Allow single-word questions if context exists (e.g., "Expiration?", "When?", "Why?")
+        # Only reject truly empty or nonsensical queries
+        if len(words) >= 1 and len(q) > 2:
+            # Has at least one meaningful word and context - not ambiguous
+            return False
+
+    # Without conversation history, apply stricter rules
+    # Single word queries (always vague without context)
     if len(words) <= 1:
         return True
 
@@ -417,7 +431,8 @@ class ChatService:
             )
 
         # STEP 2: Check for ambiguity BEFORE retrieval
-        if _is_truly_ambiguous(request.question):
+        # Pass conversation history to make ambiguity detection context-aware
+        if _is_truly_ambiguous(request.question, conversation_history=conversation_history):
             logger.info(f"Pre-retrieval: Question is too vague: '{request.question}'")
             clarification = build_clarification_message(
                 request.question, self.prompt_builder.config

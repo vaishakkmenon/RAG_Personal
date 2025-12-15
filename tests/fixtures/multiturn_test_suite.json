@@ -1,0 +1,264 @@
+{
+  "metadata": {
+    "version": "1.0.0",
+    "created": "2025-12-15",
+    "description": "Multi-turn conversation test suite for Personal RAG system",
+    "total_conversations": 8,
+    "api_endpoint": "http://localhost:8000/chat",
+    "api_key": "dev-key-1"
+  },
+  "test_conversations": [
+    {
+      "conversation_id": "multiturn_001",
+      "category": "pronoun_reference",
+      "description": "Test pronoun references across turns",
+      "turns": [
+        {
+          "turn_number": 1,
+          "question": "What certifications do I have?",
+          "expected_grounded": true,
+          "expected_keywords": ["CKA", "AWS", "Cloud Practitioner", "AI Practitioner"],
+          "notes": "Initial question establishing context about certifications"
+        },
+        {
+          "turn_number": 2,
+          "question": "When do they expire?",
+          "expected_grounded": true,
+          "expected_keywords": ["2028", "expire"],
+          "context_dependent": true,
+          "notes": "'they' should refer to certifications from Turn 1"
+        },
+        {
+          "turn_number": 3,
+          "question": "Which one was earned most recently?",
+          "expected_grounded": true,
+          "expected_keywords": ["AI Practitioner", "June", "2025"],
+          "context_dependent": true,
+          "notes": "'which one' should refer to certifications from previous turns"
+        }
+      ]
+    },
+    {
+      "conversation_id": "multiturn_002",
+      "category": "short_followup",
+      "description": "Test very short follow-up questions that rely on context",
+      "turns": [
+        {
+          "turn_number": 1,
+          "question": "What certifications do I have?",
+          "expected_grounded": true,
+          "expected_keywords": ["CKA", "AWS"],
+          "notes": "Establish certification context"
+        },
+        {
+          "turn_number": 2,
+          "question": "Expiration?",
+          "expected_grounded": true,
+          "expected_keywords": ["2028", "expire"],
+          "context_dependent": true,
+          "notes": "Single-word follow-up should be understood from context"
+        }
+      ]
+    },
+    {
+      "conversation_id": "multiturn_003",
+      "category": "topic_switching",
+      "description": "Test handling of topic changes with context carryover",
+      "turns": [
+        {
+          "turn_number": 1,
+          "question": "What was my graduate GPA?",
+          "expected_grounded": true,
+          "expected_keywords": ["4.0", "4.00"],
+          "notes": "First topic: graduate GPA"
+        },
+        {
+          "turn_number": 2,
+          "question": "What about my undergraduate GPA?",
+          "expected_grounded": true,
+          "expected_keywords": ["3.97"],
+          "context_dependent": true,
+          "notes": "Topic shift but related - 'what about' implies comparison"
+        },
+        {
+          "turn_number": 3,
+          "question": "When did I graduate with my Bachelor's degree?",
+          "expected_grounded": true,
+          "expected_keywords": ["April", "2024"],
+          "notes": "New aspect of education topic"
+        }
+      ]
+    },
+    {
+      "conversation_id": "multiturn_004",
+      "category": "implicit_reference",
+      "description": "Test implicit references and elliptical questions",
+      "turns": [
+        {
+          "turn_number": 1,
+          "question": "What degrees did I earn?",
+          "expected_grounded": true,
+          "expected_keywords": ["Bachelor", "Master", "Computer Science"],
+          "notes": "Establish degrees context"
+        },
+        {
+          "turn_number": 2,
+          "question": "When?",
+          "expected_grounded": true,
+          "expected_keywords": ["2024", "2025"],
+          "context_dependent": true,
+          "notes": "Extremely short follow-up relying entirely on context"
+        },
+        {
+          "turn_number": 3,
+          "question": "And the GPAs?",
+          "expected_grounded": true,
+          "expected_keywords": ["3.97", "4.0"],
+          "context_dependent": true,
+          "notes": "Implicit reference to degrees from Turn 1"
+        }
+      ]
+    },
+    {
+      "conversation_id": "multiturn_005",
+      "category": "work_experience",
+      "description": "Test conversation about work experience with follow-ups",
+      "turns": [
+        {
+          "turn_number": 1,
+          "question": "What companies have I worked for?",
+          "expected_grounded": true,
+          "expected_keywords": ["Maven Wave", "University"],
+          "notes": "Establish work history context"
+        },
+        {
+          "turn_number": 2,
+          "question": "What did I do at Maven Wave?",
+          "expected_grounded": true,
+          "expected_keywords": ["Infrastructure Intern", "intern"],
+          "notes": "Specific follow-up using company name from Turn 1"
+        },
+        {
+          "turn_number": 3,
+          "question": "How long?",
+          "expected_grounded": true,
+          "expected_keywords": ["3", "summer", "2021", "2022", "2023"],
+          "context_dependent": true,
+          "notes": "Very short question relying on context about Maven Wave"
+        }
+      ]
+    },
+    {
+      "conversation_id": "multiturn_006",
+      "category": "ambiguous_pronoun",
+      "description": "Test handling of potentially ambiguous pronouns",
+      "turns": [
+        {
+          "turn_number": 1,
+          "question": "What companies have I worked for?",
+          "expected_grounded": true,
+          "expected_keywords": ["Maven Wave", "University"],
+          "notes": "Establish context with multiple companies"
+        },
+        {
+          "turn_number": 2,
+          "question": "What did I do there?",
+          "expected_grounded": true,
+          "context_dependent": true,
+          "notes": "'there' is ambiguous - could refer to either company. System should handle gracefully (pick one or ask for clarification)"
+        }
+      ]
+    },
+    {
+      "conversation_id": "multiturn_007",
+      "category": "mixed_topics",
+      "description": "Test rapid topic switching across multiple domains",
+      "turns": [
+        {
+          "turn_number": 1,
+          "question": "What was my graduate GPA?",
+          "expected_grounded": true,
+          "expected_keywords": ["4.0"],
+          "notes": "Topic: education"
+        },
+        {
+          "turn_number": 2,
+          "question": "Do I have Kubernetes certifications?",
+          "expected_grounded": true,
+          "expected_keywords": ["CKA", "Certified Kubernetes Administrator"],
+          "notes": "Abrupt topic change: certifications"
+        },
+        {
+          "turn_number": 3,
+          "question": "What about Maven Wave?",
+          "expected_grounded": true,
+          "expected_keywords": ["Maven Wave", "intern"],
+          "notes": "Another abrupt change: work experience"
+        },
+        {
+          "turn_number": 4,
+          "question": "What courses did I take in Fall 2022?",
+          "expected_grounded": true,
+          "expected_keywords": ["CS 410", "CS 420", "CS 436"],
+          "notes": "Back to education but different aspect"
+        }
+      ]
+    },
+    {
+      "conversation_id": "multiturn_008",
+      "category": "long_conversation",
+      "description": "Test conversation with many turns to verify history management",
+      "turns": [
+        {
+          "turn_number": 1,
+          "question": "What certifications do I have?",
+          "expected_grounded": true,
+          "expected_keywords": ["CKA", "AWS"]
+        },
+        {
+          "turn_number": 2,
+          "question": "What was my graduate GPA?",
+          "expected_grounded": true,
+          "expected_keywords": ["4.0"]
+        },
+        {
+          "turn_number": 3,
+          "question": "What companies have I worked for?",
+          "expected_grounded": true,
+          "expected_keywords": ["Maven Wave", "University"]
+        },
+        {
+          "turn_number": 4,
+          "question": "What programming languages do I know?",
+          "expected_grounded": true,
+          "expected_keywords": ["Python", "Java"]
+        },
+        {
+          "turn_number": 5,
+          "question": "What personal projects have I built?",
+          "expected_grounded": true,
+          "expected_keywords": ["RAG", "GPT"]
+        },
+        {
+          "turn_number": 6,
+          "question": "What was my undergraduate GPA?",
+          "expected_grounded": true,
+          "expected_keywords": ["3.97"]
+        },
+        {
+          "turn_number": 7,
+          "question": "When did I graduate with my Bachelor's degree?",
+          "expected_grounded": true,
+          "expected_keywords": ["April", "2024"]
+        },
+        {
+          "turn_number": 8,
+          "question": "Do I have experience with Kubernetes?",
+          "expected_grounded": true,
+          "expected_keywords": ["yes", "CKA"]
+        }
+      ],
+      "notes": "Tests that history is properly truncated and managed over many turns"
+    }
+  ]
+}

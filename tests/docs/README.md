@@ -24,6 +24,7 @@ See the main documentation for more details.
 tests/
 ├── runners/           # Test execution scripts
 │   ├── run_tests.py                      # Main two-phase test runner
+│   ├── run_multiturn_tests.py            # Multi-turn conversation test runner
 │   ├── run_negative_inference_tests.py   # Negative inference test wrapper
 │   └── run_quality_analysis.py           # Quality analysis runner
 │
@@ -37,8 +38,17 @@ tests/
 │   └── quality_report.py     # Report generation
 │
 ├── fixtures/          # Test data and cases
-│   ├── test_suite.json                 # Main test suite
+│   ├── test_suite.json                 # Main single-turn test suite (43 tests)
+│   ├── multiturn_test_suite.json       # Multi-turn conversation tests (8 scenarios)
 │   └── negative_inference_test.json    # Negative inference tests
+│
+├── docs/              # Test documentation
+│   ├── README.md                      # This file
+│   ├── MULTITURN_TESTING.md           # Multi-turn testing guide
+│   └── MULTITURN_FIX_SUMMARY.md       # Implementation summary
+│
+├── test_multiturn.py              # Basic multi-turn test script
+├── test_multiturn_edge_cases.py   # Edge case multi-turn tests
 │
 └── utils/             # Test utilities (future)
 
@@ -94,6 +104,37 @@ python tests/runners/run_quality_analysis.py --severity-filter HIGH
 # Generate markdown report
 python tests/runners/run_quality_analysis.py --format markdown --output report.md
 ```
+
+### Run Multi-Turn Conversation Tests
+
+```bash
+# Run all multi-turn tests
+python tests/runners/run_multiturn_tests.py
+
+# Run specific conversation
+python tests/runners/run_multiturn_tests.py --conversation-id multiturn_001
+
+# Run specific category
+python tests/runners/run_multiturn_tests.py --category short_followup
+
+# Verbose output
+python tests/runners/run_multiturn_tests.py --verbose
+
+# Quick test scripts
+python tests/test_multiturn.py                  # Basic 5-turn test
+python tests/test_multiturn_edge_cases.py       # Edge case scenarios
+```
+
+**Multi-Turn Test Categories:**
+- `pronoun_reference` - Pronoun resolution ("they", "it", "which one")
+- `short_followup` - Single-word follow-ups ("Expiration?", "When?")
+- `topic_switching` - Topic changes with context
+- `implicit_reference` - Elliptical questions
+- `work_experience` - Domain-specific flows
+- `mixed_topics` - Rapid topic switching
+- `long_conversation` - 8+ turn conversations
+
+See `docs/MULTITURN_TESTING.md` for detailed documentation.
 
 ## Two-Phase Testing Approach
 

@@ -1,15 +1,15 @@
 {
   "_total": {
-    "total_queries": 120
+    "total_queries": 180
   },
   "_no_match": {
-    "total_queries": 99
+    "total_queries": 152
   },
   "negative_inference": {
-    "total_matches": 13,
-    "grounded_responses": 13,
+    "total_matches": 18,
+    "grounded_responses": 18,
     "failed_responses": 0,
-    "total_latency_ms": 135.2713108062744,
+    "total_latency_ms": 182.73258209228516,
     "distances": [
       0.3656504154205322,
       0.17680388689041138,
@@ -23,9 +23,14 @@
       0.27429473400115967,
       0.3656504154205322,
       0.17680388689041138,
-      0.2591586709022522
+      0.2591586709022522,
+      0.3656504154205322,
+      0.17680388689041138,
+      0.2591586709022522,
+      0.17680388689041138,
+      0.17680388689041138
     ],
-    "last_updated": "2025-12-14T22:52:50.535576"
+    "last_updated": "2025-12-15T13:04:18.136544"
   },
   "abbreviation_expansion": {
     "total_matches": 2,
@@ -39,11 +44,13 @@
     "last_updated": "2025-12-13T02:54:49.469929"
   },
   "course_query_targeting": {
-    "total_matches": 6,
-    "grounded_responses": 6,
+    "total_matches": 8,
+    "grounded_responses": 8,
     "failed_responses": 0,
-    "total_latency_ms": 98.8016128540039,
+    "total_latency_ms": 129.80031967163086,
     "distances": [
+      0.28181129693984985,
+      0.2970091700553894,
       0.28181129693984985,
       0.2970091700553894,
       0.28181129693984985,
@@ -51,6 +58,6 @@
       0.28181129693984985,
       0.2970091700553894
     ],
-    "last_updated": "2025-12-14T22:55:25.117630"
+    "last_updated": "2025-12-15T12:37:04.315093"
   }
 }
