@@ -312,6 +312,7 @@ class ChatService:
         term_id: Optional[str] = None,
         level: Optional[str] = None,
         model: Optional[str] = None,
+        skip_route_cache: bool = False,
     ) -> ChatResponse:
         """Handle a chat request with RAG.
 
@@ -408,6 +409,8 @@ class ChatService:
 
         # ===== RESPONSE CACHING =====
         # Try to get cached response before doing expensive retrieval/generation
+        # Only check if not already checked at route level (skip_route_cache=False)
+        # This handles conversation-aware caching with session_id
         response_cache = get_response_cache()
         cache_params = {
             "top_k": params["top_k"],
@@ -417,11 +420,14 @@ class ChatService:
             "doc_type": params["doc_type"],
         }
 
-        cached_response = response_cache.get(
-            question=request.question,
-            session_id=session.session_id if len(conversation_history) > 0 else None,
-            params=cache_params
-        )
+        cached_response = None
+        if not skip_route_cache:
+            # Check cache with session context (for conversational queries)
+            cached_response = response_cache.get(
+                question=request.question,
+                session_id=session.session_id if len(conversation_history) > 0 else None,
+                params=cache_params
+            )
 
         if cached_response:
             # Cache hit! Return cached response immediately

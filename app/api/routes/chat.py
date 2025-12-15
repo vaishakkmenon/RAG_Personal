@@ -4,13 +4,14 @@ Chat endpoint for Personal RAG system.
 
 from typing import Optional, List, Dict, Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from ...models import ChatRequest, ChatResponse, ChatSource
 from ..dependencies import check_api_key, get_chat_service
 from ...core import ChatService
 from ...retrieval import search
 from ...services.llm import generate_with_ollama
+from ...services.prompt_guard import get_prompt_guard
 from ...prompting import create_default_prompt_builder
 from ...settings import settings
 import logging
@@ -52,6 +53,20 @@ def simple_chat(
         ChatResponse with answer and sources
     """
     logger.info(f"Simple chat - Question: {request.question}")
+
+    # Step 0: Check for prompt injection
+    # Note: simple_chat doesn't support sessions, so no conversation history
+    guard = get_prompt_guard()
+    guard_result = guard.check_input(
+        request.question,
+        conversation_history=None  # Simple endpoint has no session support
+    )
+    if guard_result["blocked"]:
+        logger.warning(f"Prompt injection blocked: {guard_result['label']}")
+        raise HTTPException(
+            status_code=400,
+            detail="Your request could not be processed. Please rephrase your question."
+        )
 
     # Step 1: Simple search - no filters, no routing
     chunks = search(
@@ -162,6 +177,58 @@ def chat(
     Returns:
         ChatResponse with answer and metadata
     """
+    # OPTIMIZATION: Check response cache FIRST before expensive operations
+    # This allows cached responses to skip prompt guard checks entirely
+    # Note: We don't have session context yet, so we check without session_id
+    # The chat_service will do a more specific cache check with session_id
+    from ...services.response_cache import get_response_cache
+
+    response_cache = get_response_cache()
+
+    # Build cache params from query parameters (use defaults from settings if not provided)
+    cache_params = {
+        "top_k": top_k if top_k is not None else settings.retrieval.top_k,
+        "max_distance": max_distance if max_distance is not None else settings.retrieval.max_distance,
+        "temperature": temperature if temperature is not None else settings.llm.temperature,
+        "model": model if model is not None else (settings.llm.groq_model if settings.llm.provider == "groq" else settings.llm.ollama_model),
+        "doc_type": doc_type,
+    }
+
+    # Try cache without session_id first (for non-conversational queries)
+    cached_response = response_cache.get(
+        question=request.question,
+        session_id=None,
+        params=cache_params
+    )
+
+    if cached_response:
+        logger.info("Cache hit at route level - skipping prompt guard and RAG pipeline")
+        # Add session_id from request if provided
+        if request.session_id:
+            cached_response["session_id"] = request.session_id
+        return ChatResponse(**cached_response)
+
+    # Cache miss - proceed with prompt guard check
+    # Get session and conversation history for context-aware checking
+    from ...storage import get_session_store
+
+    session_store = get_session_store()
+    session = session_store.get_or_create_session(request.session_id, request.client_ip)
+    conversation_history = session.get_truncated_history() if session else []
+
+    guard = get_prompt_guard()
+    guard_result = guard.check_input(
+        request.question,
+        conversation_history=conversation_history
+    )
+    if guard_result["blocked"]:
+        logger.warning(f"Prompt injection blocked: {guard_result['label']}")
+        raise HTTPException(
+            status_code=400,
+            detail="Your request could not be processed. Please rephrase your question."
+        )
+
+    # Pass skip_route_cache=True to avoid double-checking cache in handle_chat
     return chat_service.handle_chat(
         request=request,
         grounded_only=grounded_only,
@@ -176,4 +243,5 @@ def chat(
         term_id=term_id,
         level=level,
         model=model,
+        skip_route_cache=True,
     )

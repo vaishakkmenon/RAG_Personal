@@ -295,6 +295,45 @@ class BM25Settings(BaseModel):
     )
 
 
+class PromptGuardSettings(BaseModel):
+    """Prompt injection guardrail configuration using Llama Prompt Guard 2."""
+
+    enabled: bool = Field(
+        default=os.getenv("PROMPT_GUARD_ENABLED", "true").lower() == "true",
+        description="Enable/disable prompt injection guard"
+    )
+
+    model: str = Field(
+        default=os.getenv("PROMPT_GUARD_MODEL", "meta-llama/llama-prompt-guard-2-86m"),
+        description="Groq model for prompt guard (86m for accuracy, 22m for speed)"
+    )
+
+    fail_open: bool = Field(
+        default=os.getenv("PROMPT_GUARD_FAIL_OPEN", "true").lower() == "true",
+        description="If True, allow requests when guard errors; if False, block on error"
+    )
+
+    timeout_seconds: float = Field(
+        default=float(os.getenv("PROMPT_GUARD_TIMEOUT_SECONDS", "3.0")),
+        description="Timeout for Groq API calls in seconds"
+    )
+
+    max_retries: int = Field(
+        default=int(os.getenv("PROMPT_GUARD_MAX_RETRIES", "2")),
+        description="Maximum number of retry attempts on transient failures"
+    )
+
+    cache_ttl_seconds: int = Field(
+        default=int(os.getenv("PROMPT_GUARD_CACHE_TTL_SECONDS", "3600")),
+        description="Cache TTL for prompt guard results in seconds"
+    )
+
+    cache_max_size: int = Field(
+        default=int(os.getenv("PROMPT_GUARD_CACHE_MAX_SIZE", "1000")),
+        description="Maximum number of entries in LRU cache"
+    )
+
+
 class MetadataInjectionSettings(BaseModel):
     """Configuration for metadata injection into LLM context."""
 
@@ -516,6 +555,11 @@ class Settings(BaseModel):
     bm25: BM25Settings = Field(
         default_factory=BM25Settings,
         description="BM25 parameter configuration"
+    )
+
+    prompt_guard: PromptGuardSettings = Field(
+        default_factory=PromptGuardSettings,
+        description="Prompt injection guardrail configuration"
     )
 
     class Config:

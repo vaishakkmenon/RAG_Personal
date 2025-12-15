@@ -74,7 +74,8 @@ class ChatSource(BaseModel):
         json_schema_extra={"example": "Graduate GPA: 4.00"}
     )
     
-    distance: float = Field(
+    distance: Optional[float] = Field(
+        default=1.0,
         description="Cosine distance from query (0 = identical, 2 = opposite)",
         json_schema_extra={"example": 0.23}
     )
