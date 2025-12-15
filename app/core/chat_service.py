@@ -20,7 +20,7 @@ from ..retrieval import search
 from ..services.llm import generate_with_ollama
 from ..services.reranker import rerank_chunks
 from ..settings import settings
-from ..storage import create_session_store, Session
+from ..storage import get_session_store, Session
 from ..storage.utils import mask_session_id
 
 logger = logging.getLogger(__name__)
@@ -234,7 +234,7 @@ class ChatService:
         self.prompt_builder = create_default_prompt_builder()
 
         if session_store is None:
-            session_store = create_session_store()
+            session_store = get_session_store()
 
         self.session_store = session_store
         logger.info(f"ChatService initialized with {type(session_store).__name__}")

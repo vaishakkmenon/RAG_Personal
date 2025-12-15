@@ -1,0 +1,119 @@
+# ============================================================================
+# Production .dockerignore - Excludes ALL non-essential files
+# ============================================================================
+# This aggressively excludes files to minimize image size and build time
+# Use with: docker build -f Dockerfile.prod .
+# ============================================================================
+
+# Version control
+.git/
+.gitignore
+.gitattributes
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Environment files (NEVER include secrets in image)
+.env
+.env.*
+!.env.example
+
+# Development data (DO NOT include in production image)
+data/chroma/**          # Vector DB data (mounted at runtime)
+data/eval/**            # Evaluation results (dev only)
+data/analytics/**       # Analytics data (dev only)
+data/docs/**            # Documents (mounted at runtime)
+
+# Testing and evaluation
+tests/
+pytest.ini
+.pytest_cache/
+*.log
+test_*.py
+*_test.py
+
+# Documentation and notes
+*.md
+!README.md              # Keep README for reference
+docs/
+walkthrough.md
+
+# Development scripts (keep only production scripts)
+scripts/debug_*.py
+scripts/run_evaluation.py
+scripts/analyze_*.py
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Docker files (not needed inside image)
+docker-compose*.yml
+Dockerfile*
+!Dockerfile.prod        # Exception: keep production Dockerfile for reference
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Coverage and profiling
+.coverage
+htmlcov/
+.tox/
+*.cover
+
+# Logs
+*.log
+logs/
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Node modules (if any frontend)
+node_modules/
+
+# Jupyter notebooks (dev only)
+*.ipynb
+.ipynb_checkpoints/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+
+# Large model files (if any - should be downloaded at runtime)
+*.bin
+*.safetensors
+*.gguf
+*.onnx
+
+# Requirements files (keep only production)
+requirements.txt        # Exclude dev requirements
+!requirements-prod.txt  # Keep production requirements
+
+# GitHub and CI/CD
+.github/
+.circleci/
+.travis.yml
+
+# ============================================================================
+# Result: Minimal image with ONLY:
+#   - app/ (application code)
+#   - scripts/ (production scripts only)
+#   - requirements-prod.txt
+#   - config/ (if needed)
+#
+# Everything else excluded or mounted at runtime
+# ============================================================================

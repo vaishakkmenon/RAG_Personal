@@ -120,7 +120,7 @@ class SessionSettings(BaseModel):
         description="Session storage backend: 'redis' or 'memory'"
     )
     redis_url: str = Field(
-        default=os.getenv("REDIS_URL", "redis://localhost:6379/0"),
+        default=os.getenv("SESSION_REDIS_URL", "redis://localhost:6379/0"),
         description="Redis connection URL"
     )
     

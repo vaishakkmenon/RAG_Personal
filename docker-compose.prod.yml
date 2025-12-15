@@ -1,0 +1,331 @@
+# ============================================================================
+# Production Docker Compose - Optimized for Groq-Only Deployment with Caddy
+# ============================================================================
+# Changes from development:
+#   ✓ Removed Ollama service (using Groq exclusively)
+#   ✓ Removed test service (testing done in CI/CD)
+#   ✓ Removed hot-reload volume mounts (code baked into image)
+#   ✓ Removed eval/analytics directories (production doesn't need these)
+#   ✓ Enabled resource limits
+#   ✓ Added Caddy reverse proxy with automatic HTTPS
+#   ✓ API service not exposed to host (only accessible via Caddy)
+# ============================================================================
+
+name: personal-rag-system-prod
+
+services:
+  # ==========================================================================
+  # Caddy Reverse Proxy - Automatic HTTPS with Let's Encrypt
+  # ==========================================================================
+  caddy:
+    image: caddy:2-alpine
+    container_name: rag_caddy
+    hostname: caddy
+
+    # Expose HTTP and HTTPS ports to the host
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"  # HTTP/3 support
+
+    # Reverse proxy configuration
+    # Caddy will automatically obtain and renew SSL certificates from Let's Encrypt
+    command: caddy reverse-proxy --from api.vaishakmenon.com --to api:8000
+
+    volumes:
+      # Persistent storage for SSL certificates and Caddy config
+      - caddy_data:/data
+      - caddy_config:/config
+
+    depends_on:
+      api:
+        condition: service_healthy
+
+    restart: always
+
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=caddy,env=production"
+
+    networks:
+      - rag_network
+  # ==========================================================================
+  # FastAPI API Service - Main application (Groq-only)
+  # ==========================================================================
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+      target: runtime
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+    image: personal-rag-system:prod
+    container_name: rag_api_prod
+    hostname: api
+
+    # NO ports exposed - only accessible via Caddy reverse proxy
+    # ports:
+    #   - "${API_PORT:-8000}:8000"
+
+    environment:
+      # ============ Application Settings ============
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - PYTHONUNBUFFERED=1
+
+      # ============ LLM Provider (Groq ONLY) ============
+      - LLM_PROVIDER=groq
+      - LLM_GROQ_API_KEY=${LLM_GROQ_API_KEY}  # REQUIRED - no default
+      - LLM_GROQ_MODEL=${LLM_GROQ_MODEL:-llama-3.1-8b-instant}
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.1}
+      - LLM_MAX_TOKENS=${LLM_MAX_TOKENS:-1000}
+
+      # Note: No Ollama fallback in production
+      # If Groq fails, requests will error
+
+      # ============ Session Management (Redis) ============
+      - SESSION_STORAGE_BACKEND=redis
+      - SESSION_REDIS_URL=redis://redis:6379/0
+      - SESSION_MAX_TOTAL_SESSIONS=${SESSION_MAX_TOTAL_SESSIONS:-1000}
+      - SESSION_MAX_SESSIONS_PER_IP=${SESSION_MAX_SESSIONS_PER_IP:-5}
+      - SESSION_QUERIES_PER_HOUR=${SESSION_QUERIES_PER_HOUR:-10}
+      - SESSION_TTL_SECONDS=${SESSION_TTL_SECONDS:-10800}        # 3 hours
+      - SESSION_MAX_HISTORY_TOKENS=${SESSION_MAX_HISTORY_TOKENS:-150}
+      - SESSION_MAX_HISTORY_TURNS=${SESSION_MAX_HISTORY_TURNS:-5}
+
+      # ============ Query Rewriting ============
+      - QUERY_REWRITER_ENABLED=${QUERY_REWRITER_ENABLED:-false}
+
+      # ============ HuggingFace Cache ============
+      - HF_HOME=/tmp/huggingface
+      - HUGGINGFACE_HUB_CACHE=/tmp/huggingface
+
+      # ============ Uvicorn Server Config ============
+      - UVICORN_WORKERS=${UVICORN_WORKERS:-2}
+      - UVICORN_LOG_LEVEL=${LOG_LEVEL:-info}
+
+    env_file:
+      - .env.prod  # Production environment file
+
+    volumes:
+      # Production: NO source code mounts (baked into image)
+      # Only persistent data directories
+      - ./data/chroma:/workspace/data/chroma
+      - ./data/docs:/workspace/data/docs:ro
+      - ./data/mds:/workspace/data/mds:ro
+      - ./config:/workspace/config:ro
+
+    depends_on:
+      redis:
+        condition: service_healthy
+
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+
+    read_only: true
+
+    cap_drop:
+      - ALL
+
+    tmpfs:
+      - /tmp:noexec,nosuid,nodev,size=512m
+
+    user: "65532:65532"
+
+    # Production uses baked-in entrypoint/command from Dockerfile
+    # Override only if needed
+
+    healthcheck:
+      test:
+        - CMD
+        - /opt/venv/bin/python
+        - -c
+        - "import socket; s=socket.socket(); s.settimeout(5); s.connect(('127.0.0.1', 8000)); s.close()"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+    restart: always
+
+    # Resource limits (ENABLED for production)
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"  # Keep more logs in production
+        labels: "service=api,env=production"
+
+    networks:
+      - rag_network
+
+  # ==========================================================================
+  # Redis Service - Session storage and caching
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: rag_redis_prod
+    hostname: redis
+
+    command:
+      - redis-server
+      - --appendonly yes
+      - --appendfsync everysec
+      - --maxmemory 512mb              # Increased for production
+      - --maxmemory-policy allkeys-lru
+      - --save 60 1
+      - --loglevel notice
+      - --tcp-backlog 511
+      - --timeout 300
+      - --tcp-keepalive 300
+      # Production optimizations
+      - --maxclients 10000             # Higher connection limit
+      - --protected-mode yes           # Security
+
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+
+    volumes:
+      - redis_data_prod:/data
+
+    healthcheck:
+      test:
+        - CMD
+        - redis-cli
+        - --raw
+        - incr
+        - ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    security_opt:
+      - no-new-privileges:true
+
+    restart: always
+
+    # Resource limits (ENABLED for production)
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 768M
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=redis,env=production"
+
+    networks:
+      - rag_network
+
+# ============================================================================
+# Named Volumes - Persistent data storage
+# ============================================================================
+volumes:
+  redis_data_prod:
+    driver: local
+    name: rag_redis_data_prod
+
+  # Caddy data for SSL certificates
+  caddy_data:
+    driver: local
+    name: rag_caddy_data
+
+  # Caddy config
+  caddy_config:
+    driver: local
+    name: rag_caddy_config
+
+# ============================================================================
+# Networks - Internal communication
+# ============================================================================
+networks:
+  rag_network:
+    driver: bridge
+    name: rag_network_prod
+
+# ============================================================================
+# Production Usage with Caddy
+# ============================================================================
+# Prerequisites:
+#   - DNS A record: api.vaishakmenon.com -> VPS IP address
+#   - Ports 80 and 443 open on VPS firewall
+#
+# 1. Create .env.prod with production secrets:
+#    LLM_GROQ_API_KEY=your-key-here
+#
+# 2. Build production image:
+#    docker-compose -f docker-compose.prod.yml build
+#
+# 3. Start services:
+#    docker-compose -f docker-compose.prod.yml up -d
+#
+# 4. Caddy will automatically:
+#    - Obtain SSL certificate from Let's Encrypt
+#    - Set up HTTPS on port 443
+#    - Redirect HTTP (port 80) to HTTPS
+#    - Auto-renew certificates
+#
+# 5. Access API:
+#    https://api.vaishakmenon.com/health
+#    https://api.vaishakmenon.com/docs
+#
+# 6. View logs:
+#    docker-compose -f docker-compose.prod.yml logs -f
+#    docker-compose -f docker-compose.prod.yml logs -f caddy
+#
+# 7. Check health:
+#    docker-compose -f docker-compose.prod.yml ps
+#
+# 8. Stop services:
+#    docker-compose -f docker-compose.prod.yml down
+#
+# Resource usage (estimated):
+#   - API: 2-4GB RAM, 1-2 CPU cores
+#   - Redis: 512-768MB RAM, 0.5-1 CPU
+#   - Caddy: 128-256MB RAM, 0.25-0.5 CPU
+#   - Total: ~3-5GB RAM, 2-3 CPU cores
+#
+# Image size (estimated):
+#   - Development: ~4GB (with Ollama models)
+#   - Production: ~2GB (no Ollama, no dev tools)
+#
+# Important:
+#   - API service is NOT exposed on port 8000 externally
+#   - Only Caddy is exposed (ports 80, 443)
+#   - All traffic goes through Caddy reverse proxy with HTTPS
+# ============================================================================
