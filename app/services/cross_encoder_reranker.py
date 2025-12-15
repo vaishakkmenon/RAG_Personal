@@ -67,7 +67,6 @@ class CrossEncoderReranker:
             # Set HuggingFace cache environment variables BEFORE loading
             # This ensures models are downloaded to writable location
             os.environ['HF_HOME'] = self.cache_dir
-            os.environ['TRANSFORMERS_CACHE'] = self.cache_dir
             os.environ['HUGGINGFACE_HUB_CACHE'] = self.cache_dir
 
             logger.info(f"Using cache directory: {self.cache_dir}")

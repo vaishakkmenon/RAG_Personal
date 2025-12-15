@@ -25,6 +25,35 @@ I earned a Master of Science degree in Computer Science on May 1, 2025, completi
 
 I earned a total of 169 credits, consisting of 139 undergraduate credits and 30 graduate credits. My undergraduate GPA was 3.97, and my graduate GPA was 4.00. I demonstrated consistent academic excellence by earning Presidential Honors in multiple terms. I achieved perfect graduate performance with a 4.00 GPA across all graduate coursework.
 
+## Transcript Statistics Summary
+
+This summary provides complete statistics for grade-related queries.
+
+### Grade Distribution
+
+I took a total of 45 courses across my undergraduate and graduate programs. My grade distribution was:
+
+- **A grades:** 44 courses (98%) - All courses except one received an A
+- **B grades:** 1 course (2%) - Only CS 350 (Automata/Formal Langs) received a B grade
+- **C grades or below:** 0 courses
+
+CS 350 (Automata/Formal Langs) was the only course in my entire academic career that received a grade lower than A. This B grade was earned in Spring Term 2022 and was the only factor that lowered my undergraduate GPA from a perfect 4.00.
+
+### GPA Statistics
+
+- **Undergraduate GPA:** 3.97 out of 4.00 (139 credits)
+- **Graduate GPA:** 4.00 out of 4.00 (30 credits) - Perfect
+- **Lowest Term GPA:** 3.80 in Spring Term 2022 (due to the CS 350 B grade)
+- **All other terms:** 4.00 GPA
+
+### Academic Highlights
+
+- **Only non-A grade:** CS 350 (Automata/Formal Langs) - B grade, Spring Term 2022
+- **Perfect graduate record:** 4.00 GPA with all A grades
+- **Presidential Honors:** Earned in multiple terms
+- **Graduation Honors:** Summa Cum Laude (undergraduate)
+- **Course count by level:** 35 undergraduate courses, 10 graduate courses
+
 ---
 
 # Graduate Program (MS Computer Science)

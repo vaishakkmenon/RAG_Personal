@@ -153,6 +153,10 @@ class PatternMatcher:
             return self._apply_list_expansion(query, match_result)
         elif strategy_type == 'synonym_expansion':
             return self._apply_synonym_expansion(query, match_result)
+        elif strategy_type == 'prefix_injection':
+            return self._apply_prefix_injection(query, match_result)
+        elif strategy_type == 'course_code_injection':
+            return self._apply_course_code_injection(query, match_result)
         elif strategy_type == 'passthrough':
             return query, {'hint': 'Passthrough (no rewrite)'}
         else:
@@ -251,7 +255,11 @@ class PatternMatcher:
         expanded = query
         added_synonyms = []
 
-        for term, synonym_list in synonyms.items():
+        # Sort terms by length (longest first) to match specific terms like "AI/ML" before "AI"
+        sorted_terms = sorted(synonyms.keys(), key=len, reverse=True)
+        
+        for term in sorted_terms:
+            synonym_list = synonyms[term]
             # Check if term appears in query (case-insensitive)
             if term.lower() in query.lower():
                 # Add synonyms after the term
@@ -265,7 +273,7 @@ class PatternMatcher:
                     insert_pos = match.end()
                     expanded = expanded[:insert_pos] + ' ' + synonym_str + expanded[insert_pos:]
                     added_synonyms.extend(synonym_list)
-                    break  # Only expand first matching term
+                    break  # Only expand first matching term (now the longest one)
 
         if added_synonyms:
             logger.info(
@@ -274,6 +282,105 @@ class PatternMatcher:
             )
 
         return expanded, {'synonyms_added': added_synonyms}
+
+    def _apply_prefix_injection(
+        self,
+        query: str,
+        match_result: MatchResult
+    ) -> Tuple[str, Dict]:
+        """
+        Prepend prefix keywords to query for better document targeting.
+
+        Example:
+            Query: "What AI courses did I take?"
+            Prefix: "transcript"
+            Result: "transcript What AI courses did I take?"
+
+        This helps target specific document types (e.g., transcripts for course queries)
+        without expanding abbreviations that might match unrelated documents.
+
+        Args:
+            query: Original query
+            match_result: MatchResult
+
+        Returns:
+            (prefixed_query, metadata) tuple
+        """
+        prefix = self.rewrite_config.get('prefix', '')
+        
+        if not prefix:
+            logger.warning(f"No prefix configured for prefix_injection pattern {self.name}")
+            return query, {}
+        
+        # Prepend the prefix
+        prefixed_query = f"{prefix} {query}"
+        
+        logger.info(
+            f"Prefix injection: prepended '{prefix}' to query "
+            f"(pattern: {self.name})"
+        )
+
+        return prefixed_query, {'prefix_added': prefix}
+
+    def _apply_course_code_injection(
+        self,
+        query: str,
+        match_result: MatchResult
+    ) -> Tuple[str, Dict]:
+        """
+        Inject specific course codes based on topic keywords.
+
+        This maps semantic topic keywords (AI, ML) to specific course codes
+        that are easier to match exactly in the transcript documents.
+
+        Example:
+            Query: "What AI/ML courses did I take?"
+            Mappings: {"AI/ML": ["CS 660", "CS 662", "CS 667"]}
+            Result: "transcript CS 660 CS 662 CS 667 What AI/ML courses did I take?"
+
+        Args:
+            query: Original query
+            match_result: MatchResult (may contain extracted entities)
+
+        Returns:
+            (injected_query, metadata) tuple
+        """
+        mappings = self.rewrite_config.get('course_mappings', {})
+        prefix = self.rewrite_config.get('prefix', 'transcript')
+        
+        if not mappings:
+            logger.warning(f"No course_mappings configured for {self.name}")
+            return query, {}
+        
+        # Find which mapping applies (longest match first)
+        sorted_keys = sorted(mappings.keys(), key=len, reverse=True)
+        matched_key = None
+        course_codes = []
+        
+        for key in sorted_keys:
+            if key.lower() in query.lower():
+                matched_key = key
+                course_codes = mappings[key]
+                break
+        
+        if not course_codes:
+            # No mapping found, just prepend prefix
+            return f"{prefix} {query}", {'prefix_added': prefix, 'courses_added': []}
+        
+        # Build the injected query: "transcript CS 660 CS 662 CS 667 <original query>"
+        codes_str = ' '.join(course_codes)
+        injected_query = f"{prefix} {codes_str} {query}"
+        
+        logger.info(
+            f"Course code injection: added {course_codes} for '{matched_key}' "
+            f"(pattern: {self.name})"
+        )
+
+        return injected_query, {
+            'prefix_added': prefix,
+            'courses_added': course_codes,
+            'matched_topic': matched_key
+        }
 
     def __repr__(self) -> str:
         """String representation for debugging."""

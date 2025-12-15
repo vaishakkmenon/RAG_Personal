@@ -40,6 +40,148 @@ patterns:
         expected_output: "certifications professional credentials"
 
   # ============================================================================
+  # PATTERN 1B: Course Query Targeting with Code Injection (ENABLED)
+  # ============================================================================
+  # When users ask about courses by topic, inject specific course codes for better retrieval
+  # This maps semantic topic keywords to exact course codes found in transcripts
+  - name: course_query_targeting
+    enabled: true
+    priority: 95
+    description: "Map course topics to specific course codes for precise retrieval"
+    matching:
+      type: regex_list
+      rules:
+        # Match various topic + courses/classes patterns (comprehensive list)
+        - pattern: '(?i)\b(AI|ML|NLP|deep learning|machine learning|artificial intelligence|computer vision|security|cloud|database|cryptography|algorithms|data science|programming|software engineering|networking|calculus|physics|math|linear algebra|statistics|psychology|english|writing|history|spanish|music|philosophy|ethics|capstone|python|OOP|object oriented|digital logic|microprocessors)\s+(courses?|classes?)'
+          extract_groups: [1]
+        # Match "AI/ML courses" (with slash)
+        - pattern: '(?i)\bAI/ML\s+(courses?|classes?)'
+          extract_groups: []
+        # Match "What courses did I take in/about <topic>"
+        - pattern: '(?i)courses?\s+(in|about|on|for)\s+(AI|ML|NLP|deep learning|machine learning|security|cloud|database|calculus|physics|math|psychology|english|history)'
+          extract_groups: [2]
+      min_score: 0.8
+    rewrite_strategy:
+      type: course_code_injection
+      prefix: "transcript"
+      course_mappings:
+        # ===== AI/ML Combined =====
+        "AI/ML": ["CS 660", "CS 662", "CS 665", "CS 667", "CS 673"]
+        
+        # ===== Artificial Intelligence & Machine Learning =====
+        "AI": ["CS 660", "CS 662"]
+        "artificial intelligence": ["CS 660", "CS 662"]
+        "ML": ["CS 667"]
+        "machine learning": ["CS 667", "CS 665"]
+        
+        # ===== Deep Learning & Neural Networks =====
+        "deep learning": ["CS 665", "CS 673"]
+        "neural networks": ["CS 665", "CS 673"]
+        "neural network": ["CS 665", "CS 673"]
+        
+        # ===== NLP & Computer Vision =====
+        "NLP": ["CS 662"]
+        "natural language processing": ["CS 662"]
+        "computer vision": ["CS 673"]
+        "vision": ["CS 673"]
+        
+        # ===== Security & Cryptography =====
+        "security": ["CS 436", "CS 645"]
+        "cryptography": ["CS 645"]
+        "crypto": ["CS 645"]
+        
+        # ===== Cloud & Distributed Systems =====
+        "cloud": ["CS 633"]
+        "cloud computing": ["CS 633"]
+        
+        # ===== Data Science & Databases =====
+        "data science": ["CS 685", "CS 610"]
+        "database": ["CS 410", "CS 610"]
+        "databases": ["CS 410", "CS 610"]
+        
+        # ===== Algorithms & Theory =====
+        "algorithms": ["CS 303", "CS 652"]
+        "data structures": ["CS 303"]
+        "automata": ["CS 350"]
+        "formal languages": ["CS 350"]
+        
+        # ===== Programming & Software Engineering =====
+        "programming languages": ["CS 401"]
+        "software engineering": ["CS 420"]
+        "systems programming": ["CS 332"]
+        "object oriented": ["CS 203"]
+        "OOP": ["CS 203"]
+        "python": ["CS 103"]
+        
+        # ===== Computer Systems =====
+        "computer organization": ["CS 330"]
+        "assembly": ["CS 330"]
+        
+        # ===== Electrical & Computer Engineering =====
+        "networking": ["EE 432"]
+        "computer networks": ["EE 432"]
+        "digital logic": ["EE 210"]
+        "microprocessors": ["EE 337"]
+        "engineering programming": ["EGR 150", "EE 233", "EE 333"]
+        "web development": ["EE 447"]
+        "intranet": ["EE 447"]
+        
+        # ===== Mathematics =====
+        "calculus": ["MA 125", "MA 126"]
+        "linear algebra": ["MA 260"]
+        "statistics": ["MA 180", "CS 355"]
+        "probability": ["CS 355"]
+        "scientific programming": ["MA 360"]
+        "discrete math": ["CS 250"]
+        "discrete structures": ["CS 250"]
+        "math": ["MA 125", "MA 126", "MA 260", "MA 180", "MA 360", "CS 250"]
+        "mathematics": ["MA 125", "MA 126", "MA 260", "MA 180", "MA 360", "CS 250"]
+        
+        # ===== Physics =====
+        "physics": ["PH 221", "PH 222"]
+        
+        # ===== Psychology =====
+        "psychology": ["PY 101", "PY 212"]
+        "developmental psychology": ["PY 212"]
+        
+        # ===== English & Writing =====
+        "english": ["EH 101", "EH 102"]
+        "writing": ["EH 101", "EH 102"]
+        "composition": ["EH 101", "EH 102"]
+        "literature": ["EH 212"]
+        
+        # ===== History =====
+        "history": ["HY 120", "HY 121"]
+        "US history": ["HY 120", "HY 121"]
+        "American history": ["HY 120", "HY 121"]
+        
+        # ===== Communication & Humanities =====
+        "public speaking": ["CMST 101"]
+        "speech": ["CMST 101"]
+        "ethics": ["PHI 115"]
+        "philosophy": ["PHI 115"]
+        "moral issues": ["PHI 115"]
+        "music": ["MU 120"]
+        "music appreciation": ["MU 120"]
+        
+        # ===== Languages =====
+        "spanish": ["SPA 101", "SPA 102"]
+        
+        # ===== Capstone & Special =====
+        "capstone": ["CS 499"]
+        "senior project": ["CS 499"]
+        
+    test_cases:
+      - input: "What AI courses have I taken?"
+        expected_output: "transcript CS 660 CS 662 What AI courses have I taken?"
+      - input: "What AI/ML courses did I take?"
+        expected_output: "transcript CS 660 CS 662 CS 665 CS 667 CS 673 What AI/ML courses did I take?"
+      - input: "What math courses did I take?"
+        expected_output: "transcript MA 125 MA 126 What math courses did I take?"
+      - input: "What physics courses did I take?"
+        expected_output: "transcript PH 221 PH 222 What physics courses did I take?"
+
+  # ============================================================================
   # DISABLED PATTERNS (Cause Regressions)
   # ============================================================================
   # All patterns below are disabled due to performance regressions

@@ -171,6 +171,61 @@ def _merge_and_dedupe_chunks(chunks_1: List[dict], chunks_2: List[dict]) -> List
     logger.info(f"Merged chunks: {len(chunks_1)} + {len(chunks_2)} = {len(merged)} (after deduplication)")
     return merged
 
+
+def _check_retrieval_quality(query: str, chunks: List[dict], min_term_overlap: int = 1) -> dict:
+    """Check if retrieved chunks contain important query terms.
+    
+    This pre-check runs BEFORE the LLM call to detect weak retrieval
+    that might lead to incorrect answers.
+    
+    Args:
+        query: The user's query
+        chunks: Retrieved chunks
+        min_term_overlap: Minimum number of query terms that should appear in chunks
+    
+    Returns:
+        Dict with 'is_weak', 'reason', and 'found_terms'
+    """
+    if not chunks:
+        return {"is_weak": True, "reason": "no_chunks", "found_terms": []}
+    
+    # Extract important terms from query (skip common words)
+    stop_words = {
+        'what', 'which', 'where', 'when', 'who', 'how', 'why', 'is', 'are', 'was', 'were',
+        'do', 'does', 'did', 'have', 'has', 'had', 'the', 'a', 'an', 'in', 'on', 'at',
+        'to', 'for', 'of', 'with', 'by', 'my', 'i', 'me', 'you', 'your', 'any', 'get'
+    }
+    
+    query_words = query.lower().replace('?', '').replace('.', '').replace(',', '').split()
+    important_terms = [w for w in query_words if w not in stop_words and len(w) > 2]
+    
+    if not important_terms:
+        # No important terms to check - consider OK
+        return {"is_weak": False, "reason": "no_terms_to_check", "found_terms": []}
+    
+    # Check if important terms appear in any chunk
+    all_chunk_text = " ".join([c.get("text", "").lower() for c in chunks])
+    found_terms = [term for term in important_terms if term in all_chunk_text]
+    
+    # Check for weak retrieval
+    overlap_ratio = len(found_terms) / len(important_terms) if important_terms else 1.0
+    
+    if len(found_terms) < min_term_overlap or overlap_ratio < 0.3:
+        return {
+            "is_weak": True,
+            "reason": f"low_term_overlap",
+            "found_terms": found_terms,
+            "missing_terms": [t for t in important_terms if t not in found_terms],
+            "overlap_ratio": overlap_ratio
+        }
+    
+    return {
+        "is_weak": False,
+        "reason": "ok",
+        "found_terms": found_terms,
+        "overlap_ratio": overlap_ratio
+    }
+
 class ChatService:
     """Service for handling RAG chat requests."""
 
@@ -506,6 +561,24 @@ class ChatService:
 
         if METRICS_ENABLED:
             rag_retrieval_chunks.observe(len(chunks))
+
+        # ===== RETRIEVAL QUALITY PRE-CHECK =====
+        # Check if retrieved chunks actually contain relevant query terms
+        # This helps detect weak retrieval before sending to LLM
+        quality_check = _check_retrieval_quality(request.question, chunks)
+        if quality_check["is_weak"]:
+            logger.warning(
+                f"Weak retrieval detected: {quality_check['reason']} - "
+                f"missing terms: {quality_check.get('missing_terms', [])}"
+            )
+            # Log for debugging but continue - the LLM may still be able to answer
+            # In production, could add retry logic here
+        else:
+            logger.info(
+                f"Retrieval quality OK: found terms {quality_check['found_terms']} "
+                f"(overlap: {quality_check.get('overlap_ratio', 1.0):.0%})"
+            )
+        # ===== END QUALITY PRE-CHECK =====
 
         # Grounding check - no chunks
         if not chunks:

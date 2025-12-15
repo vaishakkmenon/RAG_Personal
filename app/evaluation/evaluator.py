@@ -73,6 +73,58 @@ class RetrievalEvaluator:
 
         return result
 
+    def evaluate_single_query_by_content(
+        self,
+        query: str,
+        retrieved_chunks: List[Dict[str, Any]],
+        required_content: List[str],
+        k: int = 5
+    ) -> Dict[str, Any]:
+        """Evaluate retrieval by checking if required content is in retrieved chunks.
+
+        This is content-based evaluation - checking if the retrieved chunks
+        contain the information needed to answer the question.
+
+        Args:
+            query: The query string
+            retrieved_chunks: List of retrieved chunks with 'id' and 'content' fields
+            required_content: List of keywords/phrases that should be in retrieved content
+            k: Number of top chunks to consider
+
+        Returns:
+            Dictionary with content-based metrics
+        """
+        # Combine content from top-k chunks
+        top_k_chunks = retrieved_chunks[:k]
+        combined_content = " ".join([
+            c.get("content", c.get("document", "")).lower()
+            for c in top_k_chunks
+        ])
+
+        # Check which required content items are found
+        found_content = []
+        missing_content = []
+        for item in required_content:
+            if item.lower() in combined_content:
+                found_content.append(item)
+            else:
+                missing_content.append(item)
+
+        # Calculate content coverage
+        content_coverage = len(found_content) / len(required_content) if required_content else 1.0
+        content_pass = content_coverage == 1.0
+
+        return {
+            "query": query,
+            "num_retrieved": len(retrieved_chunks),
+            "num_required_content": len(required_content),
+            "content_coverage": content_coverage,
+            "content_pass": content_pass,
+            "found_content": found_content,
+            "missing_content": missing_content,
+            "top_k_chunk_ids": [c.get("id", "unknown") for c in top_k_chunks]
+        }
+
     def evaluate_batch(
         self,
         test_cases: List[Dict[str, Any]],
@@ -185,7 +237,8 @@ class AnswerEvaluator:
         Args:
             query: The query string
             answer: The generated answer
-            expected_facts: List of facts that should be in the answer
+            expected_facts: List of facts that should be in the answer.
+                           Use pipe (|) for alternatives: "three|3" means either is acceptable
             must_not_contain: List of facts that should NOT be in the answer
 
         Returns:
@@ -194,9 +247,18 @@ class AnswerEvaluator:
         must_not_contain = must_not_contain or []
 
         # Check expected facts (case-insensitive)
+        # Supports OR logic with pipe: "three|3" means either "three" OR "3" is acceptable
         answer_lower = answer.lower()
-        found_facts = [fact for fact in expected_facts if fact.lower() in answer_lower]
-        missing_facts = [fact for fact in expected_facts if fact.lower() not in answer_lower]
+        found_facts = []
+        missing_facts = []
+        
+        for fact in expected_facts:
+            # Check if fact contains alternatives (pipe-separated)
+            alternatives = [alt.strip() for alt in fact.split("|")]
+            if any(alt.lower() in answer_lower for alt in alternatives):
+                found_facts.append(fact)
+            else:
+                missing_facts.append(fact)
 
         # Check prohibited content
         found_prohibited = [fact for fact in must_not_contain if fact.lower() in answer_lower]

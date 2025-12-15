@@ -65,7 +65,7 @@ services:
 
       # ============ HuggingFace Cache (redirect to writable /tmp) ============
       - HF_HOME=/tmp/huggingface
-      - TRANSFORMERS_CACHE=/tmp/huggingface
+
       - HUGGINGFACE_HUB_CACHE=/tmp/huggingface
 
       # ============ Uvicorn Server Config ============
@@ -95,6 +95,7 @@ services:
       - ./data/docs:/workspace/data/docs
       - ./data/mds:/workspace/data/mds:ro
       - ./data/eval:/workspace/data/eval
+      - ./data/analytics:/workspace/data/analytics
     
     # Service dependencies (with health checks)
     depends_on:

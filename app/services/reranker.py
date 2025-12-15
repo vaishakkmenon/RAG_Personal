@@ -80,8 +80,12 @@ class RerankerService:
             Combined score between 0 and 1
         """
         text = chunk.get("text", "")
-        distance = chunk.get("distance", 1.0)
-
+        distance = chunk.get("distance")
+        
+        # Handle None distance (from BM25/hybrid chunks without semantic distance)
+        if distance is None:
+            distance = 0.5  # Neutral distance when unknown
+        
         # Lexical overlap
         overlap = RerankerService.calculate_lexical_overlap(query, text)
 
