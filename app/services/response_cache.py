@@ -46,6 +46,7 @@ class ResponseCache:
         ttl_seconds: int = 3600,  # 1 hour default
         enabled: bool = True,
         max_cache_size_mb: int = 100,
+        prompt_version: str = "1",
     ):
         """
         Initialize response cache.
@@ -55,10 +56,12 @@ class ResponseCache:
             ttl_seconds: Time-to-live for cached responses
             enabled: Whether caching is enabled
             max_cache_size_mb: Maximum cache size in MB (soft limit)
+            prompt_version: Version string for cache invalidation (increment when prompts change)
         """
         self.ttl_seconds = ttl_seconds
         self.enabled = enabled
         self.max_cache_size_mb = max_cache_size_mb
+        self.prompt_version = prompt_version
         self._client: Optional[redis.Redis] = None
 
         if not enabled:
@@ -164,6 +167,7 @@ class ResponseCache:
         Generate cache key from query and parameters.
 
         Cache key includes:
+        - Prompt version (for cache invalidation when prompts change)
         - Normalized question
         - Session ID (if provided) for conversation-aware caching
         - Critical parameters that affect the response
@@ -179,8 +183,8 @@ class ResponseCache:
         # Normalize question
         normalized_q = self._normalize_query(question)
 
-        # Build cache key components
-        key_components = [normalized_q]
+        # Build cache key components (version first to invalidate cache when prompts change)
+        key_components = [f"v{self.prompt_version}", normalized_q]
 
         # Add session ID if provided (for conversation-aware caching)
         if session_id:
@@ -421,6 +425,7 @@ def get_response_cache(
             ttl_seconds=ttl_seconds or settings.response_cache.ttl_seconds,
             enabled=enabled if enabled is not None else settings.response_cache.enabled,
             max_cache_size_mb=max_cache_size_mb or settings.response_cache.max_cache_size_mb,
+            prompt_version=settings.response_cache.prompt_version,
         )
 
     return _response_cache_instance

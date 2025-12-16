@@ -114,8 +114,8 @@ class BM25Index:
         processed_tokens = []
         for token in tokens:
             # Skip very short tokens (except course codes like cs)
-            if len(token) < 2:
-                continue
+            # if len(token) < 2:
+            #     continue
 
             # Keep course codes intact (e.g., cs350, cs662)
             if re.match(r'^[a-z]{2,4}\d{3,4}$', token):

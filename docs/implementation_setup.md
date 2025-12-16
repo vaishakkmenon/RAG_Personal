@@ -119,9 +119,9 @@ All configuration is managed via `pydantic` in `app/settings.py` and can be over
 -   ✅ **Hybrid Search**: Enabled (Vector + Reranking).
 -   ✅ **Negative Inference Detection**: Automatically handles queries about non-existent entities.
 -   ✅ **Adaptive Thresholding**: Data-driven entity existence detection.
+-   ✅ **Multi-turn Conversation**: Supported via `session_id` (history injection + context retrieval).
 -   ✅ **Multi-Provider LLM**: Implemented and configurable (Groq/Ollama).
 -   ✅ **Observability**: Prometheus metrics exposed at `/metrics`.
--   ❌ **Multi-turn Conversation**: Not currently supported (stateless API).
 
 ## ⚠️ Known Issues & Limitations
 
@@ -136,11 +136,11 @@ The system's ambiguity detection (implemented in `chat_service.py`) is **not agg
 - Some automated tests receive unexpected answers because the system guesses at ambiguous intent
 - The system tries to answer when it should recognize insufficient information
 
-**Current Implementation** (`chat_service.py:261-275`):
+**Current Implementation** (`chat_service.py`):
 ```python
-if _is_truly_ambiguous(request.question):
+if _is_truly_ambiguous(request.question, conversation_history):
     # Only catches extremely vague cases (1-2 words)
-    # Simple rule-based check: word count + filler words
+    # Checks history to allow short follow-ups like "When?"
 ```
 
 **Why This Design Choice:**

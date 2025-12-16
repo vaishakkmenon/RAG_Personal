@@ -381,7 +381,7 @@ docker-compose run test python run_tests.py --api-url http://api:8000
 ## 🗺️ Roadmap
 
 ### Phase 3: Advanced Features (Next Focus)
-- [ ] **Multi-turn Conversation**: Context tracking and history management.
+- [x] **Multi-turn Conversation**: Context tracking and history management.
 - [ ] **Multi-hop Reasoning**: Handling complex queries requiring synthesis from multiple sources.
 - [ ] **Fact Verification**: Post-generation grounding scores and citation checking.
 - [ ] **Comparative Analysis**: Supporting "compare X vs Y" style queries.

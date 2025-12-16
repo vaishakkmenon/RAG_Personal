@@ -277,6 +277,11 @@ class ResponseCacheSettings(BaseModel):
         description="Maximum cache size in MB (soft limit)"
     )
 
+    prompt_version: str = Field(
+        default=os.getenv("RESPONSE_CACHE_PROMPT_VERSION", "1"),
+        description="Prompt version for cache invalidation. Increment when system prompt changes to invalidate old cached responses."
+    )
+
 
 class BM25Settings(BaseModel):
     """BM25 parameter configuration for keyword search optimization."""
