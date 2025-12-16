@@ -174,7 +174,7 @@ def get_existing_versions(doc_id: str, base_version: str) -> List[str]:
     """
     try:
         # Import ChromaDB collection here to avoid circular imports
-        from ..retrieval.store import _collection
+        from app.retrieval.store import _collection
 
         # Query chunks matching doc_id
         results = _collection.get(
@@ -217,7 +217,7 @@ def get_existing_content_hash(doc_id: str, version: str) -> Optional[str]:
     """
     try:
         # Import ChromaDB collection here to avoid circular imports
-        from ..retrieval.store import _collection
+        from app.retrieval.store import _collection
 
         # Query chunks for this specific doc_id and version
         results = _collection.get(

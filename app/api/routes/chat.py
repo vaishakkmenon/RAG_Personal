@@ -7,14 +7,14 @@ from typing import Optional, List, Dict, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from ...models import ChatRequest, ChatResponse, ChatSource
-from ..dependencies import check_api_key, get_chat_service
-from ...core import ChatService
-from ...retrieval import search
-from ...services.llm import generate_with_ollama
-from ...services.prompt_guard import get_prompt_guard
-from ...prompting import create_default_prompt_builder
-from ...settings import settings
+from app.models import ChatRequest, ChatResponse, ChatSource
+from app.api.dependencies import check_api_key, get_chat_service
+from app.core import ChatService
+from app.retrieval import search
+from app.services.llm import generate_with_ollama
+from app.services.prompt_guard import get_prompt_guard
+from app.prompting import create_default_prompt_builder
+from app.settings import settings
 import logging
 
 router = APIRouter()
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 # Import end-to-end metrics
 try:
-    from ...metrics import (
+    from app.metrics import (
         rag_request_total,
         rag_request_latency_seconds,
         rag_errors_total,
@@ -232,7 +232,7 @@ def chat(
         # This allows cached responses to skip prompt guard checks entirely
         # Note: We don't have session context yet, so we check without session_id
         # The chat_service will do a more specific cache check with session_id
-        from ...services.response_cache import get_response_cache
+        from app.services.response_cache import get_response_cache
 
         response_cache = get_response_cache()
 
@@ -269,7 +269,7 @@ def chat(
 
         # Cache miss - proceed with prompt guard check
         # Get session and conversation history for context-aware checking
-        from ...storage import get_session_store
+        from app.storage import get_session_store
 
         session_store = get_session_store()
         client_ip = http_request.client.host if http_request.client else "unknown"

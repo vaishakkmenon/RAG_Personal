@@ -5,7 +5,7 @@ Evaluation runners for retrieval and answer quality.
 import logging
 from typing import Any, Dict, List, Optional
 
-from .metrics import (
+from app.evaluation.metrics import (
     calculate_recall_at_k,
     calculate_mrr,
     calculate_precision_at_k,

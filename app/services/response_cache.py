@@ -414,7 +414,7 @@ def get_response_cache(
     global _response_cache_instance
 
     if _response_cache_instance is None:
-        from ..settings import settings
+        from app.settings import settings
 
         _response_cache_instance = ResponseCache(
             redis_url=redis_url or settings.session.redis_url,

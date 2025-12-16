@@ -5,7 +5,7 @@ Contains FastAPI routes and HTTP-related functionality.
 """
 
 from fastapi import APIRouter
-from .routes import health, ingest, chat, debug, admin
+from app.api.routes import health, ingest, chat, debug, admin
 
 def create_api_router() -> APIRouter:
     """Create and configure the main API router."""

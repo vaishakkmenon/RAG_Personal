@@ -10,7 +10,7 @@ from typing import List
 
 from fastapi import HTTPException
 
-from ..settings import settings, ingest_settings
+from app.settings import settings, ingest_settings
 
 logger = logging.getLogger(__name__)
 

@@ -6,7 +6,7 @@ All settings can be overridden via environment variables.
 """
 
 import os
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Dict, List, Set, Any, Optional
 from dotenv import load_dotenv
 
@@ -64,13 +64,14 @@ class IngestSettings(BaseModel):
     )
 
     # Validation
-    @validator("max_file_size")
+    # Validation
+    @field_validator("max_file_size")
     def validate_max_file_size(cls, v):
         if v <= 0:
             raise ValueError("Max file size must be positive")
         return v
 
-    @validator("batch_size", "chunk_size", "chunk_overlap")
+    @field_validator("batch_size", "chunk_size", "chunk_overlap")
     def validate_positive_integer(cls, v):
         if v <= 0:
             raise ValueError("Value must be positive")
@@ -161,13 +162,14 @@ class SessionSettings(BaseModel):
     )
     
     # Validation
-    @validator("storage_backend")
+    # Validation
+    @field_validator("storage_backend")
     def validate_storage_backend(cls, v):
         if v not in ["redis", "memory"]:
             raise ValueError("storage_backend must be 'redis' or 'memory'")
         return v
     
-    @validator("ttl_seconds", "cleanup_interval_seconds")
+    @field_validator("ttl_seconds", "cleanup_interval_seconds")
     def validate_positive_seconds(cls, v):
         if v <= 0:
             raise ValueError("Value must be positive")
@@ -420,19 +422,20 @@ class LLMSettings(BaseModel):
     )
 
     # Validation
-    @validator("provider")
+    # Validation
+    @field_validator("provider")
     def validate_provider(cls, v):
         if v not in ["ollama", "groq"]:
             raise ValueError("Provider must be 'ollama' or 'groq'")
         return v
 
-    @validator("temperature")
+    @field_validator("temperature")
     def validate_temperature(cls, v):
         if not 0.0 <= v <= 2.0:
             raise ValueError("Temperature must be between 0.0 and 2.0")
         return v
 
-    @validator("max_tokens")
+    @field_validator("max_tokens")
     def validate_max_tokens(cls, v):
         if v <= 0:
             raise ValueError("max_tokens must be positive")
@@ -562,11 +565,10 @@ class Settings(BaseModel):
         description="Prompt injection guardrail configuration"
     )
 
-    class Config:
-        """Pydantic configuration."""
-
-        extra = "forbid"  # Prevent typos in environment variables
-        validate_assignment = True  # Validate on attribute assignment
+    model_config = ConfigDict(
+        extra="forbid",  # Prevent typos in environment variables
+        validate_assignment=True  # Validate on attribute assignment
+    )
 
 
 # Global settings instance

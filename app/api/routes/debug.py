@@ -6,8 +6,8 @@ from typing import Optional
 
 from fastapi import APIRouter
 
-from ...retrieval import search, get_sample_chunks
-from ...settings import settings
+from app.retrieval import search, get_sample_chunks
+from app.settings import settings
 
 router = APIRouter()
 

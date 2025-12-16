@@ -13,13 +13,13 @@ import chromadb
 from chromadb.config import Settings as ChromaSettings
 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
 
-from ..settings import settings
+from app.settings import settings
 
 logger = logging.getLogger(__name__)
 
 # Import BM25 for hybrid search
 try:
-    from .bm25_search import BM25Index, reciprocal_rank_fusion
+    from app.retrieval.bm25_search import BM25Index, reciprocal_rank_fusion
     BM25_AVAILABLE = True
 except ImportError:
     BM25_AVAILABLE = False
@@ -133,7 +133,7 @@ def search(
         List of dicts with keys: id, text, source, distance, metadata
     """
     import time
-    from ..settings import settings
+    from app.settings import settings
 
     original_query = (query or "").strip()
     if not original_query:
@@ -145,7 +145,7 @@ def search(
     rewrite_metadata = None
     if use_query_rewriting and settings.query_rewriter.enabled:
         try:
-            from .query_rewriter import get_query_rewriter
+            from app.retrieval.query_rewriter import get_query_rewriter
             rewriter = get_query_rewriter()
             rewritten_query, rewrite_metadata = rewriter.rewrite_query(original_query)
             
@@ -276,6 +276,9 @@ def _semantic_search(
         except Exception as e:
             logger.warning(f"Failed to process chunk {chunk_id}: {e}")
             continue
+
+    # Sort results by distance (ascending) to ensure best matches are first
+    output.sort(key=lambda x: x["distance"] if x["distance"] is not None else float('inf'))
 
     logger.info(
         f"Semantic search '{query[:50]}...': {len(output)}/{len(ids)} results within max_distance {max_dist:.3f}"

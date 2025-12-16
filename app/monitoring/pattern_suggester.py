@@ -36,7 +36,7 @@ class PatternSuggester:
         """
         # Import settings here to avoid circular imports
         if settings_obj is None:
-            from ..settings import settings as settings_obj
+            from app.settings import settings as settings_obj
 
         self.settings = settings_obj
         self.storage_path = storage_path or self.settings.query_rewriter.failed_queries_storage_path

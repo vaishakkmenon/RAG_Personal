@@ -6,7 +6,7 @@ import socket
 
 from fastapi import APIRouter
 
-from ...settings import settings
+from app.settings import settings
 
 router = APIRouter()
 

@@ -11,6 +11,6 @@ Use this backend for:
 See redis_store.py for implementation details.
 """
 
-from .redis_store import RedisSessionStore
+from app.storage.primary.redis_store import RedisSessionStore
 
 __all__ = ["RedisSessionStore"]

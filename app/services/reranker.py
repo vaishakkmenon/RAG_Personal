@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 # Import reranking metrics
 try:
-    from ..metrics import (
+    from app.metrics import (
         rag_rerank_total,
         rag_rerank_latency_seconds,
         rag_rerank_score_distribution,

@@ -10,7 +10,7 @@ Instead of a fixed threshold, dynamically calculates thresholds based on:
 import logging
 from typing import List, Optional, Tuple
 
-from .store import search
+from app.retrieval.store import search
 
 logger = logging.getLogger(__name__)
 

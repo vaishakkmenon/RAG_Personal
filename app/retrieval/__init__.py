@@ -4,7 +4,7 @@ Retrieval Package - Vector store and semantic search operations
 Handles ChromaDB integration, embeddings, and document retrieval.
 """
 
-from .store import (
+from app.retrieval.store import (
     add_documents,
     search,
     get_sample_chunks,

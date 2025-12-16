@@ -7,8 +7,8 @@ Handles building and validating prompts with safety guards.
 import logging
 from typing import Any, Dict, List, Optional
 
-from ..settings import settings
-from .config import PromptConfig, PromptResult
+from app.settings import settings
+from app.prompting.config import PromptConfig, PromptResult
 
 logger = logging.getLogger(__name__)
 

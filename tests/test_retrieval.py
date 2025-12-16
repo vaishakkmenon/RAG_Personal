@@ -33,7 +33,8 @@ class TestSemanticSearch:
             "distances": [[0.15, 0.25]],
         }
 
-        results = search(query="test question", k=5, use_hybrid=False, use_query_rewriting=False)
+        results = search(query="test question", k=5, use_hybrid=False, use_query_rewriting=False, use_cross_encoder=False)
+        print(f"\nDEBUG: Results returned: {results}")
 
         assert len(results) == 2
         assert results[0]["id"] == "chunk-1"

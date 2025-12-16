@@ -27,7 +27,7 @@ except ImportError:
 
 # Import metrics with graceful degradation
 try:
-    from ..metrics import (
+    from app.metrics import (
         prompt_guard_checks_total,
         prompt_guard_blocked_total,
         prompt_guard_api_latency_seconds,
@@ -302,7 +302,7 @@ def get_prompt_guard() -> PromptGuard:
     global _prompt_guard_instance
 
     if _prompt_guard_instance is None:
-        from ..settings import settings
+        from app.settings import settings
 
         _prompt_guard_instance = PromptGuard(
             api_key=settings.llm.groq_api_key,

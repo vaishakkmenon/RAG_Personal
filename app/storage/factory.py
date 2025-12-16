@@ -27,10 +27,10 @@ The factory automatically handles fallback scenarios:
 import logging
 from typing import Optional
 
-from ..settings import settings
-from .base import SessionStore
-from .primary import RedisSessionStore
-from .fallback import InMemorySessionStore
+from app.settings import settings
+from app.storage.base import SessionStore
+from app.storage.primary import RedisSessionStore
+from app.storage.fallback import InMemorySessionStore
 
 logger = logging.getLogger(__name__)
 

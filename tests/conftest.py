@@ -29,6 +29,13 @@ def setup_test_environment():
     os.environ["RESPONSE_CACHE_ENABLED"] = "false"
     os.environ["QUERY_REWRITER_ENABLED"] = "false"
     os.environ["CROSS_ENCODER_ENABLED"] = "false"
+
+    # Force update the global settings object to ensure it reflects the env vars
+    # This is necessary because settings might have been initialized (and defaults locked)
+    # before this fixture ran during test collection.
+    from app.settings import settings
+    settings.api_key = "test-api-key"
+
     yield
     # Cleanup after all tests
 
@@ -77,7 +84,8 @@ def mock_chromadb():
     # Count returns 0 by default
     mock_collection.count.return_value = 0
 
-    with patch("app.retrieval.search.get_collection", return_value=mock_collection):
+    # Patch the global _collection object in store.py
+    with patch("app.retrieval.store._collection", mock_collection):
         yield mock_collection
 
 

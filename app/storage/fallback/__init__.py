@@ -11,6 +11,6 @@ Automatically activated when:
 See memory.py for implementation details.
 """
 
-from .memory import InMemorySessionStore
+from app.storage.fallback.memory import InMemorySessionStore
 
 __all__ = ["InMemorySessionStore"]

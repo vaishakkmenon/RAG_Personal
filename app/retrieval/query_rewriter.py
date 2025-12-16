@@ -16,13 +16,13 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 
-from .pattern_matcher import PatternMatcher, MatchResult
+from app.retrieval.pattern_matcher import PatternMatcher, MatchResult
 
 logger = logging.getLogger(__name__)
 
 # Import query rewriting metrics
 try:
-    from ..metrics import (
+    from app.metrics import (
         rag_query_rewrite_total,
         rag_query_rewrite_pattern_matches_total,
         rag_query_rewrite_latency_seconds,
@@ -46,7 +46,7 @@ class QueryRewriter:
         """
         # Import settings here to avoid circular imports
         if settings_obj is None:
-            from ..settings import settings as settings_obj
+            from app.settings import settings as settings_obj
 
         self.settings = settings_obj
         self.config_path = config_path or self.settings.query_rewriter.pattern_config_path
@@ -174,7 +174,7 @@ class QueryRewriter:
                 latency_ms = (time.time() - start_time) * 1000
 
                 # Import RewriteMetadata here to avoid circular imports
-                from ..models import RewriteMetadata
+                from app.models import RewriteMetadata
 
                 # Build RewriteMetadata
                 metadata = RewriteMetadata(

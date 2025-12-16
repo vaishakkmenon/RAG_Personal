@@ -6,9 +6,9 @@ import logging
 
 from fastapi import APIRouter
 
-from ...ingest import ingest_paths
-from ...models import IngestRequest, IngestResponse
-from ...settings import settings
+from app.ingest import ingest_paths
+from app.models import IngestRequest, IngestResponse
+from app.settings import settings
 
 logger = logging.getLogger(__name__)
 

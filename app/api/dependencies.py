@@ -7,8 +7,8 @@ Contains FastAPI dependencies for authentication, services, etc.
 import logging
 from fastapi import Header, HTTPException, status
 
-from ..core import ChatService
-from ..settings import settings
+from app.core import ChatService
+from app.settings import settings
 
 logger = logging.getLogger(__name__)
 

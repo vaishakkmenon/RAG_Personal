@@ -6,8 +6,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from ..settings import settings
-from .utils import estimate_tokens, truncate_history
+from app.settings import settings
+from app.storage.utils import estimate_tokens, truncate_history
 
 
 @dataclass

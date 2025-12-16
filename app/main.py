@@ -10,11 +10,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from .api import create_api_router
-from .middleware.api_key import APIKeyMiddleware
-from .middleware.logging import LoggingMiddleware
-from .middleware.max_size import MaxSizeMiddleware
-from .settings import settings
+from app.api import create_api_router
+from app.middleware.api_key import APIKeyMiddleware
+from app.middleware.logging import LoggingMiddleware
+from app.middleware.max_size import MaxSizeMiddleware
+from app.settings import settings
 
 # Configure logging
 logging.basicConfig(

@@ -11,24 +11,24 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException, status
 
-from ..models import ChatRequest, ChatResponse, ChatSource, AmbiguityMetadata, RewriteMetadata
-from ..monitoring import time_execution_info
-from ..monitoring.pattern_analytics import get_pattern_analytics
-from ..monitoring.pattern_suggester import get_pattern_suggester
-from ..prompting import build_clarification_message, create_default_prompt_builder
-from ..retrieval import search
-from ..services.llm import generate_with_ollama
-from ..services.reranker import rerank_chunks
-from ..services.response_cache import get_response_cache
-from ..settings import settings
-from ..storage import get_session_store, Session
-from ..storage.utils import mask_session_id
+from app.models import ChatRequest, ChatResponse, ChatSource, AmbiguityMetadata, RewriteMetadata
+from app.monitoring import time_execution_info
+from app.monitoring.pattern_analytics import get_pattern_analytics
+from app.monitoring.pattern_suggester import get_pattern_suggester
+from app.prompting import build_clarification_message, create_default_prompt_builder
+from app.retrieval import search
+from app.services.llm import generate_with_ollama
+from app.services.reranker import rerank_chunks
+from app.services.response_cache import get_response_cache
+from app.settings import settings
+from app.storage import get_session_store, Session
+from app.storage.utils import mask_session_id
 
 logger = logging.getLogger(__name__)
 
 # Optional metrics import
 try:
-    from ..metrics import (
+    from app.metrics import (
         rag_retrieval_chunks,
         rag_retrieval_distance,
         rag_grounding_total,
@@ -516,7 +516,7 @@ class ChatService:
 
         # ===== QUERY REWRITING =====
         # Apply pattern-based query rewriting before retrieval
-        from ..retrieval.query_rewriter import get_query_rewriter
+        from app.retrieval.query_rewriter import get_query_rewriter
 
         rewriter = get_query_rewriter()
         rewritten_query, rewrite_metadata = rewriter.rewrite_query(
@@ -543,7 +543,7 @@ class ChatService:
         # Check for negative inference opportunity
         # If the question asks about a specific entity that doesn't exist in the KB,
         # search for the category instead to find complete lists
-        from ..retrieval.negative_inference_helper import detect_negative_inference_opportunity
+        from app.retrieval.negative_inference_helper import detect_negative_inference_opportunity
 
         neg_inf_result = detect_negative_inference_opportunity(search_query)
 
@@ -955,7 +955,7 @@ class ChatService:
 
         response_cache.set(
             question=question,
-            response=response.dict(),
+            response=response.model_dump(),
             session_id=cache_session_id,
             params=cache_params
         )

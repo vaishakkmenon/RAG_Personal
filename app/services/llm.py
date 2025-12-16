@@ -18,14 +18,14 @@ import ollama
 from groq import Groq, AsyncGroq
 from groq.types.chat import ChatCompletion
 
-from ..settings import settings
-from .rate_limiter import RateLimiter, NoOpRateLimiter
+from app.settings import settings
+from app.services.rate_limiter import RateLimiter, NoOpRateLimiter
 
 logger = logging.getLogger(__name__)
 
 # Optional metrics import
 try:
-    from ..metrics import (
+    from app.metrics import (
         rag_llm_request_total,
         rag_llm_latency_seconds,
         rag_fallback_operations_total,

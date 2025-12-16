@@ -9,8 +9,8 @@ import os
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
-from ..settings import ingest_settings
-from .metadata import generate_version_identifier
+from app.settings import ingest_settings
+from app.ingest.metadata import generate_version_identifier
 
 logger = logging.getLogger(__name__)
 
@@ -240,7 +240,7 @@ def chunk_by_terms(
     Returns:
         List of chunk dicts with enriched term metadata
     """
-    from ..settings import ingest_settings
+    from app.settings import ingest_settings
 
     # Extract doc identifiers
     doc_id, doc_type = extract_doc_id(source_path)

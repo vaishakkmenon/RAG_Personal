@@ -10,7 +10,7 @@ import os
 import re
 from typing import Dict, List, Optional, Tuple
 
-from .store import search
+from app.retrieval.store import search
 
 logger = logging.getLogger(__name__)
 
@@ -92,13 +92,13 @@ def check_entity_exists(
 
     # Use adaptive threshold methods if enabled
     if method == 'gap_based':
-        from .adaptive_threshold import calculate_gap_based_threshold
+        from app.retrieval.adaptive_threshold import calculate_gap_based_threshold
         exists, distance, reason = calculate_gap_based_threshold(entity, k=k)
         logger.debug(f"Entity '{entity}' gap-based check: {reason}")
         return exists, distance
 
     elif method == 'context_aware':
-        from .adaptive_threshold import calculate_context_aware_threshold
+        from app.retrieval.adaptive_threshold import calculate_context_aware_threshold
         exists, distance, reason = calculate_context_aware_threshold(entity)
         logger.debug(f"Entity '{entity}' context-aware check: {reason}")
         return exists, distance

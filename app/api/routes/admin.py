@@ -10,8 +10,8 @@ from typing import Dict, Any
 
 from fastapi import APIRouter, HTTPException
 
-from ...settings import settings
-from ...retrieval import reset_collection
+from app.settings import settings
+from app.retrieval import reset_collection
 
 router = APIRouter()
 
