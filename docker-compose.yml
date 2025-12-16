@@ -354,6 +354,122 @@ services:
         labels: "service=ollama"
 
   # ==========================================================================
+  # Prometheus Service - Metrics collection and alerting
+  # ==========================================================================
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: rag_prometheus
+    hostname: prometheus
+
+    ports:
+      - "9090:9090"
+
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+
+    depends_on:
+      api:
+        condition: service_healthy
+
+    restart: unless-stopped
+
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+
+    # Prometheus runs as nobody (65534) by default
+    user: "65534:65534"
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=prometheus,env=development"
+
+  # ==========================================================================
+  # Grafana Service - Metrics visualization and dashboards
+  # ==========================================================================
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: rag_grafana
+    hostname: grafana
+
+    ports:
+      - "3000:3000"
+
+    environment:
+      # Admin credentials (configurable via .env)
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+
+      # Server configuration
+      - GF_SERVER_ROOT_URL=http://localhost:3000
+      - GF_SERVER_SERVE_FROM_SUB_PATH=false
+
+      # Anonymous access disabled
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+
+      # Provisioning
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+
+      # Default home dashboard
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/dashboards/01-system-overview.json
+
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+
+    depends_on:
+      prometheus:
+        condition: service_healthy
+
+    restart: unless-stopped
+
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+
+    # Grafana runs as grafana user (472) by default
+    user: "472:472"
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=grafana,env=development"
+
+  # ==========================================================================
   # Test Service - Run automated tests
   # ==========================================================================
   # IMPORTANT: This service uses 'test' profile and won't start automatically
@@ -425,11 +541,21 @@ volumes:
   redis_data:
     driver: local
     name: rag_redis_data
-  
+
   # Ollama model storage (large files ~5-10GB)
   ollama_models:
     driver: local
     name: rag_ollama_models
+
+  # Prometheus time-series data
+  prometheus_data:
+    driver: local
+    name: rag_prometheus_data
+
+  # Grafana dashboards and settings
+  grafana_data:
+    driver: local
+    name: rag_grafana_data
 
 # ============================================================================
 # Networks (optional - Docker Compose creates default network)

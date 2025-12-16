@@ -25,7 +25,11 @@ logger = logging.getLogger(__name__)
 
 # Optional metrics import
 try:
-    from ..metrics import rag_llm_request_total, rag_llm_latency_seconds
+    from ..metrics import (
+        rag_llm_request_total,
+        rag_llm_latency_seconds,
+        rag_fallback_operations_total,
+    )
     METRICS_ENABLED = True
 except ImportError:
     METRICS_ENABLED = False
@@ -164,6 +168,14 @@ class OllamaService:
             # Fallback to Ollama if we were trying Groq
             if self.llm_settings.provider == "groq":
                 logger.warning("Falling back to Ollama due to Groq failure")
+
+                # Track fallback operation
+                if METRICS_ENABLED:
+                    rag_fallback_operations_total.labels(
+                        from_service="groq",
+                        to_service="ollama"
+                    ).inc()
+
                 try:
                     return self._generate_with_ollama(
                         prompt, temperature, max_tokens, model
@@ -395,6 +407,14 @@ class OllamaService:
             # Fallback to Ollama if we were trying Groq
             if self.llm_settings.provider == "groq":
                 logger.warning("Falling back to Ollama due to Groq failure")
+
+                # Track fallback operation
+                if METRICS_ENABLED:
+                    rag_fallback_operations_total.labels(
+                        from_service="groq",
+                        to_service="ollama"
+                    ).inc()
+
                 try:
                     return await self._generate_with_ollama_async(
                         prompt, temperature, max_tokens, model

@@ -6,9 +6,22 @@ Provides hybrid reranking combining lexical overlap with semantic similarity.
 
 import logging
 import re
+import time
 from typing import List, Set
 
 logger = logging.getLogger(__name__)
+
+# Import reranking metrics
+try:
+    from ..metrics import (
+        rag_rerank_total,
+        rag_rerank_latency_seconds,
+        rag_rerank_score_distribution,
+    )
+    RERANK_METRICS_ENABLED = True
+except ImportError:
+    RERANK_METRICS_ENABLED = False
+    logger.debug("Reranking metrics not available")
 
 # Tiny stopword set for lexical overlap calculation
 _STOPWORDS: Set[str] = {
@@ -116,6 +129,9 @@ class RerankerService:
         if not chunks:
             return []
 
+        # Track reranking latency
+        start_time = time.time()
+
         # Clamp weight to valid range
         lex_weight = max(0.0, min(1.0, lex_weight))
 
@@ -130,6 +146,18 @@ class RerankerService:
         logger.debug(
             f"Reranked {len(chunks)} chunks with lex_weight={lex_weight:.2f}"
         )
+
+        # Track metrics
+        if RERANK_METRICS_ENABLED:
+            method = "bm25"  # This is the hybrid BM25-style reranking
+            rag_rerank_total.labels(method=method).inc()
+            rag_rerank_latency_seconds.labels(method=method).observe(
+                time.time() - start_time
+            )
+
+            # Track score distribution
+            for chunk, score in scored_chunks:
+                rag_rerank_score_distribution.labels(method=method).observe(score)
 
         return [chunk for chunk, score in scored_chunks]
 

@@ -25,6 +25,22 @@ except ImportError:
     GROQ_AVAILABLE = False
     logger.warning("Groq SDK not available - prompt guard disabled")
 
+# Import metrics with graceful degradation
+try:
+    from ..metrics import (
+        prompt_guard_checks_total,
+        prompt_guard_blocked_total,
+        prompt_guard_api_latency_seconds,
+        prompt_guard_cache_operations_total,
+        prompt_guard_errors_total,
+        prompt_guard_retries_total,
+        prompt_guard_context_size_chars,
+    )
+    METRICS_ENABLED = True
+except ImportError:
+    METRICS_ENABLED = False
+    logger.warning("Metrics not available - prompt guard metrics disabled")
+
 
 class PromptGuard:
     """Guard against prompt injection attacks using Llama Prompt Guard 2."""
@@ -153,26 +169,49 @@ class PromptGuard:
                 f"({len(input_to_check)} chars total)"
             )
 
+        # Track context size
+        if METRICS_ENABLED:
+            prompt_guard_context_size_chars.observe(len(input_to_check))
+
         # Check cache first (using the full context as cache key)
         cache_key = self._get_cache_key(input_to_check)
         cached_result = self._get_from_cache(cache_key)
         if cached_result is not None:
+            if METRICS_ENABLED:
+                prompt_guard_cache_operations_total.labels(result="hit").inc()
+                prompt_guard_checks_total.labels(
+                    result="blocked" if cached_result["blocked"] else "safe"
+                ).inc()
             return cached_result
+
+        # Cache miss
+        if METRICS_ENABLED:
+            prompt_guard_cache_operations_total.labels(result="miss").inc()
 
         # Retry logic with exponential backoff
         last_exception = None
         for attempt in range(self.max_retries + 1):
             try:
                 if attempt > 0:
+                    # Track retry attempts
+                    if METRICS_ENABLED:
+                        prompt_guard_retries_total.labels(attempt=str(attempt)).inc()
+
                     # Exponential backoff: 0.1s, 0.2s, 0.4s...
                     backoff = 0.1 * (2 ** (attempt - 1))
                     logger.debug(f"PromptGuard retry {attempt}/{self.max_retries} after {backoff}s")
                     time.sleep(backoff)
 
+                # Track API call latency
+                api_start = time.time()
                 response = self._client.chat.completions.create(
                     model=self.model,
                     messages=[{"role": "user", "content": input_to_check}],
                 )
+                api_duration = time.time() - api_start
+
+                if METRICS_ENABLED:
+                    prompt_guard_api_latency_seconds.observe(api_duration)
 
                 # Parse response - model returns simple binary classification
                 result = response.choices[0].message.content.strip()
@@ -206,6 +245,15 @@ class PromptGuard:
                     "blocked": is_malicious
                 }
 
+                # Track result metrics
+                if METRICS_ENABLED:
+                    prompt_guard_checks_total.labels(
+                        result="blocked" if is_malicious else "safe"
+                    ).inc()
+
+                    if is_malicious:
+                        prompt_guard_blocked_total.labels(label=result).inc()
+
                 # Cache the result
                 self._put_in_cache(cache_key, guard_result)
 
@@ -215,12 +263,23 @@ class PromptGuard:
                 last_exception = e
                 logger.warning(f"PromptGuard attempt {attempt + 1}/{self.max_retries + 1} failed: {e}")
 
+                # Track error type
+                if METRICS_ENABLED:
+                    error_type = "timeout" if "timeout" in str(e).lower() else "api_error"
+                    prompt_guard_errors_total.labels(error_type=error_type).inc()
+
                 # If this was the last attempt, fall through to error handling
                 if attempt >= self.max_retries:
                     break
 
         # All retries exhausted
         logger.error(f"PromptGuard check failed after {self.max_retries + 1} attempts: {last_exception}")
+
+        # Track final error
+        if METRICS_ENABLED:
+            prompt_guard_checks_total.labels(result="safe" if self.fail_open else "blocked").inc()
+            if not self.fail_open:
+                prompt_guard_blocked_total.labels(label="ERROR").inc()
 
         # Fail-open or fail-closed based on configuration
         if self.fail_open:

@@ -1,0 +1,16 @@
+# Grafana Dashboard Provisioning
+# Auto-imports dashboards from /etc/grafana/dashboards directory
+
+apiVersion: 1
+
+providers:
+  - name: 'RAG System Dashboards'
+    orgId: 1
+    folder: ''
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/dashboards
+      foldersFromFilesStructure: false

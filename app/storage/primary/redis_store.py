@@ -44,6 +44,20 @@ try:
 except ImportError:
     REDIS_AVAILABLE = False
 
+# Import session metrics from central metrics module
+try:
+    from ...metrics import (
+        rag_sessions_active,
+        rag_session_operations_total,
+        rag_rate_limit_violations_total,
+        rag_session_query_count,
+        rag_session_duration_seconds,
+    )
+    SESSION_METRICS_ENABLED = True
+except ImportError:
+    SESSION_METRICS_ENABLED = False
+    logger.warning("Session metrics not available")
+
 
 class RedisSessionStore(SessionStore):
     """Redis-backed session storage with connection pooling and production features."""
@@ -160,8 +174,11 @@ class RedisSessionStore(SessionStore):
                 self.redis_latency.labels(operation='get').observe(
                     time.time() - start_time
                 )
-            
+
             if data:
+                # Track session retrieval
+                if SESSION_METRICS_ENABLED:
+                    rag_session_operations_total.labels(operation="retrieved").inc()
                 return Session.from_dict(json.loads(data))
             return None
         except Exception as e:
@@ -215,7 +232,7 @@ class RedisSessionStore(SessionStore):
             
             pipe.execute()
             logger.info(f"Created session {mask_session_id(session_id)} in Redis")
-            
+
             # Record metrics
             if self._metrics_enabled:
                 self.redis_operations.labels(
@@ -225,6 +242,16 @@ class RedisSessionStore(SessionStore):
                 self.redis_latency.labels(operation='create').observe(
                     time.time() - start_time
                 )
+
+            # Track session creation and update active count
+            if SESSION_METRICS_ENABLED:
+                rag_session_operations_total.labels(operation="created").inc()
+                # Update active sessions count
+                try:
+                    active_count = self._client.dbsize()  # Approximate count
+                    rag_sessions_active.set(active_count)
+                except:
+                    pass  # Don't fail on metrics
         except Exception as e:
             logger.error(f"Redis create error: {e}")
             

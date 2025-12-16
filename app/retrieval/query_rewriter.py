@@ -20,6 +20,18 @@ from .pattern_matcher import PatternMatcher, MatchResult
 
 logger = logging.getLogger(__name__)
 
+# Import query rewriting metrics
+try:
+    from ..metrics import (
+        rag_query_rewrite_total,
+        rag_query_rewrite_pattern_matches_total,
+        rag_query_rewrite_latency_seconds,
+    )
+    REWRITE_METRICS_ENABLED = True
+except ImportError:
+    REWRITE_METRICS_ENABLED = False
+    logger.warning("Query rewrite metrics not available")
+
 
 class QueryRewriter:
     """Pattern-based query rewriting engine with hot-reload support."""
@@ -190,11 +202,25 @@ class QueryRewriter:
                     f"(latency: {latency_ms:.2f}ms, confidence: {match_result.score:.2f})"
                 )
 
+                # Track pattern match metrics
+                if REWRITE_METRICS_ENABLED:
+                    rag_query_rewrite_total.labels(matched="true").inc()
+                    rag_query_rewrite_pattern_matches_total.labels(
+                        pattern_name=pattern_matcher.name
+                    ).inc()
+                    rag_query_rewrite_latency_seconds.observe(latency_ms / 1000.0)
+
                 return rewritten_query, metadata
 
         # No pattern matched
         latency_ms = (time.time() - start_time) * 1000
         logger.debug(f"No pattern matched query: '{query[:50]}...' (latency: {latency_ms:.2f}ms)")
+
+        # Track no-match metrics
+        if REWRITE_METRICS_ENABLED:
+            rag_query_rewrite_total.labels(matched="false").inc()
+            rag_query_rewrite_latency_seconds.observe(latency_ms / 1000.0)
+
         return query, None
 
 

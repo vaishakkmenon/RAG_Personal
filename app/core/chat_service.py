@@ -28,8 +28,14 @@ logger = logging.getLogger(__name__)
 
 # Optional metrics import
 try:
-    from ..metrics import rag_retrieval_chunks
-
+    from ..metrics import (
+        rag_retrieval_chunks,
+        rag_retrieval_distance,
+        rag_grounding_total,
+        rag_retrieval_latency_seconds,
+        rag_ambiguity_checks_total,
+        rag_clarification_requests_total,
+    )
     METRICS_ENABLED = True
 except ImportError:
     METRICS_ENABLED = False
@@ -465,11 +471,24 @@ class ChatService:
 
         # STEP 2: Check for ambiguity BEFORE retrieval
         # Pass conversation history to make ambiguity detection context-aware
-        if _is_truly_ambiguous(request.question, conversation_history=conversation_history):
+        is_ambiguous = _is_truly_ambiguous(request.question, conversation_history=conversation_history)
+
+        # Track ambiguity detection
+        if METRICS_ENABLED:
+            rag_ambiguity_checks_total.labels(
+                result="ambiguous" if is_ambiguous else "clear"
+            ).inc()
+
+        if is_ambiguous:
             logger.info(f"Pre-retrieval: Question is too vague: '{request.question}'")
             clarification = build_clarification_message(
                 request.question, self.prompt_builder.config
             )
+
+            # Track clarification request
+            if METRICS_ENABLED:
+                rag_clarification_requests_total.inc()
+
             return ChatResponse(
                 answer=clarification,
                 sources=[],
@@ -610,6 +629,12 @@ class ChatService:
         if METRICS_ENABLED:
             rag_retrieval_chunks.observe(len(chunks))
 
+            # Track retrieval distances
+            for chunk in chunks:
+                distance = chunk.get("distance")
+                if distance is not None:
+                    rag_retrieval_distance.observe(distance)
+
         # ===== RETRIEVAL QUALITY PRE-CHECK =====
         # Check if retrieved chunks actually contain relevant query terms
         # This helps detect weak retrieval before sending to LLM
@@ -651,6 +676,10 @@ class ChatService:
                     grounded=False
                 )
             # ===== END ANALYTICS =====
+
+            # Track ungrounded response
+            if METRICS_ENABLED:
+                rag_grounding_total.labels(grounded="false").inc()
 
             # Question is specific (passed ambiguity check) but no relevant docs found
             return ChatResponse(
@@ -904,6 +933,10 @@ class ChatService:
                 clarification_requested=False,
             ),
         )
+
+        # Track grounding success
+        if METRICS_ENABLED:
+            rag_grounding_total.labels(grounded="true").inc()
 
         # ===== CACHE RESPONSE =====
         # Cache grounded responses for future requests

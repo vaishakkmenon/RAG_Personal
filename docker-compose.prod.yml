@@ -252,6 +252,148 @@ services:
     networks:
       - rag_network
 
+  # ==========================================================================
+  # Prometheus Service - Metrics collection and alerting (Production)
+  # ==========================================================================
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: rag_prometheus_prod
+    hostname: prometheus
+
+    ports:
+      - "9090:9090"
+
+    volumes:
+      - ./monitoring/prometheus/prometheus.prod.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data_prod:/prometheus
+
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+
+    depends_on:
+      api:
+        condition: service_healthy
+
+    restart: always
+
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+
+    # Prometheus runs as nobody (65534) by default
+    user: "65534:65534"
+
+    # Resource limits (ENABLED for production)
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=prometheus,env=production"
+
+    networks:
+      - rag_network
+
+  # ==========================================================================
+  # Grafana Service - Metrics visualization and dashboards (Production)
+  # ==========================================================================
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: rag_grafana_prod
+    hostname: grafana
+
+    ports:
+      - "3000:3000"
+
+    environment:
+      # Admin credentials (configurable via .env.prod)
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}  # REQUIRED in production
+
+      # Server configuration
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-https://grafana.vaishakmenon.com}
+      - GF_SERVER_SERVE_FROM_SUB_PATH=false
+
+      # Anonymous access disabled
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+
+      # Provisioning
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+
+      # Default home dashboard
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/dashboards/01-system-overview.json
+
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana_data_prod:/var/lib/grafana
+
+    depends_on:
+      prometheus:
+        condition: service_healthy
+
+    restart: always
+
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+
+    # Grafana runs as grafana user (472) by default
+    user: "472:472"
+
+    # Resource limits (ENABLED for production)
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=grafana,env=production"
+
+    networks:
+      - rag_network
+
 # ============================================================================
 # Named Volumes - Persistent data storage
 # ============================================================================
@@ -269,6 +411,16 @@ volumes:
   caddy_config:
     driver: local
     name: rag_caddy_config
+
+  # Prometheus time-series data (production)
+  prometheus_data_prod:
+    driver: local
+    name: rag_prometheus_data_prod
+
+  # Grafana dashboards and settings (production)
+  grafana_data_prod:
+    driver: local
+    name: rag_grafana_data_prod
 
 # ============================================================================
 # Networks - Internal communication

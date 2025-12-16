@@ -13,6 +13,13 @@ from .utils import mask_session_id
 
 logger = logging.getLogger(__name__)
 
+# Import session metrics
+try:
+    from ..metrics import rag_rate_limit_violations_total
+    RATE_LIMIT_METRICS_ENABLED = True
+except ImportError:
+    RATE_LIMIT_METRICS_ENABLED = False
+
 
 class SessionStore(ABC):
     """Abstract base class for session storage backends."""
@@ -128,6 +135,9 @@ class SessionStore(ABC):
                 f"Rate limit exceeded for session {mask_session_id(session.session_id)}: "
                 f"{len(recent_requests)} requests in last hour"
             )
+            # Track rate limit violation
+            if RATE_LIMIT_METRICS_ENABLED:
+                rag_rate_limit_violations_total.labels(limit_type="queries_per_hour").inc()
 
         return within_limit
 
