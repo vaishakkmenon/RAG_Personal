@@ -109,15 +109,15 @@ def simple_chat(
             for chunk in chunks
         ]
 
-        prompt = prompt_builder.build_prompt(
+        prompt_result = prompt_builder.build_prompt(
             question=request.question,
-            sources=formatted_sources,
+            context_chunks=formatted_sources,  # Fixed: parameter is context_chunks not sources
             conversation_history=[]  # Simple endpoint doesn't support conversation history
         )
 
-        # Step 3: Generate answer
+        # Step 3: Generate answer (use prompt from PromptResult)
         answer = generate_with_ollama(
-            prompt=prompt,
+            prompt=prompt_result.prompt,  # Fixed: use prompt_result.prompt not just prompt
             temperature=temperature,
             max_tokens=max_tokens
         )
@@ -138,18 +138,15 @@ def simple_chat(
 
         grounded = len(chunks) > 0
 
+        # Generate session_id if not provided (simple endpoint doesn't use sessions but needs to return one)
+        import uuid
+        session_id = request.session_id or str(uuid.uuid4())
+
         response = ChatResponse(
             answer=answer,
             sources=sources,
             grounded=grounded,
-            metadata={
-                "num_chunks": len(chunks),
-                "top_k": top_k,
-                "max_distance": max_distance,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-                "routing_enabled": False,
-            }
+            session_id=session_id,
         )
 
         # Track success metrics

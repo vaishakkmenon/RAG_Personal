@@ -85,8 +85,9 @@ FROM builder AS test
 # Install testing and linting tools into the same virtualenv
 RUN /opt/venv/bin/python -m pip install --no-cache-dir \
     pytest==8.4.1 \
-    pytest-asyncio==0.23.0 \
     pytest-cov==4.1.0 \
+    pytest-mock==3.12.0 \
+    faker==22.0.0 \
     ruff==0.12.9
 
 # Copy test files and configuration
