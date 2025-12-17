@@ -14,7 +14,14 @@ from app.settings import settings
 log = logging.getLogger(__name__)
 
 class APIKeyMiddleware(BaseHTTPMiddleware):
+    # Public paths that don't require API key authentication
+    PUBLIC_PATHS = {"/health", "/health/detailed", "/health/ready", "/health/live", "/metrics", "/docs", "/openapi.json", "/redoc"}
+
     async def dispatch(self, request: Request, call_next) -> Response:
+        # Skip authentication for public endpoints
+        if request.url.path in self.PUBLIC_PATHS:
+            return await call_next(request)
+
         # Validate origin (primary defense)
         origin = request.headers.get("origin") or request.headers.get("referer", "")
         if origin:

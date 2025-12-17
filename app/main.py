@@ -5,6 +5,7 @@ Clean, modular application setup with middleware configuration.
 """
 
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,12 +19,30 @@ from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.settings import settings
 from app.config_validator import validate_config
 
+from app.exceptions import (
+    RAGException,
+    rag_exception_handler,
+    generic_exception_handler
+)
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# ------------------------------------------------------------------------------
+# Lifespan event handler
+# ------------------------------------------------------------------------------
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handle application startup and shutdown events."""
+    # Startup: Validate environment configuration
+    validate_config()
+    yield
+    # Shutdown: Add cleanup logic here if needed in the future
 
 # ------------------------------------------------------------------------------
 # FastAPI app setup
@@ -34,12 +53,15 @@ app = FastAPI(
     description=settings.api.description,
     version=settings.api.version,
     summary=settings.api.summary,
+    lifespan=lifespan,
 )
 
-@app.on_event("startup")
-async def startup_event():
-    """Validate environment configuration on startup."""
-    validate_config()
+# ------------------------------------------------------------------------------
+# Exception Handlers
+# ------------------------------------------------------------------------------
+
+app.add_exception_handler(RAGException, rag_exception_handler)
+app.add_exception_handler(Exception, generic_exception_handler)
 
 # ------------------------------------------------------------------------------
 # Middleware configuration

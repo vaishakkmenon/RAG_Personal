@@ -16,6 +16,7 @@ from app.services.prompt_guard import get_prompt_guard
 from app.prompting import create_default_prompt_builder
 from app.settings import settings
 import logging
+from app.exceptions import LLMException, RetrievalException, RAGException
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -87,12 +88,16 @@ def simple_chat(
             )
 
         # Step 1: Simple search - no filters, no routing
-        chunks = search(
-            query=request.question,
-            k=top_k,
-            max_distance=max_distance,
-            metadata_filter=None  # No filtering!
-        )
+        try:
+            chunks = search(
+                query=request.question,
+                k=top_k,
+                max_distance=max_distance,
+                metadata_filter=None  # No filtering!
+            )
+        except Exception as e:
+            logger.error(f"Retrieval failed in simple_chat: {e}")
+            raise RetrievalException("Failed to search knowledge base")
 
         logger.info(f"Retrieved {len(chunks)} chunks")
 
@@ -116,11 +121,15 @@ def simple_chat(
         )
 
         # Step 3: Generate answer (use prompt from PromptResult)
-        answer = generate_with_ollama(
-            prompt=prompt_result.prompt,  # Fixed: use prompt_result.prompt not just prompt
-            temperature=temperature,
-            max_tokens=max_tokens
-        )
+        try:
+            answer = generate_with_ollama(
+                prompt=prompt_result.prompt,  # Fixed: use prompt_result.prompt not just prompt
+                temperature=temperature,
+                max_tokens=max_tokens
+            )
+        except Exception as e:
+            logger.error(f"LLM generation failed in simple_chat: {e}")
+            raise LLMException("Failed to generate response")
 
         # Step 4: Format response
         sources: List[ChatSource] = []
@@ -166,6 +175,13 @@ def simple_chat(
                 component="api",
                 error_type=f"http_{e.status_code}"
             ).inc()
+        raise
+
+    except RAGException:
+        # Re-raise custom exceptions to be handled by app-level handler
+        # We don't track these here because the handler/middleware will track them? 
+        # Actually proper metrics tracking for these custom exceptions might be good.
+        # For now, just re-raise.
         raise
 
     except Exception as e:
@@ -324,6 +340,10 @@ def chat(
                 error_type=f"http_{e.status_code}"
             ).inc()
         raise
+
+    except RAGException:
+        raise
+
 
     except Exception as e:
         # Track unexpected errors

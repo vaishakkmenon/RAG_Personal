@@ -423,3 +423,54 @@ class TestLLMWrapperFunction:
             max_tokens=1000,
             model=None
         )
+
+
+@pytest.mark.unit
+@pytest.mark.llm
+class TestLLMFallback:
+    """Tests for LLM fallback mechanisms."""
+
+    @patch("app.services.llm.ollama.Client")
+    @patch("app.services.llm.Groq")
+    def test_groq_to_ollama_fallback(self, mock_groq_class, mock_ollama_class):
+        """Test successful fallback from Groq to Ollama."""
+        from app.services.llm import OllamaService
+        from app.settings import settings
+        from groq import APITimeoutError
+        from httpx import Request
+
+        original_provider = settings.llm.provider
+        original_key = settings.llm.groq_api_key
+        settings.llm.provider = "groq"
+        settings.llm.groq_api_key = "test-key"
+
+        try:
+            # Mock Groq client to raise timeout
+            mock_groq_client = MagicMock()
+            mock_request = Request("POST", "https://api.groq.com/test")
+            mock_groq_client.chat.completions.create.side_effect = APITimeoutError(request=mock_request)
+            mock_groq_class.return_value = mock_groq_client
+
+            # Mock Ollama fallback to SUCCEED
+            mock_ollama_client = MagicMock()
+            mock_ollama_client.generate.return_value = {"response": "Fallback response from Ollama"}
+            mock_ollama_class.return_value = mock_ollama_client
+
+            service = OllamaService()
+
+            # Should succeed with fallback response
+            # Note: Retry logic will cause Groq to be called multiple times before fallback
+            # We mock it to fail every time
+            result = service.generate(prompt="Test")
+
+            assert result == "Fallback response from Ollama"
+
+            # Verify both were called
+            assert mock_groq_client.chat.completions.create.called
+            # Default retry is 2 times (max_retries=2 in usage)
+            assert mock_groq_client.chat.completions.create.call_count == 2
+            assert mock_ollama_client.generate.called
+
+        finally:
+            settings.llm.provider = original_provider
+            settings.llm.groq_api_key = original_key

@@ -375,12 +375,20 @@ class TestRetrievalEdgeCases:
         """Test handling of ChromaDB connection failures."""
         from app.retrieval import search
 
+        # Clear fallback cache to ensure no cached results
+        try:
+            from app.retrieval.fallback_cache import get_fallback_cache
+            cache = get_fallback_cache()
+            cache.clear()
+        except:
+            pass
+
         # Mock connection failure
         mock_collection.query.side_effect = Exception("ChromaDB connection failed")
 
         with pytest.raises(Exception, match="ChromaDB connection failed"):
             search(
-                query="test",
+                query="test_unique_query_12345",  # Use unique query to avoid cache
                 k=5,
                 use_hybrid=False,
                 use_query_rewriting=False,

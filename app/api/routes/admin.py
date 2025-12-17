@@ -12,6 +12,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.settings import settings
 from app.retrieval import reset_collection
+from app.retrieval.fallback_cache import get_fallback_cache
 
 router = APIRouter()
 
@@ -107,4 +108,90 @@ async def chromadb_status() -> Dict[str, Any]:
         raise HTTPException(
             status_code=500,
             detail=f"Error checking status: {str(e)}"
+        )
+
+
+@router.get("/fallback-cache/stats")
+async def get_fallback_cache_stats() -> Dict[str, Any]:
+    """Get retrieval fallback cache statistics.
+
+    Returns information about the fallback cache used when ChromaDB is unavailable.
+
+    Returns:
+        Dictionary with cache statistics including hit rate and size
+    """
+    try:
+        cache = get_fallback_cache()
+        stats = cache.get_stats()
+
+        return {
+            "status": "active",
+            "statistics": stats,
+            "description": "Fallback cache provides cached retrieval results when ChromaDB is unavailable"
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error getting cache stats: {str(e)}"
+        )
+
+
+@router.delete("/fallback-cache")
+async def clear_fallback_cache() -> Dict[str, Any]:
+    """Clear the retrieval fallback cache.
+
+    Removes all cached retrieval results. This is useful when you want to
+    ensure fresh results after updating the vector database.
+
+    Returns:
+        Dictionary with operation status
+    """
+    try:
+        cache = get_fallback_cache()
+        stats_before = cache.get_stats()
+        cache.clear()
+
+        return {
+            "status": "success",
+            "message": "Fallback cache cleared successfully",
+            "entries_cleared": stats_before["cache_size"],
+            "statistics_reset": {
+                "hits": stats_before["hits"],
+                "misses": stats_before["misses"],
+                "fallback_uses": stats_before["fallback_uses"]
+            }
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error clearing cache: {str(e)}"
+        )
+
+
+@router.post("/fallback-cache/cleanup")
+async def cleanup_fallback_cache() -> Dict[str, Any]:
+    """Clean up expired entries from the fallback cache.
+
+    Removes entries that have exceeded their TTL (time-to-live).
+
+    Returns:
+        Dictionary with cleanup results
+    """
+    try:
+        cache = get_fallback_cache()
+        removed_count = cache.cleanup_expired()
+
+        return {
+            "status": "success",
+            "message": "Expired entries cleaned up",
+            "entries_removed": removed_count,
+            "current_cache_size": cache.get_stats()["cache_size"]
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error cleaning up cache: {str(e)}"
         )

@@ -51,6 +51,11 @@ logger.info(
     f"Collection '{COLLECTION_NAME}' ready with {_collection.count()} documents"
 )
 
+
+def get_chroma_client():
+    """Get the ChromaDB client instance."""
+    return _client
+
 # Initialize BM25 index for hybrid search
 _bm25_index = None
 if BM25_AVAILABLE:
@@ -179,10 +184,40 @@ def search(
         final_k = k
 
     # Use hybrid search if BM25 is available and enabled
-    if use_hybrid and _bm25_index is not None:
-        results = _hybrid_search(query, retrieval_k, max_dist, metadata_filter)
-    else:
-        results = _semantic_search(query, retrieval_k, max_dist, metadata_filter)
+    # Wrap in try-except for fallback cache support
+    try:
+        if use_hybrid and _bm25_index is not None:
+            results = _hybrid_search(query, retrieval_k, max_dist, metadata_filter)
+        else:
+            results = _semantic_search(query, retrieval_k, max_dist, metadata_filter)
+
+        # Cache successful retrieval results for fallback
+        if results:
+            try:
+                from app.retrieval.fallback_cache import get_fallback_cache
+                cache = get_fallback_cache()
+                cache.cache_results(query, results)
+            except Exception as cache_error:
+                logger.warning(f"Failed to cache retrieval results: {cache_error}")
+
+    except Exception as retrieval_error:
+        logger.error(f"ChromaDB retrieval failed: {retrieval_error}")
+
+        # Try fallback cache
+        try:
+            from app.retrieval.fallback_cache import get_fallback_cache
+            cache = get_fallback_cache()
+            cached_results = cache.get_fallback_results(query)
+
+            if cached_results:
+                logger.warning(f"Using {len(cached_results)} cached results as fallback")
+                results = cached_results
+            else:
+                # No cached results available, re-raise original error
+                raise retrieval_error
+        except ImportError:
+            # Fallback cache not available
+            raise retrieval_error
 
     # Apply cross-encoder reranking if enabled
     if use_cross_encoder and len(results) > 0:

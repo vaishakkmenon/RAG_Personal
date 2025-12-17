@@ -23,7 +23,7 @@ class TestHealthEndpoint:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "ok"  # Actual implementation returns "ok" not "healthy"
+        assert data["status"] == "healthy"  # Actual implementation returns "healthy"
         assert "provider" in data
         assert "model" in data
         assert "socket" in data

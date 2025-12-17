@@ -13,6 +13,7 @@ import logging
 import time
 from typing import Optional
 import asyncio
+from functools import wraps
 
 import ollama
 from groq import Groq, AsyncGroq
@@ -34,6 +35,59 @@ try:
 except ImportError:
     METRICS_ENABLED = False
     logger.debug("Metrics not available for LLM service")
+
+
+def retry_with_exponential_backoff(
+    max_retries=3,
+    base_delay=1,
+    max_delay=10,
+    exponential_base=2
+):
+    """Retry decorator with exponential backoff for synchronous functions"""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    if attempt == max_retries - 1:
+                        raise
+                    delay = min(base_delay * (exponential_base ** attempt), max_delay)
+                    logger.warning(
+                        f"Attempt {attempt + 1}/{max_retries} failed in {func.__name__}: {e}. "
+                        f"Retrying in {delay}s..."
+                    )
+                    time.sleep(delay)
+        return wrapper
+    return decorator
+
+
+def async_retry_with_exponential_backoff(
+    max_retries=3,
+    base_delay=1,
+    max_delay=10,
+    exponential_base=2
+):
+    """Retry decorator with exponential backoff for asynchronous functions"""
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            for attempt in range(max_retries):
+                try:
+                    return await func(*args, **kwargs)
+                except Exception as e:
+                    if attempt == max_retries - 1:
+                        raise
+                    delay = min(base_delay * (exponential_base ** attempt), max_delay)
+                    logger.warning(
+                        f"Attempt {attempt + 1}/{max_retries} failed in {func.__name__}: {e}. "
+                        f"Retrying in {delay}s..."
+                    )
+                    await asyncio.sleep(delay)
+        return wrapper
+    return decorator
+
 
 
 class OllamaService:
@@ -187,6 +241,7 @@ class OllamaService:
                 # Already using Ollama, can't fallback further
                 raise
 
+    @retry_with_exponential_backoff(max_retries=2)
     def _generate_with_groq(
         self,
         prompt: str,
@@ -426,6 +481,7 @@ class OllamaService:
                 # Already using Ollama, can't fallback further
                 raise
 
+    @async_retry_with_exponential_backoff(max_retries=2)
     async def _generate_with_groq_async(
         self,
         prompt: str,
