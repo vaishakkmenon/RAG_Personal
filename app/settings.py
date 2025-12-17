@@ -27,7 +27,15 @@ class APISettings(BaseModel):
         default="Local RAG + Resume-style RC.", description="API summary"
     )
     cors_origins: List[str] = Field(
-        default=["http://localhost:3000"], description="Allowed CORS origins"
+        default_factory=lambda: [
+            url.strip()
+            for url in os.getenv(
+                "ALLOWED_ORIGINS",
+                "http://localhost:3000,http://localhost:5173,https://vaishakmenon.com"
+            ).split(",")
+            if url.strip()
+        ],
+        description="Allowed CORS origins"
     )
 
 

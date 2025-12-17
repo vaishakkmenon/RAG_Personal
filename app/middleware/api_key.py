@@ -8,34 +8,44 @@ from starlette.responses import JSONResponse, Response
 
 from app.settings import settings
 
+import fnmatch
+from app.settings import settings
+
 log = logging.getLogger(__name__)
-
-# Allow health/docs/openapi and metrics to be scraped without a key
-EXEMPT_PATH_PREFIXES: tuple[str, ...] = (
-    "/health", "/docs", "/openapi.json", "/metrics", "/redoc", "/favicon.ico"
-)
-
-# API_KEY is now accessed dynamically from settings to prevent test pollution
-# API_KEY: str | None = getattr(settings, "api_key", None)
-
-def _is_exempt(path: str) -> bool:
-    return any(path.startswith(p) for p in EXEMPT_PATH_PREFIXES)
 
 class APIKeyMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
-        # Allow docs & schema without a key
-        if _is_exempt(request.url.path):
-            return await call_next(request)
+        # Validate origin (primary defense)
+        origin = request.headers.get("origin") or request.headers.get("referer", "")
+        if origin:
+            # Clean origin to just scheme + domain (remove trailing slash)
+            origin_clean = origin.rstrip("/")
+            
+            # Check against allowed origins (supports wildcards)
+            origin_valid = False
+            for allowed in settings.api.cors_origins + [
+                "https://deploy-preview-*.vaishakmenon.com" # Explicit wildcard support
+            ]:
+                if fnmatch.fnmatch(origin_clean, allowed):
+                    origin_valid = True
+                    break
+            
+            if not origin_valid:
+                log.warning(f"Invalid origin: {origin} for {request.url.path}")
+                return JSONResponse(
+                    status_code=403,
+                    content={"detail": "Origin not allowed"}
+                )
 
-        # If no key configured, allow all
-        current_api_key = getattr(settings, "api_key", None)
-        if not current_api_key:
-            log.warning("API key not configured; allowing request to %s", request.url.path)
-            return await call_next(request)
-
-        # Accept header 'X-API-Key' (case-insensitive)
-        provided = request.headers.get("x-api-key") or request.headers.get("X-API-Key")
-        if provided != current_api_key:
-            return JSONResponse(status_code=401, content={"detail": "Invalid or missing API key"})
+        # Validate API key (secondary defense)
+        api_key = getattr(settings, "api_key", None)
+        if api_key:
+            provided = request.headers.get("x-api-key")
+            if provided != api_key:
+                log.error(f"API Key mismatch! Expected: {api_key[:4]}***, Received: {provided[:4] if provided else 'None'}***")
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": "Invalid or missing API key"}
+                )
 
         return await call_next(request)

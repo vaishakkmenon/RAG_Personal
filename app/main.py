@@ -14,7 +14,9 @@ from app.api import create_api_router
 from app.middleware.api_key import APIKeyMiddleware
 from app.middleware.logging import LoggingMiddleware
 from app.middleware.max_size import MaxSizeMiddleware
+from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.settings import settings
+from app.config_validator import validate_config
 
 # Configure logging
 logging.basicConfig(
@@ -34,20 +36,30 @@ app = FastAPI(
     summary=settings.api.summary,
 )
 
+@app.on_event("startup")
+async def startup_event():
+    """Validate environment configuration on startup."""
+    validate_config()
+
 # ------------------------------------------------------------------------------
 # Middleware configuration
 # ------------------------------------------------------------------------------
 
 # CORS for local frontend
+# CORS configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.api.cors_origins,
+    allow_origin_regex=r"https://deploy-preview-.*\.vaishakmenon\.com",  # Allow Netlify deploy previews
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "X-API-Key", "Authorization"],
+    max_age=600,  # Cache preflight requests for 10 minutes
 )
 
 # Custom middleware: API key validation, request size limiting, structured logging
+# Custom middleware: API key validation, request size limiting, structured logging, security headers
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(APIKeyMiddleware)
 app.add_middleware(MaxSizeMiddleware, max_bytes=settings.max_bytes)
 app.add_middleware(LoggingMiddleware)

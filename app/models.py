@@ -43,16 +43,24 @@ class ChatRequest(BaseModel):
     session_id: Optional[str] = Field(
         default=None,
         description="Optional session ID for conversation continuity. If not provided, a new session will be created.",
-        json_schema_extra={"example": "550e8400-e29b-41d4-a716-446655440000"}
+        json_schema_extra={"example": "550e8400-e29b-41d4-a716-446655440000"},
+        max_length=64,
+        pattern="^[a-zA-Z0-9_-]+$"  # Only alphanumeric, dash, underscore
     )
 
     @field_validator('question')
     @classmethod
     def strip_and_validate(cls, v: str) -> str:
-        """Strip whitespace and ensure question has content."""
+        """Strip whitespace, check content, and prevent spam/repetition."""
         v = v.strip()
         if not v:
             raise ValueError('Question cannot be empty or whitespace only')
+        
+        # Check for extremely repetitive patterns (potential abuse)
+        words = v.split()
+        if len(words) > 10 and len(set(words)) < len(words) / 10:  # >90% repeated words
+             raise ValueError("Query contains excessive repetition")
+             
         return v
 
 

@@ -52,7 +52,7 @@ services:
       
       # ============ Session Management (Redis) ============
       - SESSION_STORAGE_BACKEND=${SESSION_STORAGE_BACKEND:-redis}
-      - SESSION_REDIS_URL=redis://redis:6379/0
+      - SESSION_REDIS_URL=redis://:${REDIS_PASSWORD:-devpassword123}@redis:6379/0
       - SESSION_MAX_TOTAL_SESSIONS=${SESSION_MAX_TOTAL_SESSIONS:-1000}
       - SESSION_MAX_SESSIONS_PER_IP=${SESSION_MAX_SESSIONS_PER_IP:-5}
       - SESSION_QUERIES_PER_HOUR=${SESSION_QUERIES_PER_HOUR:-10}
@@ -182,6 +182,7 @@ services:
     command: 
       - redis-server
       - --appendonly yes                    # Enable AOF persistence
+      - --requirepass ${REDIS_PASSWORD:-devpassword123}  # Require encryption
       - --appendfsync everysec              # Fsync every second (balanced)
       - --maxmemory 256mb                   # Memory limit
       - --maxmemory-policy allkeys-lru      # Eviction policy
@@ -199,9 +200,11 @@ services:
     
     # Health check (critical for API service dependency)
     healthcheck:
-      test: 
+      test:
         - CMD
         - redis-cli
+        - -a
+        - ${REDIS_PASSWORD:-devpassword123}
         - --raw
         - incr
         - ping
