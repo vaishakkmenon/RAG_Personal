@@ -63,7 +63,7 @@ class TestRecallAtK:
         relevant = ["chunk-1", "chunk-4", "chunk-5"]
 
         recall = calculate_recall_at_k(retrieved, relevant, k=3)
-        assert recall == pytest.approx(1/3)  # Found 1 out of 3 relevant
+        assert recall == pytest.approx(1 / 3)  # Found 1 out of 3 relevant
 
     def test_recall_at_k_no_relevant(self):
         """Test recall when no relevant docs exist."""
@@ -98,7 +98,7 @@ class TestPrecisionAtK:
         relevant = ["chunk-1"]
 
         precision = calculate_precision_at_k(retrieved, relevant, k=3)
-        assert precision == pytest.approx(1/3)  # Only 1 out of 3 is relevant
+        assert precision == pytest.approx(1 / 3)  # Only 1 out of 3 is relevant
 
 
 @pytest.mark.unit
@@ -123,7 +123,7 @@ class TestMRR:
         relevant = ["relevant"]
 
         mrr = calculate_mrr(retrieved, relevant)
-        assert mrr == pytest.approx(1/3)  # 1/3
+        assert mrr == pytest.approx(1 / 3)  # 1/3
 
     def test_mrr_no_match(self):
         """Test MRR when no relevant docs retrieved."""

@@ -26,7 +26,9 @@ logger = logging.getLogger(__name__)
 class PatternSuggester:
     """Analyze failed queries and suggest new patterns."""
 
-    def __init__(self, storage_path: Optional[str] = None, settings_obj: Optional[object] = None):
+    def __init__(
+        self, storage_path: Optional[str] = None, settings_obj: Optional[object] = None
+    ):
         """
         Initialize pattern suggester.
 
@@ -39,7 +41,9 @@ class PatternSuggester:
             from app.settings import settings as settings_obj
 
         self.settings = settings_obj
-        self.storage_path = storage_path or self.settings.query_rewriter.failed_queries_storage_path
+        self.storage_path = (
+            storage_path or self.settings.query_rewriter.failed_queries_storage_path
+        )
         self.failed_queries: List[Dict] = self._load_failed_queries()
         self.max_failed_queries = 1000
         self.save_counter = 0
@@ -55,9 +59,11 @@ class PatternSuggester:
         storage_file = Path(self.storage_path)
         if storage_file.exists():
             try:
-                with open(storage_file, encoding='utf-8') as f:
+                with open(storage_file, encoding="utf-8") as f:
                     queries = json.load(f)
-                    logger.info(f"Loaded {len(queries)} failed queries from {self.storage_path}")
+                    logger.info(
+                        f"Loaded {len(queries)} failed queries from {self.storage_path}"
+                    )
                     return queries
             except Exception as e:
                 logger.error(f"Failed to load failed queries: {e}")
@@ -71,12 +77,14 @@ class PatternSuggester:
             storage_file.parent.mkdir(parents=True, exist_ok=True)
 
             # Keep only the most recent N queries
-            queries_to_save = self.failed_queries[-self.max_failed_queries:]
+            queries_to_save = self.failed_queries[-self.max_failed_queries :]
 
-            with open(storage_file, 'w', encoding='utf-8') as f:
+            with open(storage_file, "w", encoding="utf-8") as f:
                 json.dump(queries_to_save, f, indent=2)
 
-            logger.debug(f"Saved {len(queries_to_save)} failed queries to {self.storage_path}")
+            logger.debug(
+                f"Saved {len(queries_to_save)} failed queries to {self.storage_path}"
+            )
         except Exception as e:
             logger.error(f"Failed to save failed queries: {e}")
 
@@ -85,7 +93,7 @@ class PatternSuggester:
         query: str,
         distance: Optional[float],
         pattern_matched: Optional[str],
-        grounded: bool
+        grounded: bool,
     ):
         """
         Capture a failed query for analysis.
@@ -100,22 +108,24 @@ class PatternSuggester:
         distance_threshold = self.settings.query_rewriter.capture_failed_threshold
 
         is_failure = (
-            not grounded or
-            (distance is not None and distance > distance_threshold) or
-            distance is None
+            not grounded
+            or (distance is not None and distance > distance_threshold)
+            or distance is None
         )
 
         if not is_failure:
             return
 
         # Capture the failed query
-        self.failed_queries.append({
-            'query': query,
-            'distance': distance,
-            'pattern_matched': pattern_matched,
-            'grounded': grounded,
-            'timestamp': datetime.now().isoformat()
-        })
+        self.failed_queries.append(
+            {
+                "query": query,
+                "distance": distance,
+                "pattern_matched": pattern_matched,
+                "grounded": grounded,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
 
         logger.debug(
             f"Captured failed query: '{query[:50]}...' "
@@ -139,63 +149,86 @@ class PatternSuggester:
             Dict with analysis results and pattern suggestions
         """
         if not self.failed_queries:
-            return {
-                'total_failed': 0,
-                'clusters': [],
-                'suggestions': []
-            }
+            return {"total_failed": 0, "clusters": [], "suggestions": []}
 
         # Keyword-based clustering
         keyword_clusters = defaultdict(list)
 
         for failed in self.failed_queries:
-            query = failed['query']
+            query = failed["query"]
             query_lower = query.lower()
 
             # Identify query patterns based on keywords
             clustered = False
 
             # Counting queries
-            if any(kw in query_lower for kw in ['how many', 'count', 'number of']):
-                keyword_clusters['counting'].append(failed)
+            if any(kw in query_lower for kw in ["how many", "count", "number of"]):
+                keyword_clusters["counting"].append(failed)
                 clustered = True
 
             # Temporal queries
-            elif any(kw in query_lower for kw in ['when did', 'when was', 'what year', 'what date']):
-                keyword_clusters['temporal_past'].append(failed)
+            elif any(
+                kw in query_lower
+                for kw in ["when did", "when was", "what year", "what date"]
+            ):
+                keyword_clusters["temporal_past"].append(failed)
                 clustered = True
-            elif any(kw in query_lower for kw in ['when does', 'when will', 'expire', 'expiration']):
-                keyword_clusters['temporal_future'].append(failed)
+            elif any(
+                kw in query_lower
+                for kw in ["when does", "when will", "expire", "expiration"]
+            ):
+                keyword_clusters["temporal_future"].append(failed)
                 clustered = True
 
             # Comparison queries
-            elif any(kw in query_lower for kw in ['compare', 'versus', 'vs', 'difference between', 'better than']):
-                keyword_clusters['comparison'].append(failed)
+            elif any(
+                kw in query_lower
+                for kw in [
+                    "compare",
+                    "versus",
+                    "vs",
+                    "difference between",
+                    "better than",
+                ]
+            ):
+                keyword_clusters["comparison"].append(failed)
                 clustered = True
 
             # List queries
-            elif any(kw in query_lower for kw in ['list all', 'show all', 'what are all', 'give me all']):
-                keyword_clusters['list_request'].append(failed)
+            elif any(
+                kw in query_lower
+                for kw in ["list all", "show all", "what are all", "give me all"]
+            ):
+                keyword_clusters["list_request"].append(failed)
                 clustered = True
 
             # Ranking/superlative queries
-            elif any(kw in query_lower for kw in ['best', 'worst', 'highest', 'lowest', 'most', 'least']):
-                keyword_clusters['ranking'].append(failed)
+            elif any(
+                kw in query_lower
+                for kw in ["best", "worst", "highest", "lowest", "most", "least"]
+            ):
+                keyword_clusters["ranking"].append(failed)
                 clustered = True
 
             # Attribute queries
-            elif any(kw in query_lower for kw in ['what grade', 'what score', 'what gpa', 'which courses']):
-                keyword_clusters['attribute_filter'].append(failed)
+            elif any(
+                kw in query_lower
+                for kw in ["what grade", "what score", "what gpa", "which courses"]
+            ):
+                keyword_clusters["attribute_filter"].append(failed)
                 clustered = True
 
             # Existence/verification queries
-            elif any(kw in query_lower for kw in ['do i have', 'did i take', 'have i done', 'did i get']):
-                keyword_clusters['existence_check'].append(failed)
+            elif any(
+                kw in query_lower
+                for kw in ["do i have", "did i take", "have i done", "did i get"]
+            ):
+                keyword_clusters["existence_check"].append(failed)
                 clustered = True
 
             # If no cluster matched, put in unknown
             if not clustered:
-                keyword_clusters['unknown'].append(failed)
+                keyword_clusters["unknown"].append(failed)
 
         # Generate suggestions for clusters with enough queries
         suggestions = []
@@ -203,40 +236,47 @@ class PatternSuggester:
         for cluster_name, queries in keyword_clusters.items():
             if len(queries) >= min_cluster_size:
                 # Calculate average distance for this cluster
-                distances = [q['distance'] for q in queries if q['distance'] is not None]
+                distances = [
+                    q["distance"] for q in queries if q["distance"] is not None
+                ]
                 avg_distance = sum(distances) / len(distances) if distances else None
 
                 # Get example queries (up to 5)
-                example_queries = [q['query'] for q in queries[:5]]
+                example_queries = [q["query"] for q in queries[:5]]
 
                 # Check if any pattern already matched these queries
-                patterns_that_matched = [q['pattern_matched'] for q in queries if q['pattern_matched']]
-                pattern_coverage = len(patterns_that_matched) / len(queries) if queries else 0.0
+                patterns_that_matched = [
+                    q["pattern_matched"] for q in queries if q["pattern_matched"]
+                ]
+                pattern_coverage = (
+                    len(patterns_that_matched) / len(queries) if queries else 0.0
+                )
 
-                suggestions.append({
-                    'cluster_type': cluster_name,
-                    'frequency': len(queries),
-                    'example_queries': example_queries,
-                    'avg_distance': avg_distance,
-                    'pattern_coverage': pattern_coverage,
-                    'suggestion': self._generate_suggestion_text(cluster_name, len(queries), pattern_coverage)
-                })
+                suggestions.append(
+                    {
+                        "cluster_type": cluster_name,
+                        "frequency": len(queries),
+                        "example_queries": example_queries,
+                        "avg_distance": avg_distance,
+                        "pattern_coverage": pattern_coverage,
+                        "suggestion": self._generate_suggestion_text(
+                            cluster_name, len(queries), pattern_coverage
+                        ),
+                    }
+                )
 
         # Sort suggestions by frequency (descending)
-        suggestions.sort(key=lambda x: x['frequency'], reverse=True)
+        suggestions.sort(key=lambda x: x["frequency"], reverse=True)
 
         return {
-            'total_failed': len(self.failed_queries),
-            'clusters': list(keyword_clusters.keys()),
-            'cluster_sizes': {k: len(v) for k, v in keyword_clusters.items()},
-            'suggestions': suggestions
+            "total_failed": len(self.failed_queries),
+            "clusters": list(keyword_clusters.keys()),
+            "cluster_sizes": {k: len(v) for k, v in keyword_clusters.items()},
+            "suggestions": suggestions,
         }
 
     def _generate_suggestion_text(
-        self,
-        cluster_type: str,
-        frequency: int,
-        pattern_coverage: float
+        self, cluster_type: str, frequency: int, pattern_coverage: float
     ) -> str:
         """
         Generate human-readable suggestion text.
@@ -281,37 +321,39 @@ class PatternSuggester:
             f"Query Clusters Identified: {len(analysis['clusters'])}",
             "",
             "Cluster Sizes:",
-            "-" * 80
+            "-" * 80,
         ]
 
         # Show cluster sizes
         for cluster_name, size in sorted(
-            analysis['cluster_sizes'].items(),
-            key=lambda x: x[1],
-            reverse=True
+            analysis["cluster_sizes"].items(), key=lambda x: x[1], reverse=True
         ):
             report_lines.append(f"  {cluster_name:<25} {size:>5} queries")
 
-        report_lines.extend([
-            "",
-            "Pattern Suggestions:",
-            "=" * 80
-        ])
+        report_lines.extend(["", "Pattern Suggestions:", "=" * 80])
 
-        if not analysis['suggestions']:
-            report_lines.append("No suggestions available (need at least 3 queries per cluster)")
+        if not analysis["suggestions"]:
+            report_lines.append(
+                "No suggestions available (need at least 3 queries per cluster)"
+            )
         else:
-            for i, suggestion in enumerate(analysis['suggestions'], 1):
-                avg_dist_str = f"{suggestion['avg_distance']:.3f}" if suggestion['avg_distance'] is not None else "N/A"
+            for i, suggestion in enumerate(analysis["suggestions"], 1):
+                avg_dist_str = (
+                    f"{suggestion['avg_distance']:.3f}"
+                    if suggestion["avg_distance"] is not None
+                    else "N/A"
+                )
 
-                report_lines.extend([
-                    f"\n{i}. {suggestion['cluster_type'].upper()} ({suggestion['frequency']} queries)",
-                    f"   Coverage: {suggestion['pattern_coverage']*100:.0f}% | Avg Distance: {avg_dist_str}",
-                    f"   Suggestion: {suggestion['suggestion']}",
-                    "   Example queries:"
-                ])
+                report_lines.extend(
+                    [
+                        f"\n{i}. {suggestion['cluster_type'].upper()} ({suggestion['frequency']} queries)",
+                        f"   Coverage: {suggestion['pattern_coverage']*100:.0f}% | Avg Distance: {avg_dist_str}",
+                        f"   Suggestion: {suggestion['suggestion']}",
+                        "   Example queries:",
+                    ]
+                )
 
-                for example in suggestion['example_queries']:
+                for example in suggestion["example_queries"]:
                     report_lines.append(f"     - {example}")
 
         report_lines.append("=" * 80)

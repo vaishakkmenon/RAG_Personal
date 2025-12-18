@@ -6,8 +6,6 @@ and NoOp rate limiter.
 """
 
 import pytest
-from unittest.mock import patch, MagicMock
-import time
 
 
 @pytest.mark.unit
@@ -18,10 +16,7 @@ class TestRateLimiterInit:
         """Test RateLimiter initialization with limits."""
         from app.services.rate_limiter import RateLimiter
 
-        limiter = RateLimiter(
-            requests_per_minute=30,
-            requests_per_day=1000
-        )
+        limiter = RateLimiter(requests_per_minute=30, requests_per_day=1000)
 
         assert limiter is not None
         assert limiter.requests_per_minute == 30
@@ -45,10 +40,7 @@ class TestRateLimiterAcquire:
         """Test that acquire succeeds when under rate limit."""
         from app.services.rate_limiter import RateLimiter
 
-        limiter = RateLimiter(
-            requests_per_minute=100,
-            requests_per_day=10000
-        )
+        limiter = RateLimiter(requests_per_minute=100, requests_per_day=10000)
 
         # Should succeed for first request
         result = limiter.acquire(timeout=1)
@@ -59,10 +51,7 @@ class TestRateLimiterAcquire:
         """Test multiple acquire calls."""
         from app.services.rate_limiter import RateLimiter
 
-        limiter = RateLimiter(
-            requests_per_minute=100,
-            requests_per_day=10000
-        )
+        limiter = RateLimiter(requests_per_minute=100, requests_per_day=10000)
 
         # Should succeed for multiple requests under limit
         for _ in range(5):
@@ -78,29 +67,23 @@ class TestRateLimiterStats:
         """Test that get_stats returns statistics dict."""
         from app.services.rate_limiter import RateLimiter
 
-        limiter = RateLimiter(
-            requests_per_minute=30,
-            requests_per_day=1000
-        )
+        limiter = RateLimiter(requests_per_minute=30, requests_per_day=1000)
 
         stats = limiter.get_stats()
 
         assert isinstance(stats, dict)
-        assert 'requests_last_minute' in stats or 'minute_utilization' in stats
+        assert "requests_last_minute" in stats or "minute_utilization" in stats
 
     def test_get_stats_includes_limits(self):
         """Test that stats includes configured limits."""
         from app.services.rate_limiter import RateLimiter
 
-        limiter = RateLimiter(
-            requests_per_minute=30,
-            requests_per_day=1000
-        )
+        limiter = RateLimiter(requests_per_minute=30, requests_per_day=1000)
 
         stats = limiter.get_stats()
 
-        assert stats.get('requests_per_minute_limit', 30) == 30
-        assert stats.get('requests_per_day_limit', 1000) == 1000
+        assert stats.get("requests_per_minute_limit", 30) == 30
+        assert stats.get("requests_per_day_limit", 1000) == 1000
 
 
 @pytest.mark.unit

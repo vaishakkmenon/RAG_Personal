@@ -6,12 +6,17 @@ prompt building, and LLM generation.
 """
 
 import logging
-import time
 from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException, status
 
-from app.models import ChatRequest, ChatResponse, ChatSource, AmbiguityMetadata, RewriteMetadata
+from app.models import (
+    ChatRequest,
+    ChatResponse,
+    ChatSource,
+    AmbiguityMetadata,
+    RewriteMetadata,
+)
 from app.monitoring import time_execution_info
 from app.monitoring.pattern_analytics import get_pattern_analytics
 from app.monitoring.pattern_suggester import get_pattern_suggester
@@ -32,10 +37,10 @@ try:
         rag_retrieval_chunks,
         rag_retrieval_distance,
         rag_grounding_total,
-        rag_retrieval_latency_seconds,
         rag_ambiguity_checks_total,
         rag_clarification_requests_total,
     )
+
     METRICS_ENABLED = True
 except ImportError:
     METRICS_ENABLED = False
@@ -54,23 +59,42 @@ def _is_chitchat(question: str) -> tuple[bool, str]:
     q = question.strip().lower()
 
     # Greetings
-    greetings = {'hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening', 'howdy', 'greetings'}
-    if any(greeting == q or q.startswith(greeting + ' ') or q.startswith(greeting + '!') for greeting in greetings):
-        return True, "Hello! I can help answer questions about your background, experience, certifications, and education. What would you like to know?"
+    greetings = {
+        "hello",
+        "hi",
+        "hey",
+        "good morning",
+        "good afternoon",
+        "good evening",
+        "howdy",
+        "greetings",
+    }
+    if any(
+        greeting == q or q.startswith(greeting + " ") or q.startswith(greeting + "!")
+        for greeting in greetings
+    ):
+        return (
+            True,
+            "Hello! I can help answer questions about your background, experience, certifications, and education. What would you like to know?",
+        )
 
     # Gratitude
-    if any(word in q for word in ['thank you', 'thanks', 'thx', 'appreciate', 'grateful']):
+    if any(
+        word in q for word in ["thank you", "thanks", "thx", "appreciate", "grateful"]
+    ):
         return True, "You're welcome! Is there anything else you'd like to know?"
 
     # Farewells
-    farewells = {'bye', 'goodbye', 'see you', 'later', 'farewell'}
+    farewells = {"bye", "goodbye", "see you", "later", "farewell"}
     if any(farewell in q for farewell in farewells):
         return True, "Goodbye! Feel free to come back if you have more questions."
 
     return False, ""
 
 
-def _is_truly_ambiguous(question: str, conversation_history: Optional[List[Dict[str, str]]] = None) -> bool:
+def _is_truly_ambiguous(
+    question: str, conversation_history: Optional[List[Dict[str, str]]] = None
+) -> bool:
     """Detect ONLY obviously vague questions (1-2 words).
 
     Catches the clear-cut cases where questions are too short to be meaningful.
@@ -93,7 +117,7 @@ def _is_truly_ambiguous(question: str, conversation_history: Optional[List[Dict[
         return True
 
     # Remove punctuation and split into words
-    words = q.replace('?', '').replace('.', '').replace('!', '').strip().split()
+    words = q.replace("?", "").replace(".", "").replace("!", "").strip().split()
 
     # If we have conversation history, be more lenient with short questions
     # They might be valid context-dependent follow-ups
@@ -111,12 +135,13 @@ def _is_truly_ambiguous(question: str, conversation_history: Optional[List[Dict[
 
     # Two words with filler words (very likely vague)
     if len(words) == 2:
-        filler_words = {'my', 'the', 'a', 'an', 'your'}
+        filler_words = {"my", "the", "a", "an", "your"}
         if any(word.lower() in filler_words for word in words):
             return True  # "My experience?", "The background?"
 
     # Everything else: let the LLM decide via system prompt
     return False
+
 
 def _get_client_ip(request: ChatRequest) -> Optional[str]:
     """Extract client IP from request.
@@ -134,7 +159,10 @@ def _get_client_ip(request: ChatRequest) -> Optional[str]:
     # For now, return None (sessions will still work, just no IP-based limiting)
     return None
 
-def _build_context_query(conversation_history: List[Dict[str, str]], max_turns: int = 2) -> Optional[str]:
+
+def _build_context_query(
+    conversation_history: List[Dict[str, str]], max_turns: int = 2
+) -> Optional[str]:
     """Build a context query from recent conversation history.
 
     Args:
@@ -148,7 +176,9 @@ def _build_context_query(conversation_history: List[Dict[str, str]], max_turns: 
         return None
 
     # Take last N turns (both user and assistant)
-    recent_turns = conversation_history[-max_turns * 2:]  # Each turn is user + assistant
+    recent_turns = conversation_history[
+        -max_turns * 2 :
+    ]  # Each turn is user + assistant
 
     # Extract only user questions for context (avoid hallucinated assistant responses)
     user_queries = [
@@ -164,6 +194,7 @@ def _build_context_query(conversation_history: List[Dict[str, str]], max_turns: 
     context_query = " ".join(user_queries)
     logger.info(f"Built context query from {len(user_queries)} previous question(s)")
     return context_query
+
 
 def _merge_and_dedupe_chunks(chunks_1: List[dict], chunks_2: List[dict]) -> List[dict]:
     """Merge and deduplicate chunks from two retrieval passes.
@@ -189,63 +220,102 @@ def _merge_and_dedupe_chunks(chunks_1: List[dict], chunks_2: List[dict]) -> List
             # If no ID, include it (shouldn't happen but handle gracefully)
             merged.append(chunk)
 
-    logger.info(f"Merged chunks: {len(chunks_1)} + {len(chunks_2)} = {len(merged)} (after deduplication)")
+    logger.info(
+        f"Merged chunks: {len(chunks_1)} + {len(chunks_2)} = {len(merged)} (after deduplication)"
+    )
     return merged
 
 
-def _check_retrieval_quality(query: str, chunks: List[dict], min_term_overlap: int = 1) -> dict:
+def _check_retrieval_quality(
+    query: str, chunks: List[dict], min_term_overlap: int = 1
+) -> dict:
     """Check if retrieved chunks contain important query terms.
-    
+
     This pre-check runs BEFORE the LLM call to detect weak retrieval
     that might lead to incorrect answers.
-    
+
     Args:
         query: The user's query
         chunks: Retrieved chunks
         min_term_overlap: Minimum number of query terms that should appear in chunks
-    
+
     Returns:
         Dict with 'is_weak', 'reason', and 'found_terms'
     """
     if not chunks:
         return {"is_weak": True, "reason": "no_chunks", "found_terms": []}
-    
+
     # Extract important terms from query (skip common words)
     stop_words = {
-        'what', 'which', 'where', 'when', 'who', 'how', 'why', 'is', 'are', 'was', 'were',
-        'do', 'does', 'did', 'have', 'has', 'had', 'the', 'a', 'an', 'in', 'on', 'at',
-        'to', 'for', 'of', 'with', 'by', 'my', 'i', 'me', 'you', 'your', 'any', 'get'
+        "what",
+        "which",
+        "where",
+        "when",
+        "who",
+        "how",
+        "why",
+        "is",
+        "are",
+        "was",
+        "were",
+        "do",
+        "does",
+        "did",
+        "have",
+        "has",
+        "had",
+        "the",
+        "a",
+        "an",
+        "in",
+        "on",
+        "at",
+        "to",
+        "for",
+        "of",
+        "with",
+        "by",
+        "my",
+        "i",
+        "me",
+        "you",
+        "your",
+        "any",
+        "get",
     }
-    
-    query_words = query.lower().replace('?', '').replace('.', '').replace(',', '').split()
+
+    query_words = (
+        query.lower().replace("?", "").replace(".", "").replace(",", "").split()
+    )
     important_terms = [w for w in query_words if w not in stop_words and len(w) > 2]
-    
+
     if not important_terms:
         # No important terms to check - consider OK
         return {"is_weak": False, "reason": "no_terms_to_check", "found_terms": []}
-    
+
     # Check if important terms appear in any chunk
     all_chunk_text = " ".join([c.get("text", "").lower() for c in chunks])
     found_terms = [term for term in important_terms if term in all_chunk_text]
-    
+
     # Check for weak retrieval
     overlap_ratio = len(found_terms) / len(important_terms) if important_terms else 1.0
-    
+
     if len(found_terms) < min_term_overlap or overlap_ratio < 0.3:
         return {
             "is_weak": True,
-            "reason": f"low_term_overlap",
+            "reason": "low_term_overlap",
             "found_terms": found_terms,
             "missing_terms": [t for t in important_terms if t not in found_terms],
-            "overlap_ratio": overlap_ratio
+            "overlap_ratio": overlap_ratio,
         }
-    
+
     return {
         "is_weak": False,
         "reason": "ok",
         "found_terms": found_terms,
-        "overlap_ratio": overlap_ratio
+        "overlap_ratio": overlap_ratio,
     }
+
 
 class ChatService:
     """Service for handling RAG chat requests."""
@@ -344,9 +414,7 @@ class ChatService:
         temperature = (
             temperature if temperature is not None else settings.llm.temperature
         )
-        max_tokens = (
-            max_tokens if max_tokens is not None else settings.llm.max_tokens
-        )
+        max_tokens = max_tokens if max_tokens is not None else settings.llm.max_tokens
         # Don't pass model parameter - let LLM service use its configured default
         # Passing None lets the service choose based on provider
         model_name = model  # Only use if explicitly provided
@@ -384,10 +452,12 @@ class ChatService:
             session = self.session_store.get_or_create_session(
                 session_id=request.session_id,
                 ip_address=_get_client_ip(request),
-                user_agent=None  # Will be added in Phase 7
+                user_agent=None,  # Will be added in Phase 7
             )
-            logger.info(f"Session: {mask_session_id(session.session_id)} "
-                f"(created: {session.created_at.strftime('%Y-%m-%d %H:%M:%S')})")
+            logger.info(
+                f"Session: {mask_session_id(session.session_id)} "
+                f"(created: {session.created_at.strftime('%Y-%m-%d %H:%M:%S')})"
+            )
         except HTTPException as e:
             # Session limit exceeded or rate limit hit
             logger.error(f"Session creation failed: {e.detail}")
@@ -398,14 +468,17 @@ class ChatService:
             # Create a temporary session for this request
             import uuid
             from datetime import datetime
+
             session = Session(
                 session_id=str(uuid.uuid4()),
                 created_at=datetime.now(),
-                last_accessed=datetime.now()
+                last_accessed=datetime.now(),
             )
-        
+
         if not self.session_store.check_rate_limit(session):
-            logger.warning(f"Rate limit exceeded for session: {mask_session_id(session.session_id)}")
+            logger.warning(
+                f"Rate limit exceeded for session: {mask_session_id(session.session_id)}"
+            )
             raise HTTPException(status_code=429, detail="Rate limit exceeded")
 
         conversation_history = session.get_truncated_history()
@@ -431,8 +504,10 @@ class ChatService:
             # Check cache with session context (for conversational queries)
             cached_response = response_cache.get(
                 question=request.question,
-                session_id=session.session_id if len(conversation_history) > 0 else None,
-                params=cache_params
+                session_id=session.session_id
+                if len(conversation_history) > 0
+                else None,
+                params=cache_params,
             )
 
         if cached_response:
@@ -471,7 +546,9 @@ class ChatService:
 
         # STEP 2: Check for ambiguity BEFORE retrieval
         # Pass conversation history to make ambiguity detection context-aware
-        is_ambiguous = _is_truly_ambiguous(request.question, conversation_history=conversation_history)
+        is_ambiguous = _is_truly_ambiguous(
+            request.question, conversation_history=conversation_history
+        )
 
         # Track ambiguity detection
         if METRICS_ENABLED:
@@ -502,7 +579,6 @@ class ChatService:
                 ),
             )
 
-
         # Build metadata filter
         metadata_filter = {
             k: v
@@ -520,8 +596,7 @@ class ChatService:
 
         rewriter = get_query_rewriter()
         rewritten_query, rewrite_metadata = rewriter.rewrite_query(
-            request.question,
-            metadata_filter=metadata_filter
+            request.question, metadata_filter=metadata_filter
         )
 
         # Merge metadata filter enhancements from rewrite
@@ -543,18 +618,20 @@ class ChatService:
         # Check for negative inference opportunity
         # If the question asks about a specific entity that doesn't exist in the KB,
         # search for the category instead to find complete lists
-        from app.retrieval.negative_inference_helper import detect_negative_inference_opportunity
+        from app.retrieval.negative_inference_helper import (
+            detect_negative_inference_opportunity,
+        )
 
         neg_inf_result = detect_negative_inference_opportunity(search_query)
 
-        if neg_inf_result and neg_inf_result['is_negative_inference_candidate']:
+        if neg_inf_result and neg_inf_result["is_negative_inference_candidate"]:
             # Use category search instead of entity search
-            search_query = neg_inf_result['suggested_category_search']
+            search_query = neg_inf_result["suggested_category_search"]
             logger.info(
                 f"Negative inference detected: '{rewritten_query}' → "
                 f"searching for category: '{search_query}'"
             )
-            missing = [e['entity'] for e in neg_inf_result['missing_entities']]
+            missing = [e["entity"] for e in neg_inf_result["missing_entities"]]
             logger.info(f"Missing entities: {missing}")
 
         # Retrieve chunks with hybrid retrieval if conversation history exists
@@ -611,8 +688,10 @@ class ChatService:
 
         # DEBUG: Log retrieved chunk distances
         if chunks:
-            distances = [c.get('distance', 'N/A') for c in chunks[:5]]
-            logger.info(f"Retrieved {len(chunks)} chunks (merged), top 5 distances: {distances}")
+            distances = [c.get("distance", "N/A") for c in chunks[:5]]
+            logger.info(
+                f"Retrieved {len(chunks)} chunks (merged), top 5 distances: {distances}"
+            )
 
         # Reranking (if enabled)
         if params["rerank"] and chunks:
@@ -623,7 +702,7 @@ class ChatService:
 
             # Trim to top_k after reranking
             if len(chunks) > params["top_k"]:
-                chunks = chunks[:params["top_k"]]
+                chunks = chunks[: params["top_k"]]
                 logger.info(f"Trimmed to top {params['top_k']} chunks after reranking")
 
         if METRICS_ENABLED:
@@ -666,14 +745,16 @@ class ChatService:
                     query=request.question,
                     rewrite_metadata=rewrite_metadata,
                     retrieval_distance=None,
-                    grounded=False
+                    grounded=False,
                 )
 
                 suggester.capture_failed_query(
                     query=request.question,
                     distance=None,
-                    pattern_matched=rewrite_metadata.pattern_name if rewrite_metadata else None,
-                    grounded=False
+                    pattern_matched=rewrite_metadata.pattern_name
+                    if rewrite_metadata
+                    else None,
+                    grounded=False,
                 )
             # ===== END ANALYTICS =====
 
@@ -700,7 +781,9 @@ class ChatService:
 
         # Handle None distance (from BM25/hybrid search)
         if best_distance is None:
-            logger.info("Best chunk has no distance (BM25/hybrid search) - skipping distance check")
+            logger.info(
+                "Best chunk has no distance (BM25/hybrid search) - skipping distance check"
+            )
         else:
             logger.info(
                 f"Best chunk distance: {best_distance:.3f}, threshold: {params['null_threshold']}"
@@ -720,14 +803,16 @@ class ChatService:
                     query=request.question,
                     rewrite_metadata=rewrite_metadata,
                     retrieval_distance=best_distance,
-                    grounded=False
+                    grounded=False,
                 )
 
                 suggester.capture_failed_query(
                     query=request.question,
                     distance=best_distance,
-                    pattern_matched=rewrite_metadata.pattern_name if rewrite_metadata else None,
-                    grounded=False
+                    pattern_matched=rewrite_metadata.pattern_name
+                    if rewrite_metadata
+                    else None,
+                    grounded=False,
                 )
             # ===== END ANALYTICS =====
 
@@ -747,7 +832,13 @@ class ChatService:
 
         # Standard RAG flow
         return self._handle_standard_query(
-            request.question, params, chunks, session, conversation_history, neg_inf_result, rewrite_metadata
+            request.question,
+            params,
+            chunks,
+            session,
+            conversation_history,
+            neg_inf_result,
+            rewrite_metadata,
         )
 
     def _handle_standard_query(
@@ -758,7 +849,7 @@ class ChatService:
         session: "Session",
         conversation_history: List[Dict[str, str]],
         neg_inf_result: Optional[Dict[str, Any]] = None,
-        rewrite_metadata: Optional[RewriteMetadata] = None
+        rewrite_metadata: Optional[RewriteMetadata] = None,
     ) -> ChatResponse:
         """Handle standard RAG query with LLM generation.
 
@@ -778,32 +869,34 @@ class ChatService:
 
         # Prepare negative inference hint if detected
         negative_inference_hint = None
-        if neg_inf_result and neg_inf_result.get('is_negative_inference_candidate'):
+        if neg_inf_result and neg_inf_result.get("is_negative_inference_candidate"):
             # Map category search query to human-readable category name
             category_map = {
-                'work experience': 'employers/companies',
-                'certifications': 'professional certifications',
-                'personal projects': 'personal projects',
-                'education': 'degrees',
+                "work experience": "employers/companies",
+                "certifications": "professional certifications",
+                "personal projects": "personal projects",
+                "education": "degrees",
             }
 
-            category_search = neg_inf_result.get('suggested_category_search', '')
-            category_name = 'items'
+            category_search = neg_inf_result.get("suggested_category_search", "")
+            category_name = "items"
             for key, value in category_map.items():
                 if key in category_search.lower():
                     category_name = value
                     break
 
             negative_inference_hint = {
-                'missing_entities': [e['entity'] for e in neg_inf_result['missing_entities']],
-                'category': category_name
+                "missing_entities": [
+                    e["entity"] for e in neg_inf_result["missing_entities"]
+                ],
+                "category": category_name,
             }
 
         # Build and validate prompt
         prompt_result = self.prompt_builder.build_prompt(
             question=question,
             context_chunks=formatted_chunks,
-            keywords=params.get('all_keywords', []),
+            keywords=params.get("all_keywords", []),
             negative_inference_hint=negative_inference_hint,
             conversation_history=conversation_history,
         )
@@ -876,9 +969,11 @@ class ChatService:
             "what would you like to know",
             "could you clarify",
             "please specify",
-            "which aspect"
+            "which aspect",
         ]
-        is_clarification = any(indicator in answer.lower() for indicator in clarification_indicators)
+        is_clarification = any(
+            indicator in answer.lower() for indicator in clarification_indicators
+        )
 
         if is_clarification:
             logger.info("Answer appears to be a clarification request")
@@ -899,8 +994,10 @@ class ChatService:
             session.add_turn("user", question)
             session.add_turn("assistant", answer)
             self.session_store.update_session(session)
-            logger.info(f"Updated session {mask_session_id(session.session_id)} "
-                        f"(total turns: {len(session.history)})")
+            logger.info(
+                f"Updated session {mask_session_id(session.session_id)} "
+                f"(total turns: {len(session.history)})"
+            )
         except Exception as e:
             # Log error but don't fail the request
             logger.error(f"Failed to update session history: {e}")
@@ -914,7 +1011,7 @@ class ChatService:
                 query=question,
                 rewrite_metadata=rewrite_metadata,
                 retrieval_distance=best_distance,
-                grounded=True
+                grounded=True,
             )
 
             # Note: Don't capture in suggester for successful queries
@@ -957,7 +1054,7 @@ class ChatService:
             question=question,
             response=response.model_dump(),
             session_id=cache_session_id,
-            params=cache_params
+            params=cache_params,
         )
         # ===== END CACHE =====
 

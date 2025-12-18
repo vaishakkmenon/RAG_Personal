@@ -58,7 +58,7 @@ class TestSlugify:
         result = slugify("CS 665 - Deep Learning")
         # Should be lowercase with hyphens
         assert "-" in result
-        assert result.islower() or all(c.isalnum() or c == '-' for c in result)
+        assert result.islower() or all(c.isalnum() or c == "-" for c in result)
 
     def test_slugify_nested(self):
         """Test slugifying nested section name."""
@@ -88,9 +88,7 @@ Content for section two.
         metadata = {"doc_type": "resume", "source": "test.md"}
 
         chunks = chunk_by_headers(
-            text=text,
-            base_metadata=metadata,
-            source_path="/docs/test.md"
+            text=text, base_metadata=metadata, source_path="/docs/test.md"
         )
 
         # Should produce multiple chunks
@@ -115,10 +113,7 @@ Content here.
 
         # Split at level 2 (##)
         chunks_level2 = chunk_by_headers(
-            text=text,
-            base_metadata=metadata,
-            source_path="/test.md",
-            split_level=2
+            text=text, base_metadata=metadata, source_path="/test.md", split_level=2
         )
 
         assert len(chunks_level2) >= 1
@@ -128,9 +123,7 @@ Content here.
         from app.ingest.chunking import chunk_by_headers
 
         chunks = chunk_by_headers(
-            text="",
-            base_metadata={"doc_type": "test"},
-            source_path="/test.md"
+            text="", base_metadata={"doc_type": "test"}, source_path="/test.md"
         )
 
         assert chunks == [] or len(chunks) == 0
@@ -153,9 +146,7 @@ Course content for spring 2024.
         metadata = {"doc_type": "transcript_analysis"}
 
         chunks = smart_chunk(
-            text=text,
-            base_metadata=metadata,
-            source_path="/docs/transcript.md"
+            text=text, base_metadata=metadata, source_path="/docs/transcript.md"
         )
 
         # Should produce chunks for each term
@@ -174,9 +165,7 @@ Education content.
         metadata = {"doc_type": "resume"}
 
         chunks = smart_chunk(
-            text=text,
-            base_metadata=metadata,
-            source_path="/docs/resume.md"
+            text=text, base_metadata=metadata, source_path="/docs/resume.md"
         )
 
         assert len(chunks) >= 1
@@ -201,9 +190,7 @@ Grade: A
         metadata = {"doc_type": "transcript_analysis"}
 
         chunks = chunk_by_terms(
-            text=text,
-            base_metadata=metadata,
-            source_path="/docs/transcript.md"
+            text=text, base_metadata=metadata, source_path="/docs/transcript.md"
         )
 
         assert len(chunks) >= 1
@@ -333,7 +320,7 @@ class TestCreateChunkMetadata:
             section_name="Work",
             doc_id="resume",
             doc_type="resume",
-            version="2025-01-15"
+            version="2025-01-15",
         )
 
         assert "doc_type" in metadata
@@ -351,8 +338,7 @@ class TestCreateChunkMetadata:
             doc_type="resume",
             version="2025-01-15",
             part_num=1,
-            total_parts=3
+            total_parts=3,
         )
 
         assert "part" in metadata or metadata is not None
-

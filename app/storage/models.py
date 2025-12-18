@@ -39,9 +39,7 @@ class Session:
         self.total_tokens_used += estimate_tokens(content)
 
     def get_truncated_history(
-        self,
-        max_tokens: Optional[int] = None,
-        max_turns: Optional[int] = None
+        self, max_tokens: Optional[int] = None, max_turns: Optional[int] = None
     ) -> List[Dict[str, str]]:
         """Get conversation history truncated to fit budget.
 

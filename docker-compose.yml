@@ -23,33 +23,33 @@ services:
     image: personal-rag-system:latest
     container_name: rag_api
     hostname: api
-    
+
     # Port mapping: host:container
     ports:
       - "${API_PORT:-8000}:8000"
-    
+
     # Environment variables (with sensible defaults)
     environment:
       # ============ Application Settings ============
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - PYTHONUNBUFFERED=1
       - WATCHFILES_FORCE_POLLING=1
-      
+
       # ============ LLM Provider Configuration ============
       # Primary: Groq (cloud API)
       - LLM_PROVIDER=${LLM_PROVIDER:-groq}
       - LLM_GROQ_API_KEY=${LLM_GROQ_API_KEY:-}
       - LLM_GROQ_MODEL=${LLM_GROQ_MODEL:-llama-3.1-70b-versatile}
-      
+
       # Fallback: Ollama (local inference)
       - LLM_FALLBACK_PROVIDER=ollama
       - LLM_OLLAMA_HOST=http://ollama:11434
       - LLM_OLLAMA_MODEL=${LLM_OLLAMA_MODEL:-llama3.1:8b}
-      
+
       # LLM generation parameters
       - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.1}
       - LLM_MAX_TOKENS=${LLM_MAX_TOKENS:-1000}
-      
+
       # ============ Session Management (Redis) ============
       - SESSION_STORAGE_BACKEND=${SESSION_STORAGE_BACKEND:-redis}
       - SESSION_REDIS_URL=redis://:${REDIS_PASSWORD:-devpassword123}@redis:6379/0
@@ -71,11 +71,11 @@ services:
       # ============ Uvicorn Server Config ============
       - UVICORN_WORKERS=${UVICORN_WORKERS:-2}
       - UVICORN_LOG_LEVEL=${LOG_LEVEL:-info}
-    
+
     # Load additional env vars from .env file
     env_file:
       - .env
-    
+
     # Volume mounts
     volumes:
       # Application code (for development hot-reload)
@@ -96,31 +96,31 @@ services:
       - ./data/mds:/workspace/data/mds:ro
       - ./data/eval:/workspace/data/eval
       - ./data/analytics:/workspace/data/analytics
-    
+
     # Service dependencies (with health checks)
     depends_on:
       redis:
         condition: service_healthy
       ollama:
         condition: service_started
-    
+
     # Security hardening
     security_opt:
       - no-new-privileges:true
-    
+
     read_only: true
-    
+
     # Drop all capabilities (principle of least privilege)
     cap_drop:
       - ALL
-    
+
     # Writable /tmp for runtime files and model cache
     tmpfs:
       - /tmp:noexec,nosuid,nodev,size=512m
-    
+
     # Run as non-root user (nonroot:nonroot = 65532:65532)
     user: "65532:65532"
-    
+
     # Use entrypoint script for initialization, then start uvicorn
     entrypoint: ["/bin/bash", "/workspace/scripts/docker-entrypoint.sh"]
     command:
@@ -136,10 +136,10 @@ services:
       - "${UVICORN_WORKERS:-2}"
       - --log-level
       - "${LOG_LEVEL:-info}"
-    
+
     # Health check (critical for depends_on conditions)
     healthcheck:
-      test: 
+      test:
         - CMD
         - /opt/venv/bin/python
         - -c
@@ -148,10 +148,10 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
-    
+
     # Restart policy
     restart: unless-stopped
-    
+
     # Resource limits (optional, uncomment for production)
     # deploy:
     #   resources:
@@ -161,7 +161,7 @@ services:
     #     reservations:
     #       cpus: '1.0'
     #       memory: 2G
-    
+
     # Logging configuration
     logging:
       driver: "json-file"
@@ -177,9 +177,9 @@ services:
     image: redis:7-alpine
     container_name: rag_redis
     hostname: redis
-    
+
     # Redis server configuration
-    command: 
+    command:
       - redis-server
       - --appendonly yes                    # Enable AOF persistence
       - --requirepass ${REDIS_PASSWORD:-devpassword123}  # Require encryption
@@ -191,13 +191,13 @@ services:
       - --tcp-backlog 511                   # Connection queue size
       - --timeout 300                       # Close idle connections after 5min
       - --tcp-keepalive 300                 # TCP keepalive
-    
+
     ports:
       - "${REDIS_PORT:-6379}:6379"
-    
+
     volumes:
       - redis_data:/data
-    
+
     # Health check (critical for API service dependency)
     healthcheck:
       test:
@@ -212,14 +212,14 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-    
+
     # Security hardening
     security_opt:
       - no-new-privileges:true
-    
+
     # Restart policy
     restart: unless-stopped
-    
+
     # Resource limits (optional)
     # deploy:
     #   resources:
@@ -229,7 +229,7 @@ services:
     #     reservations:
     #       cpus: '0.25'
     #       memory: 256M
-    
+
     # Logging configuration
     logging:
       driver: "json-file"
@@ -245,7 +245,7 @@ services:
     image: ollama/ollama:latest
     container_name: rag_ollama
     hostname: ollama
-    
+
     # GPU support (uncomment if GPU available)
     # deploy:
     #   resources:
@@ -254,31 +254,31 @@ services:
     #         - driver: nvidia
     #           count: all
     #           capabilities: [gpu]
-    
+
     # Alternative GPU syntax (older Docker)
     # runtime: nvidia
-    
+
     environment:
       # Ollama server configuration
       - OLLAMA_HOST=0.0.0.0:11434
       - OLLAMA_ORIGINS=*
-      
+
       # Performance tuning
       - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL:-2}      # Concurrent requests
       - OLLAMA_MAX_LOADED_MODELS=1                          # Only load one model
       - OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE:-24h}        # Keep model in memory
-      
+
       # GPU settings (if available)
       # - OLLAMA_LLM_LIBRARY=cublas                         # Use CUDA
       # - NVIDIA_VISIBLE_DEVICES=all
       # - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-    
+
     ports:
       - "${OLLAMA_PORT:-11434}:11434"
-    
+
     volumes:
       - ollama_models:/root/.ollama
-    
+
     # Startup script to pull model
     entrypoint: ["/bin/sh", "-c"]
     command:
@@ -287,11 +287,11 @@ services:
         echo "Starting Ollama server..."
         /bin/ollama serve &
         OLLAMA_PID=$$!
-        
+
         echo "Waiting for Ollama server to be ready..."
         echo "Timeout: 300 seconds (5 minutes)"
         START_TIME=$$(date +%s)
-        
+
         for i in $$(seq 1 300); do
           # Use 'ollama list' instead of curl (curl not available in container)
           if ollama list >/dev/null 2>&1; then
@@ -312,7 +312,7 @@ services:
           fi
           sleep 1
         done
-        
+
         echo "Pulling model: $${LLM_OLLAMA_MODEL:-llama3.1:8b}..."
         MODEL_START=$$(date +%s)
         if ollama pull "$${LLM_OLLAMA_MODEL:-llama3.1:8b}"; then
@@ -322,10 +322,10 @@ services:
         else
           echo "WARNING: Failed to pull model, will retry on first request"
         fi
-        
+
         echo "Ollama ready to serve requests"
         wait $$OLLAMA_PID
-    
+
     # Health check - monitors Ollama continuously
     healthcheck:
       test: ["CMD", "ollama", "list"]
@@ -333,10 +333,10 @@ services:
       timeout: 10s           # Fail if takes >10s
       retries: 3             # Mark unhealthy after 3 failures
       start_period: 300s     # 5 minute grace period on startup
-    
+
     # Restart policy
     restart: unless-stopped
-    
+
     # Resource limits (adjust based on model size)
     # For llama3.1:8b, recommend at least 8GB RAM
     # deploy:
@@ -347,7 +347,7 @@ services:
     #     reservations:
     #       cpus: '2.0'
     #       memory: 8G
-    
+
     # Logging configuration
     logging:
       driver: "json-file"
@@ -486,22 +486,22 @@ services:
     image: personal-rag-system:test
     container_name: rag_test
     hostname: test
-    
+
     environment:
       - PYTHONUNBUFFERED=1
       - API_URL=http://api:8000
       - OLLAMA_HOST=http://ollama:11434
       - LOG_LEVEL=DEBUG
-    
+
     env_file:
       - .env
-    
+
     volumes:
       # Mount test files
       - ./tests:/workspace/tests:ro
       - ./app:/workspace/app:ro
       - ./pytest.ini:/workspace/pytest.ini:ro
-    
+
     depends_on:
       api:
         condition: service_healthy
@@ -509,25 +509,25 @@ services:
         condition: service_healthy
       ollama:
         condition: service_started
-    
+
     # Security hardening
     security_opt:
       - no-new-privileges:true
-    
+
     cap_drop:
       - ALL
-    
+
     tmpfs:
       - /tmp:noexec,nosuid,nodev,size=128m
-    
+
     user: "65532:65532"
-    
+
     # Override to run specific tests
     # command: ["/opt/venv/bin/python", "-m", "pytest", "-v", "--tb=short"]
-    
+
     # Don't restart test service
     restart: "no"
-    
+
     # Logging configuration
     logging:
       driver: "json-file"

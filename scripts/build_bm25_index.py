@@ -16,8 +16,7 @@ from app.retrieval.store import _collection
 from app.retrieval.bm25_search import BM25Index
 
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s'
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -26,10 +25,12 @@ def main():
     """Build BM25 index from ChromaDB collection."""
     # Import settings
     from app.settings import settings
-    
+
     logger.info("=" * 80)
     logger.info("Building BM25 Index from ChromaDB")
-    logger.info(f"Parameters: k1={settings.bm25.k1}, b={settings.bm25.b}, rrf_k={settings.bm25.rrf_k}")
+    logger.info(
+        f"Parameters: k1={settings.bm25.k1}, b={settings.bm25.b}, rrf_k={settings.bm25.rrf_k}"
+    )
     logger.info("=" * 80)
 
     # Get all documents from ChromaDB
@@ -46,19 +47,13 @@ def main():
         text = result["documents"][i] if result["documents"] else ""
         metadata = result["metadatas"][i] if result["metadatas"] else {}
 
-        documents.append({
-            "id": doc_id,
-            "text": text,
-            "metadata": metadata
-        })
+        documents.append({"id": doc_id, "text": text, "metadata": metadata})
 
     logger.info(f"Fetched {len(documents)} documents from ChromaDB")
 
     # Build BM25 index with optimized parameters from settings
     bm25_index = BM25Index(
-        index_path="data/chroma/bm25_index.pkl",
-        k1=settings.bm25.k1,
-        b=settings.bm25.b
+        index_path="data/chroma/bm25_index.pkl", k1=settings.bm25.k1, b=settings.bm25.b
     )
     bm25_index.build_index(documents)
 
@@ -68,7 +63,7 @@ def main():
     logger.info("=" * 80)
     logger.info(f"BM25 index built successfully with {len(documents)} documents")
     logger.info(f"Parameters used: k1={settings.bm25.k1}, b={settings.bm25.b}")
-    logger.info(f"Index saved to: data/chroma/bm25_index.pkl")
+    logger.info("Index saved to: data/chroma/bm25_index.pkl")
     logger.info("=" * 80)
 
     # Test the index
@@ -78,7 +73,7 @@ def main():
         "CS 350 B grade",
         "AWS certifications",
         "CKA expire",
-        "What is my GPA"
+        "What is my GPA",
     ]
 
     for query in test_queries:
@@ -87,7 +82,9 @@ def main():
         logger.info(f"  Found {len(results)} results")
         if results:
             top_result = results[0]
-            logger.info(f"  Top result: {top_result['id']} (score: {top_result['bm25_score']:.2f})")
+            logger.info(
+                f"  Top result: {top_result['id']} (score: {top_result['bm25_score']:.2f})"
+            )
             logger.info(f"  Text preview: {top_result['text'][:100]}...")
 
 

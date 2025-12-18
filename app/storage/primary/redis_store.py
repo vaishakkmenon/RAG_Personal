@@ -40,6 +40,7 @@ logger = logging.getLogger(__name__)
 
 try:
     import redis
+
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
@@ -49,10 +50,8 @@ try:
     from app.metrics import (
         rag_sessions_active,
         rag_session_operations_total,
-        rag_rate_limit_violations_total,
-        rag_session_query_count,
-        rag_session_duration_seconds,
     )
+
     SESSION_METRICS_ENABLED = True
 except ImportError:
     SESSION_METRICS_ENABLED = False
@@ -80,7 +79,7 @@ class RedisSessionStore(SessionStore):
                 decode_responses=True,
                 socket_connect_timeout=5,
                 socket_timeout=5,
-                retry_on_timeout=True
+                retry_on_timeout=True,
             )
             self._client = redis.Redis(connection_pool=pool)
             self._client.ping()
@@ -92,29 +91,24 @@ class RedisSessionStore(SessionStore):
         # Prometheus metrics
         try:
             from prometheus_client import Counter, Gauge, Histogram
+
             self._metrics_enabled = True
-            
+
             self.redis_operations = Counter(
-                'redis_operations_total',
-                'Total Redis operations',
-                ['operation', 'status']  # get/set/delete, success/error
+                "redis_operations_total",
+                "Total Redis operations",
+                ["operation", "status"],  # get/set/delete, success/error
             )
-            
+
             self.redis_latency = Histogram(
-                'redis_operation_duration_seconds',
-                'Redis operation latency',
-                ['operation']
+                "redis_operation_duration_seconds",
+                "Redis operation latency",
+                ["operation"],
             )
-            
-            self.redis_memory = Gauge(
-                'redis_memory_usage_bytes',
-                'Redis memory usage'
-            )
-            
-            self.redis_keys = Gauge(
-                'redis_keys_total',
-                'Total keys in Redis'
-            )
+
+            self.redis_memory = Gauge("redis_memory_usage_bytes", "Redis memory usage")
+
+            self.redis_keys = Gauge("redis_keys_total", "Total keys in Redis")
         except ImportError:
             logger.warning("Prometheus client not available, metrics disabled")
             self._metrics_enabled = False
@@ -129,7 +123,7 @@ class RedisSessionStore(SessionStore):
 
     def health_check(self) -> bool:
         """Check Redis connection health.
-        
+
         Returns:
             True if Redis is responsive, False otherwise
         """
@@ -142,7 +136,7 @@ class RedisSessionStore(SessionStore):
 
     def get_info(self) -> dict:
         """Get Redis server info.
-        
+
         Returns:
             Dictionary with Redis stats (memory, clients, etc.)
         """
@@ -152,7 +146,7 @@ class RedisSessionStore(SessionStore):
                 "used_memory_mb": info.get("used_memory", 0) / (1024 * 1024),
                 "connected_clients": info.get("connected_clients", 0),
                 "total_keys": self._client.dbsize(),
-                "uptime_seconds": info.get("uptime_in_seconds", 0)
+                "uptime_seconds": info.get("uptime_in_seconds", 0),
             }
         except Exception as e:
             logger.error(f"Redis info error: {e}")
@@ -161,17 +155,14 @@ class RedisSessionStore(SessionStore):
     def get_session(self, session_id: str) -> Optional[Session]:
         """Retrieve session from Redis."""
         start_time = time.time()
-        
+
         try:
             data = self._client.get(self._key(session_id))
-            
+
             # Record metrics
             if self._metrics_enabled:
-                self.redis_operations.labels(
-                    operation='get',
-                    status='success'
-                ).inc()
-                self.redis_latency.labels(operation='get').observe(
+                self.redis_operations.labels(operation="get", status="success").inc()
+                self.redis_latency.labels(operation="get").observe(
                     time.time() - start_time
                 )
 
@@ -183,25 +174,22 @@ class RedisSessionStore(SessionStore):
             return None
         except Exception as e:
             logger.error(f"Redis get error: {e}")
-            
+
             # Record error metric
             if self._metrics_enabled:
-                self.redis_operations.labels(
-                    operation='get',
-                    status='error'
-                ).inc()
-            
+                self.redis_operations.labels(operation="get", status="error").inc()
+
             return None
 
     def create_session(
         self,
         session_id: Optional[str] = None,
         ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None
+        user_agent: Optional[str] = None,
     ) -> Session:
         """Create new session in Redis with IP indexing."""
         start_time = time.time()
-        
+
         if session_id is None:
             session_id = str(uuid.uuid4())
 
@@ -217,29 +205,28 @@ class RedisSessionStore(SessionStore):
         try:
             # Use pipeline for atomic operations
             pipe = self._client.pipeline()
-            
+
             # Store session with TTL
             pipe.setex(
                 self._key(session_id),
                 settings.session.ttl_seconds,
-                json.dumps(session.to_dict())
+                json.dumps(session.to_dict()),
             )
-            
+
             # Add to IP index with same TTL
             if ip_address:
                 pipe.sadd(self._ip_index_key(ip_address), session_id)
-                pipe.expire(self._ip_index_key(ip_address), settings.session.ttl_seconds)
-            
+                pipe.expire(
+                    self._ip_index_key(ip_address), settings.session.ttl_seconds
+                )
+
             pipe.execute()
             logger.info(f"Created session {mask_session_id(session_id)} in Redis")
 
             # Record metrics
             if self._metrics_enabled:
-                self.redis_operations.labels(
-                    operation='create',
-                    status='success'
-                ).inc()
-                self.redis_latency.labels(operation='create').observe(
+                self.redis_operations.labels(operation="create", status="success").inc()
+                self.redis_latency.labels(operation="create").observe(
                     time.time() - start_time
                 )
 
@@ -250,23 +237,20 @@ class RedisSessionStore(SessionStore):
                 try:
                     active_count = self._client.dbsize()  # Approximate count
                     rag_sessions_active.set(active_count)
-                except:
+                except Exception:
                     pass  # Don't fail on metrics
         except Exception as e:
             logger.error(f"Redis create error: {e}")
-            
+
             if self._metrics_enabled:
-                self.redis_operations.labels(
-                    operation='create',
-                    status='error'
-                ).inc()
+                self.redis_operations.labels(operation="create", status="error").inc()
 
         return session
 
     def update_session(self, session: Session) -> None:
         """Update session in Redis with TTL refresh and IP index update."""
         start_time = time.time()
-        
+
         try:
             # Get old session to check if IP changed
             old_data = self._client.get(self._key(session.session_id))
@@ -274,107 +258,100 @@ class RedisSessionStore(SessionStore):
             if old_data:
                 old_session = Session.from_dict(json.loads(old_data))
                 old_ip = old_session.ip_address
-            
+
             pipe = self._client.pipeline()
-            
+
             # Update session
             pipe.setex(
                 self._key(session.session_id),
                 settings.session.ttl_seconds,
-                json.dumps(session.to_dict())
+                json.dumps(session.to_dict()),
             )
-            
+
             # Update IP index if IP changed
             if old_ip != session.ip_address:
                 if old_ip:
                     pipe.srem(self._ip_index_key(old_ip), session.session_id)
                 if session.ip_address:
-                    pipe.sadd(self._ip_index_key(session.ip_address), session.session_id)
-                    pipe.expire(self._ip_index_key(session.ip_address), settings.session.ttl_seconds)
-            
+                    pipe.sadd(
+                        self._ip_index_key(session.ip_address), session.session_id
+                    )
+                    pipe.expire(
+                        self._ip_index_key(session.ip_address),
+                        settings.session.ttl_seconds,
+                    )
+
             pipe.execute()
-            
+
             # Record metrics
             if self._metrics_enabled:
-                self.redis_operations.labels(
-                    operation='update',
-                    status='success'
-                ).inc()
-                self.redis_latency.labels(operation='update').observe(
+                self.redis_operations.labels(operation="update", status="success").inc()
+                self.redis_latency.labels(operation="update").observe(
                     time.time() - start_time
                 )
         except Exception as e:
             logger.error(f"Redis update error: {e}")
-            
+
             if self._metrics_enabled:
-                self.redis_operations.labels(
-                    operation='update',
-                    status='error'
-                ).inc()
+                self.redis_operations.labels(operation="update", status="error").inc()
 
     def delete_session(self, session_id: str) -> None:
         """Delete session from Redis and IP index."""
         start_time = time.time()
-        
+
         try:
             # Get session to find IP
             data = self._client.get(self._key(session_id))
-            
+
             if data:
                 session = Session.from_dict(json.loads(data))
-                
+
                 # Remove from both session store and IP index
                 pipe = self._client.pipeline()
                 pipe.delete(self._key(session_id))
                 if session.ip_address:
                     pipe.srem(self._ip_index_key(session.ip_address), session_id)
                 pipe.execute()
-                
-                logger.debug(f"Deleted session {mask_session_id(session_id)} from Redis")
-                
+
+                logger.debug(
+                    f"Deleted session {mask_session_id(session_id)} from Redis"
+                )
+
                 # Record metrics
                 if self._metrics_enabled:
                     self.redis_operations.labels(
-                        operation='delete',
-                        status='success'
+                        operation="delete", status="success"
                     ).inc()
-                    self.redis_latency.labels(operation='delete').observe(
+                    self.redis_latency.labels(operation="delete").observe(
                         time.time() - start_time
                     )
         except Exception as e:
             logger.error(f"Redis delete error: {e}")
-            
+
             if self._metrics_enabled:
-                self.redis_operations.labels(
-                    operation='delete',
-                    status='error'
-                ).inc()
+                self.redis_operations.labels(operation="delete", status="error").inc()
 
     def get_session_count(self) -> int:
         """Get total number of active sessions in Redis.
-        
+
         Uses SCAN to count only session keys (non-blocking, safe for production).
         """
         try:
             count = 0
             cursor = 0
-            
+
             # Use SCAN to safely iterate through session keys
             while True:
-                cursor, keys = self._client.scan(
-                    cursor, 
-                    match="session:*", 
-                    count=100
-                )
+                cursor, keys = self._client.scan(cursor, match="session:*", count=100)
                 count += len(keys)
-                
+
                 if cursor == 0:
                     break
-            
+
             # Update metrics
             if self._metrics_enabled:
                 self.redis_keys.set(count)
-            
+
             return count
         except Exception as e:
             logger.error(f"Redis count error: {e}")
@@ -382,49 +359,47 @@ class RedisSessionStore(SessionStore):
 
     def get_sessions_by_ip(self, ip_address: str) -> List[Session]:
         """Get all sessions for an IP address using indexed lookup.
-        
+
         O(K) where K = sessions for this IP, not total sessions.
         """
         start_time = time.time()
-        
+
         try:
             # Get session IDs from IP index (O(1))
             session_ids = self._client.smembers(self._ip_index_key(ip_address))
-            
+
             # Fetch sessions in batch using pipeline
             if not session_ids:
                 return []
-            
+
             pipe = self._client.pipeline()
             for sid in session_ids:
                 pipe.get(self._key(sid))
-            
+
             results = pipe.execute()
-            
+
             # Parse sessions
             sessions = []
             for data in results:
                 if data:
                     sessions.append(Session.from_dict(json.loads(data)))
-            
+
             # Record metrics
             if self._metrics_enabled:
                 self.redis_operations.labels(
-                    operation='get_by_ip',
-                    status='success'
+                    operation="get_by_ip", status="success"
                 ).inc()
-                self.redis_latency.labels(operation='get_by_ip').observe(
+                self.redis_latency.labels(operation="get_by_ip").observe(
                     time.time() - start_time
                 )
-            
+
             return sessions
         except Exception as e:
             logger.error(f"Redis IP query error: {e}")
-            
+
             if self._metrics_enabled:
                 self.redis_operations.labels(
-                    operation='get_by_ip',
-                    status='error'
+                    operation="get_by_ip", status="error"
                 ).inc()
-            
+
             return []

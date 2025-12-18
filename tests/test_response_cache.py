@@ -12,7 +12,6 @@ Tests:
 import pytest
 from unittest.mock import MagicMock, patch
 import json
-import time
 
 
 @pytest.mark.unit
@@ -33,7 +32,7 @@ class TestResponseCache:
         result = cache.get(
             question="What is my Python experience?",
             session_id=None,
-            params={"top_k": 5, "temperature": 0.1}
+            params={"top_k": 5, "temperature": 0.1},
         )
 
         assert result is None
@@ -49,7 +48,7 @@ class TestResponseCache:
             "answer": "You have 5 years of Python experience.",
             "sources": [],
             "grounded": True,
-            "metadata": {"cached": True}
+            "metadata": {"cached": True},
         }
 
         # Mock Redis client (cache hit)
@@ -61,7 +60,7 @@ class TestResponseCache:
         result = cache.get(
             question="What is my Python experience?",
             session_id=None,
-            params={"top_k": 5, "temperature": 0.1}
+            params={"top_k": 5, "temperature": 0.1},
         )
 
         assert result is not None
@@ -78,23 +77,20 @@ class TestResponseCache:
         mock_redis.setex.return_value = True
         mock_redis_class.return_value = mock_redis
 
-        cache = ResponseCache(
-            redis_url="redis://localhost:6379/0",
-            ttl_seconds=3600
-        )
+        cache = ResponseCache(redis_url="redis://localhost:6379/0", ttl_seconds=3600)
 
         response = {
             "answer": "Test answer",
             "sources": [],
             "grounded": True,
-            "metadata": {}
+            "metadata": {},
         }
 
         cache.set(
             question="Test question",
             session_id=None,
             params={"top_k": 5},
-            response=response
+            response=response,
         )
 
         # Verify Redis setex was called with TTL
@@ -117,14 +113,14 @@ class TestResponseCache:
         cache.get(
             question="What is my Python experience?",
             session_id=None,
-            params={"top_k": 5, "temperature": 0.1}
+            params={"top_k": 5, "temperature": 0.1},
         )
         call1_key = mock_redis.get.call_args_list[0].args[0]
 
         cache.get(
             question="What is my Python experience?",
             session_id=None,
-            params={"top_k": 5, "temperature": 0.1}
+            params={"top_k": 5, "temperature": 0.1},
         )
         call2_key = mock_redis.get.call_args_list[1].args[0]
 
@@ -145,14 +141,14 @@ class TestResponseCache:
         cache.get(
             question="What is my Python experience?",
             session_id=None,
-            params={"top_k": 5}
+            params={"top_k": 5},
         )
         key1 = mock_redis.get.call_args_list[0].args[0]
 
         cache.get(
             question="What is my Python experience?",
             session_id=None,
-            params={"top_k": 10}  # Different!
+            params={"top_k": 10},  # Different!
         )
         key2 = mock_redis.get.call_args_list[1].args[0]
 
@@ -173,14 +169,14 @@ class TestResponseCache:
         cache.get(
             question="What is my Python experience?",
             session_id="session-123",
-            params={"top_k": 5}
+            params={"top_k": 5},
         )
         key1 = mock_redis.get.call_args_list[0].args[0]
 
         cache.get(
             question="What is my Python experience?",
             session_id="session-456",  # Different!
-            params={"top_k": 5}
+            params={"top_k": 5},
         )
         key2 = mock_redis.get.call_args_list[1].args[0]
 
@@ -194,17 +190,10 @@ class TestResponseCache:
         mock_redis = MagicMock()
         mock_redis_class.return_value = mock_redis
 
-        cache = ResponseCache(
-            redis_url="redis://localhost:6379/0",
-            enabled=False
-        )
+        cache = ResponseCache(redis_url="redis://localhost:6379/0", enabled=False)
 
         # Get should return None when disabled
-        result = cache.get(
-            question="Test",
-            session_id=None,
-            params={}
-        )
+        result = cache.get(question="Test", session_id=None, params={})
 
         assert result is None
         # Redis should not be called
@@ -223,11 +212,7 @@ class TestResponseCache:
         cache = ResponseCache(redis_url="redis://localhost:6379/0")
 
         # Should return None on Redis failure (graceful degradation)
-        result = cache.get(
-            question="Test",
-            session_id=None,
-            params={}
-        )
+        result = cache.get(question="Test", session_id=None, params={})
 
         assert result is None
 

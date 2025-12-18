@@ -37,7 +37,7 @@ class RetrievalFallbackCache:
         self,
         max_size: int = 100,
         ttl_seconds: int = 3600,
-        similarity_threshold: float = 0.8
+        similarity_threshold: float = 0.8,
     ):
         """
         Initialize the fallback cache.
@@ -52,7 +52,9 @@ class RetrievalFallbackCache:
         self.similarity_threshold = similarity_threshold
 
         # LRU cache: query -> (results, timestamp)
-        self._cache: OrderedDict[str, tuple[List[Dict[str, Any]], float]] = OrderedDict()
+        self._cache: OrderedDict[str, tuple[List[Dict[str, Any]], float]] = (
+            OrderedDict()
+        )
         self._lock = threading.RLock()
 
         # Statistics
@@ -92,9 +94,7 @@ class RetrievalFallbackCache:
         logger.debug(f"Cached {len(results)} results for query: {query[:50]}...")
 
     def get_cached_results(
-        self,
-        query: str,
-        use_fuzzy_match: bool = True
+        self, query: str, use_fuzzy_match: bool = True
     ) -> Optional[List[Dict[str, Any]]]:
         """
         Get cached results for a query.
@@ -202,11 +202,7 @@ class RetrievalFallbackCache:
         """Normalize query for consistent caching."""
         return query.lower().strip()
 
-    def _find_similar_query(
-        self,
-        query: str,
-        current_time: float
-    ) -> Optional[str]:
+    def _find_similar_query(self, query: str, current_time: float) -> Optional[str]:
         """
         Find the most similar query in the cache using fuzzy matching.
 
@@ -275,7 +271,7 @@ def get_fallback_cache() -> RetrievalFallbackCache:
         _fallback_cache = RetrievalFallbackCache(
             max_size=100,  # Cache up to 100 queries
             ttl_seconds=3600,  # 1 hour TTL
-            similarity_threshold=0.8  # 80% similarity for fuzzy match
+            similarity_threshold=0.8,  # 80% similarity for fuzzy match
         )
 
     return _fallback_cache

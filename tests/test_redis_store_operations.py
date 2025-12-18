@@ -41,7 +41,7 @@ class TestRedisHealth:
         mock_client.info.return_value = {
             "used_memory": 10485760,  # 10 MB in bytes
             "connected_clients": 5,
-            "uptime_in_seconds": 3600
+            "uptime_in_seconds": 3600,
         }
         mock_client.dbsize.return_value = 42
         mock_redis_class.return_value = mock_client
@@ -108,7 +108,7 @@ class TestRedisErrorHandling:
             last_accessed=datetime.now(),
             history=[],
             ip_address="127.0.0.1",
-            request_count=0
+            request_count=0,
         )
 
         # Should not raise, error is logged
@@ -134,7 +134,7 @@ class TestRedisErrorHandling:
             last_accessed=datetime.now(),
             history=[],
             ip_address="127.0.0.1",
-            request_count=1
+            request_count=1,
         )
 
         # Should not raise

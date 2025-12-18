@@ -18,6 +18,7 @@ from functools import wraps
 # Conditional import for Ollama (not available in production Groq-only builds)
 try:
     import ollama
+
     OLLAMA_AVAILABLE = True
 except ImportError:
     ollama = None
@@ -37,6 +38,7 @@ try:
         rag_llm_latency_seconds,
         rag_fallback_operations_total,
     )
+
     METRICS_ENABLED = True
 except ImportError:
     METRICS_ENABLED = False
@@ -44,12 +46,10 @@ except ImportError:
 
 
 def retry_with_exponential_backoff(
-    max_retries=3,
-    base_delay=1,
-    max_delay=10,
-    exponential_base=2
+    max_retries=3, base_delay=1, max_delay=10, exponential_base=2
 ):
     """Retry decorator with exponential backoff for synchronous functions"""
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -59,23 +59,23 @@ def retry_with_exponential_backoff(
                 except Exception as e:
                     if attempt == max_retries - 1:
                         raise
-                    delay = min(base_delay * (exponential_base ** attempt), max_delay)
+                    delay = min(base_delay * (exponential_base**attempt), max_delay)
                     logger.warning(
                         f"Attempt {attempt + 1}/{max_retries} failed in {func.__name__}: {e}. "
                         f"Retrying in {delay}s..."
                     )
                     time.sleep(delay)
+
         return wrapper
+
     return decorator
 
 
 def async_retry_with_exponential_backoff(
-    max_retries=3,
-    base_delay=1,
-    max_delay=10,
-    exponential_base=2
+    max_retries=3, base_delay=1, max_delay=10, exponential_base=2
 ):
     """Retry decorator with exponential backoff for asynchronous functions"""
+
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):
@@ -85,15 +85,16 @@ def async_retry_with_exponential_backoff(
                 except Exception as e:
                     if attempt == max_retries - 1:
                         raise
-                    delay = min(base_delay * (exponential_base ** attempt), max_delay)
+                    delay = min(base_delay * (exponential_base**attempt), max_delay)
                     logger.warning(
                         f"Attempt {attempt + 1}/{max_retries} failed in {func.__name__}: {e}. "
                         f"Retrying in {delay}s..."
                     )
                     await asyncio.sleep(delay)
-        return wrapper
-    return decorator
 
+        return wrapper
+
+    return decorator
 
 
 class OllamaService:
@@ -134,7 +135,9 @@ class OllamaService:
         if OLLAMA_AVAILABLE:
             self.ollama_client = ollama.Client(host=self.host, timeout=self.timeout)
         elif self.llm_settings.provider != "groq":
-            logger.warning("Ollama not available and provider is not groq - LLM calls will fail")
+            logger.warning(
+                "Ollama not available and provider is not groq - LLM calls will fail"
+            )
 
         # Initialize Groq client and rate limiter if configured
         self.groq_client = None
@@ -143,7 +146,9 @@ class OllamaService:
         if self.llm_settings.provider == "groq" and self.llm_settings.groq_api_key:
             try:
                 self.groq_client = Groq(api_key=self.llm_settings.groq_api_key)
-                self.async_groq_client = AsyncGroq(api_key=self.llm_settings.groq_api_key)
+                self.async_groq_client = AsyncGroq(
+                    api_key=self.llm_settings.groq_api_key
+                )
 
                 # Initialize rate limiter based on configured Groq tier
                 # Tier limits (from settings):
@@ -152,7 +157,7 @@ class OllamaService:
                 # - Enterprise: Custom limits
                 self.rate_limiter = RateLimiter(
                     requests_per_minute=self.llm_settings.groq_requests_per_minute,
-                    requests_per_day=self.llm_settings.groq_requests_per_day
+                    requests_per_day=self.llm_settings.groq_requests_per_day,
                 )
 
                 logger.info(
@@ -206,24 +211,22 @@ class OllamaService:
         """
         # Use settings defaults if not provided
         temperature = (
-            temperature if temperature is not None
-            else self.llm_settings.temperature
+            temperature if temperature is not None else self.llm_settings.temperature
         )
         max_tokens = (
-            max_tokens if max_tokens is not None
-            else self.llm_settings.max_tokens
+            max_tokens if max_tokens is not None else self.llm_settings.max_tokens
         )
 
         # Try primary provider
         try:
             if self.llm_settings.provider == "groq" and self.groq_client:
                 logger.debug("Attempting generation with Groq")
-                return self._generate_with_groq(
-                    prompt, temperature, max_tokens, model
-                )
+                return self._generate_with_groq(prompt, temperature, max_tokens, model)
             else:
                 if not self.ollama_client:
-                    raise RuntimeError("No LLM provider available - Groq not configured and Ollama not installed")
+                    raise RuntimeError(
+                        "No LLM provider available - Groq not configured and Ollama not installed"
+                    )
                 logger.debug("Generating with Ollama")
                 return self._generate_with_ollama(
                     prompt, temperature, max_tokens, model
@@ -235,14 +238,17 @@ class OllamaService:
             )
 
             # Fallback to Ollama if we were trying Groq and Ollama is available
-            if self.llm_settings.provider == "groq" and OLLAMA_AVAILABLE and self.ollama_client:
+            if (
+                self.llm_settings.provider == "groq"
+                and OLLAMA_AVAILABLE
+                and self.ollama_client
+            ):
                 logger.warning("Falling back to Ollama due to Groq failure")
 
                 # Track fallback operation
                 if METRICS_ENABLED:
                     rag_fallback_operations_total.labels(
-                        from_service="groq",
-                        to_service="ollama"
+                        from_service="groq", to_service="ollama"
                     ).inc()
 
                 try:
@@ -254,7 +260,9 @@ class OllamaService:
                     raise fallback_error
             elif self.llm_settings.provider == "groq" and not OLLAMA_AVAILABLE:
                 # Production: Groq-only, no fallback available
-                logger.error("Groq failed and Ollama is not available (production mode)")
+                logger.error(
+                    "Groq failed and Ollama is not available (production mode)"
+                )
                 raise
             else:
                 # Already using Ollama, can't fallback further
@@ -297,7 +305,7 @@ class OllamaService:
 
             # Log rate limit status
             stats = self.rate_limiter.get_stats()
-            if stats['minute_utilization'] > 0.8 or stats['day_utilization'] > 0.8:
+            if stats["minute_utilization"] > 0.8 or stats["day_utilization"] > 0.8:
                 logger.warning(
                     f"High rate limit usage: "
                     f"{stats['requests_last_minute']}/{stats['requests_per_minute_limit']} req/min, "
@@ -310,9 +318,7 @@ class OllamaService:
 
             response: ChatCompletion = self.groq_client.chat.completions.create(
                 model=model_name,
-                messages=[
-                    {"role": "user", "content": prompt}
-                ],
+                messages=[{"role": "user", "content": prompt}],
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
@@ -352,7 +358,9 @@ class OllamaService:
             error_msg = str(e)
             if "rate_limit" in error_msg.lower():
                 logger.warning(f"Groq rate limit exceeded: {e}")
-            elif "api_key" in error_msg.lower() or "authentication" in error_msg.lower():
+            elif (
+                "api_key" in error_msg.lower() or "authentication" in error_msg.lower()
+            ):
                 logger.error(f"Groq authentication error: {e}")
             else:
                 logger.error(f"Groq API error: {e}")
@@ -452,12 +460,10 @@ class OllamaService:
         """
         # Use settings defaults if not provided
         temperature = (
-            temperature if temperature is not None
-            else self.llm_settings.temperature
+            temperature if temperature is not None else self.llm_settings.temperature
         )
         max_tokens = (
-            max_tokens if max_tokens is not None
-            else self.llm_settings.max_tokens
+            max_tokens if max_tokens is not None else self.llm_settings.max_tokens
         )
 
         # Try primary provider
@@ -469,7 +475,9 @@ class OllamaService:
                 )
             else:
                 if not self.ollama_client:
-                    raise RuntimeError("No LLM provider available - Groq not configured and Ollama not installed")
+                    raise RuntimeError(
+                        "No LLM provider available - Groq not configured and Ollama not installed"
+                    )
                 logger.debug("Generating with Ollama (async wrapper)")
                 return await self._generate_with_ollama_async(
                     prompt, temperature, max_tokens, model
@@ -481,14 +489,17 @@ class OllamaService:
             )
 
             # Fallback to Ollama if we were trying Groq and Ollama is available
-            if self.llm_settings.provider == "groq" and OLLAMA_AVAILABLE and self.ollama_client:
+            if (
+                self.llm_settings.provider == "groq"
+                and OLLAMA_AVAILABLE
+                and self.ollama_client
+            ):
                 logger.warning("Falling back to Ollama due to Groq failure")
 
                 # Track fallback operation
                 if METRICS_ENABLED:
                     rag_fallback_operations_total.labels(
-                        from_service="groq",
-                        to_service="ollama"
+                        from_service="groq", to_service="ollama"
                     ).inc()
 
                 try:
@@ -500,7 +511,9 @@ class OllamaService:
                     raise fallback_error
             elif self.llm_settings.provider == "groq" and not OLLAMA_AVAILABLE:
                 # Production: Groq-only, no fallback available
-                logger.error("Groq failed and Ollama is not available (production mode)")
+                logger.error(
+                    "Groq failed and Ollama is not available (production mode)"
+                )
                 raise
             else:
                 # Already using Ollama, can't fallback further
@@ -547,7 +560,7 @@ class OllamaService:
 
             # Log rate limit status
             stats = self.rate_limiter.get_stats()
-            if stats['minute_utilization'] > 0.8 or stats['day_utilization'] > 0.8:
+            if stats["minute_utilization"] > 0.8 or stats["day_utilization"] > 0.8:
                 logger.warning(
                     f"High rate limit usage: "
                     f"{stats['requests_last_minute']}/{stats['requests_per_minute_limit']} req/min, "
@@ -558,13 +571,13 @@ class OllamaService:
         try:
             logger.debug(f"Calling Groq API async with model: {model_name}")
 
-            response: ChatCompletion = await self.async_groq_client.chat.completions.create(
-                model=model_name,
-                messages=[
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=temperature,
-                max_tokens=max_tokens,
+            response: ChatCompletion = (
+                await self.async_groq_client.chat.completions.create(
+                    model=model_name,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
             )
 
             generated_text = response.choices[0].message.content
@@ -602,7 +615,9 @@ class OllamaService:
             error_msg = str(e)
             if "rate_limit" in error_msg.lower():
                 logger.warning(f"Groq rate limit exceeded: {e}")
-            elif "api_key" in error_msg.lower() or "authentication" in error_msg.lower():
+            elif (
+                "api_key" in error_msg.lower() or "authentication" in error_msg.lower()
+            ):
                 logger.error(f"Groq authentication error: {e}")
             else:
                 logger.error(f"Groq API error: {e}")
@@ -634,7 +649,7 @@ class OllamaService:
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(
             None,
-            lambda: self._generate_with_ollama(prompt, temperature, max_tokens, model)
+            lambda: self._generate_with_ollama(prompt, temperature, max_tokens, model),
         )
 
 

@@ -5,7 +5,6 @@ Provides factory functions for creating prompt builder instances.
 """
 
 from app.prompting.builder import PromptBuilder
-from app.prompting.config import PromptConfig
 
 
 def create_default_prompt_builder() -> PromptBuilder:

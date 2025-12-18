@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 # Import session metrics
 try:
     from app.metrics import rag_rate_limit_violations_total
+
     RATE_LIMIT_METRICS_ENABLED = True
 except ImportError:
     RATE_LIMIT_METRICS_ENABLED = False
@@ -34,7 +35,7 @@ class SessionStore(ABC):
         self,
         session_id: Optional[str] = None,
         ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None
+        user_agent: Optional[str] = None,
     ) -> Session:
         """Create new session."""
         pass
@@ -53,7 +54,7 @@ class SessionStore(ABC):
         self,
         session_id: Optional[str] = None,
         ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None
+        user_agent: Optional[str] = None,
     ) -> Session:
         """Get existing session or create new one.
 
@@ -77,7 +78,7 @@ class SessionStore(ABC):
                 logger.error(f"Max total sessions reached: {total_sessions}")
                 raise HTTPException(
                     status_code=429,
-                    detail=f"Server capacity reached. Maximum {settings.session.max_total_sessions} active sessions."
+                    detail=f"Server capacity reached. Maximum {settings.session.max_total_sessions} active sessions.",
                 )
 
         # Get or create session
@@ -95,13 +96,11 @@ class SessionStore(ABC):
                 logger.warning(f"Max sessions per IP reached for {ip_address}")
                 raise HTTPException(
                     status_code=429,
-                    detail=f"Too many sessions from your IP. Maximum {settings.session.max_sessions_per_ip} sessions per IP."
+                    detail=f"Too many sessions from your IP. Maximum {settings.session.max_sessions_per_ip} sessions per IP.",
                 )
 
         session = self.create_session(
-            session_id=session_id,
-            ip_address=ip_address,
-            user_agent=user_agent
+            session_id=session_id, ip_address=ip_address, user_agent=user_agent
         )
         session.record_request()
         self.update_session(session)  # Persist initial request timestamp
@@ -125,10 +124,7 @@ class SessionStore(ABC):
         one_hour_ago = now - timedelta(hours=1)
 
         # Count requests in last hour
-        recent_requests = [
-            ts for ts in session.request_timestamps
-            if ts > one_hour_ago
-        ]
+        recent_requests = [ts for ts in session.request_timestamps if ts > one_hour_ago]
 
         within_limit = len(recent_requests) < settings.session.queries_per_hour
 
@@ -139,7 +135,9 @@ class SessionStore(ABC):
             )
             # Track rate limit violation
             if RATE_LIMIT_METRICS_ENABLED:
-                rag_rate_limit_violations_total.labels(limit_type="queries_per_hour").inc()
+                rag_rate_limit_violations_total.labels(
+                    limit_type="queries_per_hour"
+                ).inc()
 
         return within_limit
 

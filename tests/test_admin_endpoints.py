@@ -7,7 +7,7 @@ and fallback cache management.
 
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 
 @pytest.mark.integration
@@ -33,6 +33,7 @@ class TestAdminFallbackCache:
         """Test clearing the fallback cache."""
         # First add some entries to the cache
         from app.retrieval.fallback_cache import get_fallback_cache
+
         cache = get_fallback_cache()
         cache.cache_results("test query 1", [{"id": "1", "text": "test"}])
         cache.cache_results("test query 2", [{"id": "2", "text": "test"}])
@@ -112,7 +113,9 @@ class TestAdminChromaDB:
         mock_reset.assert_called_once()
 
     @patch("app.api.routes.admin.reset_collection")
-    def test_clear_chromadb_handles_errors(self, mock_reset, client: TestClient, auth_headers: dict):
+    def test_clear_chromadb_handles_errors(
+        self, mock_reset, client: TestClient, auth_headers: dict
+    ):
         """Test that ChromaDB clear handles errors gracefully."""
         # Mock error during reset
         mock_reset.side_effect = Exception("ChromaDB error")
@@ -158,7 +161,9 @@ class TestAdminEndpointsSecurity:
 
             assert response.status_code == 401, f"Expected 401 for {method} {endpoint}"
 
-    def test_admin_endpoints_require_valid_methods(self, client: TestClient, auth_headers: dict):
+    def test_admin_endpoints_require_valid_methods(
+        self, client: TestClient, auth_headers: dict
+    ):
         """Test that admin endpoints only accept correct HTTP methods."""
         # GET on DELETE endpoint should fail
         response = client.get("/admin/fallback-cache", headers=auth_headers)

@@ -13,10 +13,12 @@ import time
 import yaml
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
-from datetime import datetime
+from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 
-from app.retrieval.pattern_matcher import PatternMatcher, MatchResult
+from app.retrieval.pattern_matcher import PatternMatcher
+
+if TYPE_CHECKING:
+    from app.models import RewriteMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +29,7 @@ try:
         rag_query_rewrite_pattern_matches_total,
         rag_query_rewrite_latency_seconds,
     )
+
     REWRITE_METRICS_ENABLED = True
 except ImportError:
     REWRITE_METRICS_ENABLED = False
@@ -36,7 +39,9 @@ except ImportError:
 class QueryRewriter:
     """Pattern-based query rewriting engine with hot-reload support."""
 
-    def __init__(self, config_path: Optional[str] = None, settings_obj: Optional[object] = None):
+    def __init__(
+        self, config_path: Optional[str] = None, settings_obj: Optional[object] = None
+    ):
         """
         Initialize query rewriter.
 
@@ -49,10 +54,14 @@ class QueryRewriter:
             from app.settings import settings as settings_obj
 
         self.settings = settings_obj
-        self.config_path = config_path or self.settings.query_rewriter.pattern_config_path
+        self.config_path = (
+            config_path or self.settings.query_rewriter.pattern_config_path
+        )
         self.patterns: List[PatternMatcher] = []
         self.enabled = self.settings.query_rewriter.enabled
-        self.hot_reload_interval = self.settings.query_rewriter.hot_reload_interval_seconds
+        self.hot_reload_interval = (
+            self.settings.query_rewriter.hot_reload_interval_seconds
+        )
         self.last_reload_time = 0
 
         # Load patterns on initialization
@@ -73,20 +82,20 @@ class QueryRewriter:
                 self.patterns = []
                 return
 
-            with open(config_file, encoding='utf-8') as f:
+            with open(config_file, encoding="utf-8") as f:
                 config = yaml.safe_load(f)
 
-            if not config or 'patterns' not in config:
+            if not config or "patterns" not in config:
                 logger.error("Invalid pattern config: missing 'patterns' key")
                 self.patterns = []
                 return
 
             # Create PatternMatcher instances for enabled patterns
-            pattern_configs = config.get('patterns', [])
-            enabled_patterns = [p for p in pattern_configs if p.get('enabled', True)]
+            pattern_configs = config.get("patterns", [])
+            enabled_patterns = [p for p in pattern_configs if p.get("enabled", True)]
 
             # Sort by priority (highest first)
-            enabled_patterns.sort(key=lambda p: p.get('priority', 0), reverse=True)
+            enabled_patterns.sort(key=lambda p: p.get("priority", 0), reverse=True)
 
             self.patterns = [PatternMatcher(p) for p in enabled_patterns]
             self.last_reload_time = time.time()
@@ -129,10 +138,8 @@ class QueryRewriter:
                 logger.info(f"Pattern count changed: {old_count} -> {new_count}")
 
     def rewrite_query(
-        self,
-        query: str,
-        metadata_filter: Optional[Dict] = None
-    ) -> Tuple[str, Optional['RewriteMetadata']]:
+        self, query: str, metadata_filter: Optional[Dict] = None
+    ) -> Tuple[str, Optional["RewriteMetadata"]]:
         """
         Main entry point for query rewriting.
 
@@ -167,8 +174,7 @@ class QueryRewriter:
             if match_result.matched:
                 # Apply rewrite transformation
                 rewritten_query, rewrite_metadata_dict = pattern_matcher.apply_rewrite(
-                    query,
-                    match_result
+                    query, match_result
                 )
 
                 latency_ms = (time.time() - start_time) * 1000
@@ -181,12 +187,14 @@ class QueryRewriter:
                     original_query=query,
                     rewritten_query=rewritten_query,
                     pattern_name=pattern_matcher.name,
-                    pattern_type=pattern_matcher.matching_config['type'],
+                    pattern_type=pattern_matcher.matching_config["type"],
                     matched_entities=match_result.extracted_entities or {},
-                    rewrite_hint=rewrite_metadata_dict.get('hint'),
-                    metadata_filter_addition=rewrite_metadata_dict.get('metadata_filter'),
+                    rewrite_hint=rewrite_metadata_dict.get("hint"),
+                    metadata_filter_addition=rewrite_metadata_dict.get(
+                        "metadata_filter"
+                    ),
                     latency_ms=latency_ms,
-                    confidence=match_result.score
+                    confidence=match_result.score,
                 )
 
                 # Check latency constraint
@@ -214,7 +222,9 @@ class QueryRewriter:
 
         # No pattern matched
         latency_ms = (time.time() - start_time) * 1000
-        logger.debug(f"No pattern matched query: '{query[:50]}...' (latency: {latency_ms:.2f}ms)")
+        logger.debug(
+            f"No pattern matched query: '{query[:50]}...' (latency: {latency_ms:.2f}ms)"
+        )
 
         # Track no-match metrics
         if REWRITE_METRICS_ENABLED:

@@ -37,25 +37,25 @@ def extract_potential_entities(question: str) -> List[str]:
 
     # Pattern 1: Capitalized words (potential company names, products, etc.)
     # e.g., "Microsoft", "Google", "Oracle"
-    capitalized = re.findall(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b', question)
+    capitalized = re.findall(r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b", question)
     entities.extend(capitalized)
 
     # Pattern 2: All-caps acronyms (potential certs, technologies)
     # e.g., "AWS", "PhD", "EdD", "CCNA"
-    acronyms = re.findall(r'\b[A-Z]{2,}\b', question)
+    acronyms = re.findall(r"\b[A-Z]{2,}\b", question)
     entities.extend(acronyms)
 
     # Pattern 3: Technical terms from common patterns
     tech_patterns = [
-        r'\b(blockchain|mobile apps?|iOS|Android|React Native)\b',
-        r'\b(PhD|EdD|JD|MBA)\b',  # Degrees
+        r"\b(blockchain|mobile apps?|iOS|Android|React Native)\b",
+        r"\b(PhD|EdD|JD|MBA)\b",  # Degrees
     ]
     for pattern in tech_patterns:
         matches = re.findall(pattern, question, re.IGNORECASE)
         entities.extend(matches)
 
     # Remove duplicates and common words
-    stopwords = {'I', 'Do', 'Did', 'Have', 'My', 'The', 'A', 'An'}
+    stopwords = {"I", "Do", "Did", "Have", "My", "The", "A", "An"}
     entities = [e for e in entities if e not in stopwords]
 
     return list(set(entities))
@@ -65,7 +65,7 @@ def check_entity_exists(
     entity: str,
     k: int = 5,
     threshold: float = ENTITY_NOT_FOUND_THRESHOLD,
-    method: str = THRESHOLD_METHOD
+    method: str = THRESHOLD_METHOD,
 ) -> Tuple[bool, float]:
     """Check if an entity likely exists in the knowledge base.
 
@@ -88,17 +88,19 @@ def check_entity_exists(
     if not chunks:
         return False, 1.0
 
-    best_distance = chunks[0]['distance']
+    best_distance = chunks[0]["distance"]
 
     # Use adaptive threshold methods if enabled
-    if method == 'gap_based':
+    if method == "gap_based":
         from app.retrieval.adaptive_threshold import calculate_gap_based_threshold
+
         exists, distance, reason = calculate_gap_based_threshold(entity, k=k)
         logger.debug(f"Entity '{entity}' gap-based check: {reason}")
         return exists, distance
 
-    elif method == 'context_aware':
+    elif method == "context_aware":
         from app.retrieval.adaptive_threshold import calculate_context_aware_threshold
+
         exists, distance, reason = calculate_context_aware_threshold(entity)
         logger.debug(f"Entity '{entity}' context-aware check: {reason}")
         return exists, distance
@@ -135,9 +137,9 @@ def detect_negative_inference_opportunity(question: str) -> Optional[Dict[str, a
     """
     # Check if question matches negative inference patterns
     negative_patterns = [
-        r'do\s+i\s+have\s+(?:a|an|any)?\s*(.+)\?',
-        r'did\s+i\s+(?:work\s+at|work\s+for|intern\s+at)\s+(.+)\?',
-        r'have\s+i\s+(?:built|created|developed)\s+(?:any)?\s*(.+)\?',
+        r"do\s+i\s+have\s+(?:a|an|any)?\s*(.+)\?",
+        r"did\s+i\s+(?:work\s+at|work\s+for|intern\s+at)\s+(.+)\?",
+        r"have\s+i\s+(?:built|created|developed)\s+(?:any)?\s*(.+)\?",
     ]
 
     matches_pattern = False
@@ -160,21 +162,18 @@ def detect_negative_inference_opportunity(question: str) -> Optional[Dict[str, a
     for entity in entities:
         exists, distance = check_entity_exists(entity)
         if not exists:
-            missing_entities.append({
-                'entity': entity,
-                'distance': distance
-            })
+            missing_entities.append({"entity": entity, "distance": distance})
 
     if not missing_entities:
         return None
 
     # Determine category search based on question pattern
     category_mapping = {
-        r'work|company|employer|job': 'work experience companies employment history',
-        r'certification|certified|cert': 'certifications credentials professional certifications',
-        r'degree|phd|edd|mba|bachelor|master': 'education degrees academic',
-        r'project|built|developed|created': 'personal projects built developed',
-        r'skill|technology|framework': 'technical skills technologies',
+        r"work|company|employer|job": "work experience companies employment history",
+        r"certification|certified|cert": "certifications credentials professional certifications",
+        r"degree|phd|edd|mba|bachelor|master": "education degrees academic",
+        r"project|built|developed|created": "personal projects built developed",
+        r"skill|technology|framework": "technical skills technologies",
     }
 
     suggested_category = None
@@ -187,15 +186,15 @@ def detect_negative_inference_opportunity(question: str) -> Optional[Dict[str, a
         suggested_category = "experience background summary"
 
     return {
-        'is_negative_inference_candidate': True,
-        'missing_entities': missing_entities,
-        'suggested_category_search': suggested_category,
-        'question': question,
+        "is_negative_inference_candidate": True,
+        "missing_entities": missing_entities,
+        "suggested_category_search": suggested_category,
+        "question": question,
     }
 
 
 __all__ = [
-    'detect_negative_inference_opportunity',
-    'check_entity_exists',
-    'extract_potential_entities',
+    "detect_negative_inference_opportunity",
+    "check_entity_exists",
+    "extract_potential_entities",
 ]

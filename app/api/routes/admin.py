@@ -4,7 +4,6 @@ Admin endpoints for Personal RAG system.
 Contains administrative operations like clearing ChromaDB.
 """
 
-import shutil
 from pathlib import Path
 from typing import Dict, Any
 
@@ -42,14 +41,13 @@ async def clear_chromadb() -> Dict[str, Any]:
             "method": "collection_reset",
             "next_steps": [
                 "Run your ingestion script to rebuild the database",
-                "Verify no duplicate versions are created"
-            ]
+                "Verify no duplicate versions are created",
+            ],
         }
 
     except Exception as e:
         raise HTTPException(
-            status_code=500,
-            detail=f"Error during collection reset: {str(e)}"
+            status_code=500, detail=f"Error during collection reset: {str(e)}"
         )
 
 
@@ -71,22 +69,24 @@ async def chromadb_status() -> Dict[str, Any]:
             "path": str(chroma_path.absolute()),
             "exists": False,
             "files_count": 0,
-            "dirs_count": 0
+            "dirs_count": 0,
         }
 
     try:
-        files_count = sum(1 for _ in chroma_path.rglob('*') if _.is_file())
-        dirs_count = sum(1 for _ in chroma_path.rglob('*') if _.is_dir())
+        files_count = sum(1 for _ in chroma_path.rglob("*") if _.is_file())
+        dirs_count = sum(1 for _ in chroma_path.rglob("*") if _.is_dir())
 
         # Get directory size
-        total_size = sum(f.stat().st_size for f in chroma_path.rglob('*') if f.is_file())
+        total_size = sum(
+            f.stat().st_size for f in chroma_path.rglob("*") if f.is_file()
+        )
 
         # Format size in human-readable format
         if total_size < 1024:
             size_str = f"{total_size} B"
-        elif total_size < 1024 ** 2:
+        elif total_size < 1024**2:
             size_str = f"{total_size / 1024:.2f} KB"
-        elif total_size < 1024 ** 3:
+        elif total_size < 1024**3:
             size_str = f"{total_size / (1024 ** 2):.2f} MB"
         else:
             size_str = f"{total_size / (1024 ** 3):.2f} GB"
@@ -95,20 +95,19 @@ async def chromadb_status() -> Dict[str, Any]:
 
         return {
             "status": "empty" if is_empty else "populated",
-            "message": "ChromaDB directory is empty" if is_empty else "ChromaDB directory contains data",
+            "message": "ChromaDB directory is empty"
+            if is_empty
+            else "ChromaDB directory contains data",
             "path": str(chroma_path.absolute()),
             "exists": True,
             "files_count": files_count,
             "dirs_count": dirs_count,
             "total_size_bytes": total_size,
-            "total_size": size_str
+            "total_size": size_str,
         }
 
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error checking status: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Error checking status: {str(e)}")
 
 
 @router.get("/fallback-cache/stats")
@@ -127,13 +126,12 @@ async def get_fallback_cache_stats() -> Dict[str, Any]:
         return {
             "status": "active",
             "statistics": stats,
-            "description": "Fallback cache provides cached retrieval results when ChromaDB is unavailable"
+            "description": "Fallback cache provides cached retrieval results when ChromaDB is unavailable",
         }
 
     except Exception as e:
         raise HTTPException(
-            status_code=500,
-            detail=f"Error getting cache stats: {str(e)}"
+            status_code=500, detail=f"Error getting cache stats: {str(e)}"
         )
 
 
@@ -159,15 +157,12 @@ async def clear_fallback_cache() -> Dict[str, Any]:
             "statistics_reset": {
                 "hits": stats_before["hits"],
                 "misses": stats_before["misses"],
-                "fallback_uses": stats_before["fallback_uses"]
-            }
+                "fallback_uses": stats_before["fallback_uses"],
+            },
         }
 
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error clearing cache: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Error clearing cache: {str(e)}")
 
 
 @router.post("/fallback-cache/cleanup")
@@ -187,11 +182,10 @@ async def cleanup_fallback_cache() -> Dict[str, Any]:
             "status": "success",
             "message": "Expired entries cleaned up",
             "entries_removed": removed_count,
-            "current_cache_size": cache.get_stats()["cache_size"]
+            "current_cache_size": cache.get_stats()["cache_size"],
         }
 
     except Exception as e:
         raise HTTPException(
-            status_code=500,
-            detail=f"Error cleaning up cache: {str(e)}"
+            status_code=500, detail=f"Error cleaning up cache: {str(e)}"
         )

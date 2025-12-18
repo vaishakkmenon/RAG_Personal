@@ -7,7 +7,6 @@ and reset_collection operations.
 
 import pytest
 from unittest.mock import MagicMock, patch
-import random
 
 
 @pytest.mark.unit
@@ -29,18 +28,16 @@ class TestAddDocuments:
         """Test adding a single document."""
         from app.retrieval.store import add_documents
 
-        docs = [{
-            "id": "chunk-1",
-            "text": "Test content",
-            "metadata": {"source": "test.md"}
-        }]
+        docs = [
+            {"id": "chunk-1", "text": "Test content", "metadata": {"source": "test.md"}}
+        ]
 
         add_documents(docs)
 
         mock_collection.upsert.assert_called_once_with(
             ids=["chunk-1"],
             documents=["Test content"],
-            metadatas=[{"source": "test.md"}]
+            metadatas=[{"source": "test.md"}],
         )
 
     @patch("app.retrieval.store._collection")
@@ -101,7 +98,7 @@ class TestGetSampleChunks:
         mock_collection.get.return_value = {
             "ids": ["chunk-1", "chunk-2"],
             "documents": ["Text 1", "Text 2"],
-            "metadatas": [{"source": "doc1.md"}, {"source": "doc2.md"}]
+            "metadatas": [{"source": "doc1.md"}, {"source": "doc2.md"}],
         }
 
         result = get_sample_chunks(n=2)
@@ -117,11 +114,7 @@ class TestGetSampleChunks:
         from app.retrieval.store import get_sample_chunks
 
         mock_collection.count.return_value = 200
-        mock_collection.get.return_value = {
-            "ids": [],
-            "documents": [],
-            "metadatas": []
-        }
+        mock_collection.get.return_value = {"ids": [], "documents": [], "metadatas": []}
 
         get_sample_chunks(n=200)
 
@@ -261,14 +254,18 @@ class TestSearchQueryRewriting:
     """Tests for query rewriting in search."""
 
     @patch("app.retrieval.store._semantic_search")
-    def test_search_query_rewriting_disabled_uses_original(
-        self, mock_semantic
-    ):
+    def test_search_query_rewriting_disabled_uses_original(self, mock_semantic):
         """Test that disabled query rewriting uses original query."""
         from app.retrieval.store import search
 
         mock_semantic.return_value = [
-            {"id": "1", "text": "test", "source": "test.md", "distance": 0.2, "metadata": {}}
+            {
+                "id": "1",
+                "text": "test",
+                "source": "test.md",
+                "distance": 0.2,
+                "metadata": {},
+            }
         ]
 
         result = search("test query", use_query_rewriting=False)
@@ -283,14 +280,18 @@ class TestSearchCaching:
     """Tests for fallback caching in search."""
 
     @patch("app.retrieval.store._semantic_search")
-    def test_search_returns_results(
-        self, mock_semantic
-    ):
+    def test_search_returns_results(self, mock_semantic):
         """Test that search returns results from semantic search."""
         from app.retrieval.store import search
 
         mock_semantic.return_value = [
-            {"id": "1", "text": "test", "source": "test.md", "distance": 0.2, "metadata": {}}
+            {
+                "id": "1",
+                "text": "test",
+                "source": "test.md",
+                "distance": 0.2,
+                "metadata": {},
+            }
         ]
 
         result = search("test query", use_query_rewriting=False, use_hybrid=False)
@@ -313,14 +314,11 @@ class TestSemanticSearch:
             "ids": [["chunk-1"]],
             "documents": [["Test content"]],
             "metadatas": [[{"source": "resume.md", "doc_type": "resume"}]],
-            "distances": [[0.1]]
+            "distances": [[0.1]],
         }
 
         result = _semantic_search(
-            query="test",
-            k=5,
-            max_dist=0.8,
-            metadata_filter={"doc_type": "resume"}
+            query="test", k=5, max_dist=0.8, metadata_filter={"doc_type": "resume"}
         )
 
         assert len(result) == 1
@@ -333,15 +331,13 @@ class TestSemanticSearch:
         mock_collection.query.return_value = {
             "ids": [["chunk-1", "chunk-2", "chunk-3"]],
             "documents": [["Content 1", "Content 2", "Content 3"]],
-            "metadatas": [[{"source": "doc.md"}, {"source": "doc.md"}, {"source": "doc.md"}]],
-            "distances": [[0.1, 0.5, 0.9]]  # Only first two should pass max_dist=0.8
+            "metadatas": [
+                [{"source": "doc.md"}, {"source": "doc.md"}, {"source": "doc.md"}]
+            ],
+            "distances": [[0.1, 0.5, 0.9]],  # Only first two should pass max_dist=0.8
         }
 
-        result = _semantic_search(
-            query="test",
-            k=5,
-            max_dist=0.8
-        )
+        result = _semantic_search(query="test", k=5, max_dist=0.8)
 
         # Only chunks within max_dist should be returned
         assert len(result) == 2
@@ -385,4 +381,3 @@ class TestGetSource:
         result = _get_source(None)
 
         assert result == "unknown"
-

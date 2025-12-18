@@ -6,7 +6,6 @@ Tests async generation methods for Groq and Ollama with proper async mocking.
 
 import pytest
 from unittest.mock import MagicMock, patch, AsyncMock
-import asyncio
 
 
 @pytest.mark.unit
@@ -19,7 +18,7 @@ class TestAsyncGenerate:
         """Test async_generate uses Ollama when provider is ollama."""
         from app.services.llm import OllamaService
 
-        with patch.object(OllamaService, '__init__', lambda x, **kw: None):
+        with patch.object(OllamaService, "__init__", lambda x, **kw: None):
             service = OllamaService()
             service.llm_settings = MagicMock()
             service.llm_settings.provider = "ollama"
@@ -36,10 +35,7 @@ class TestAsyncGenerate:
             service._generate_with_ollama_async = mock_ollama_async
 
             result = await service.async_generate(
-                prompt="Test prompt",
-                temperature=0.7,
-                max_tokens=100,
-                model=None
+                prompt="Test prompt", temperature=0.7, max_tokens=100, model=None
             )
 
             assert result == "Ollama async response"
@@ -49,7 +45,7 @@ class TestAsyncGenerate:
         """Test async_generate uses Groq when provider is groq."""
         from app.services.llm import OllamaService
 
-        with patch.object(OllamaService, '__init__', lambda x, **kw: None):
+        with patch.object(OllamaService, "__init__", lambda x, **kw: None):
             service = OllamaService()
             service.llm_settings = MagicMock()
             service.llm_settings.provider = "groq"
@@ -65,10 +61,7 @@ class TestAsyncGenerate:
             service._generate_with_groq_async = mock_groq_async
 
             result = await service.async_generate(
-                prompt="Test prompt",
-                temperature=0.7,
-                max_tokens=100,
-                model=None
+                prompt="Test prompt", temperature=0.7, max_tokens=100, model=None
             )
 
             assert result == "Groq async response"
@@ -79,7 +72,7 @@ class TestAsyncGenerate:
         """Test async_generate falls back to Ollama when Groq fails."""
         from app.services.llm import OllamaService
 
-        with patch.object(OllamaService, '__init__', lambda x, **kw: None):
+        with patch.object(OllamaService, "__init__", lambda x, **kw: None):
             service = OllamaService()
             service.llm_settings = MagicMock()
             service.llm_settings.provider = "groq"
@@ -101,10 +94,7 @@ class TestAsyncGenerate:
             service._generate_with_ollama_async = mock_ollama_async
 
             result = await service.async_generate(
-                prompt="Test prompt",
-                temperature=0.7,
-                max_tokens=100,
-                model=None
+                prompt="Test prompt", temperature=0.7, max_tokens=100, model=None
             )
 
             assert result == "Ollama fallback response"
@@ -120,7 +110,7 @@ class TestAsyncGroqGeneration:
         """Test _generate_with_groq_async returns generated text."""
         from app.services.llm import OllamaService
 
-        with patch.object(OllamaService, '__init__', lambda x, **kw: None):
+        with patch.object(OllamaService, "__init__", lambda x, **kw: None):
             service = OllamaService()
             service.llm_settings = MagicMock()
             service.llm_settings.groq_model = "llama-3.1-8b-instant"
@@ -136,10 +126,7 @@ class TestAsyncGroqGeneration:
             service.async_groq_client = mock_client
 
             result = await service._generate_with_groq_async(
-                prompt="Test prompt",
-                temperature=0.7,
-                max_tokens=100,
-                model=None
+                prompt="Test prompt", temperature=0.7, max_tokens=100, model=None
             )
 
             assert result == "Generated async response"
@@ -149,7 +136,7 @@ class TestAsyncGroqGeneration:
         """Test _generate_with_groq_async respects rate limiter."""
         from app.services.llm import OllamaService
 
-        with patch.object(OllamaService, '__init__', lambda x, **kw: None):
+        with patch.object(OllamaService, "__init__", lambda x, **kw: None):
             service = OllamaService()
             service.llm_settings = MagicMock()
             service.llm_settings.groq_model = "llama-3.1-8b-instant"
@@ -163,7 +150,7 @@ class TestAsyncGroqGeneration:
                 "requests_last_minute": 10,
                 "requests_per_minute_limit": 28,
                 "requests_last_day": 100,
-                "requests_per_day_limit": 1000
+                "requests_per_day_limit": 1000,
             }
             service.rate_limiter = mock_rate_limiter
 
@@ -177,14 +164,11 @@ class TestAsyncGroqGeneration:
             service.async_groq_client = mock_client
 
             # Mock event loop for rate limiter
-            with patch('asyncio.get_event_loop') as mock_loop:
+            with patch("asyncio.get_event_loop") as mock_loop:
                 mock_loop.return_value.run_in_executor = AsyncMock(return_value=True)
 
                 result = await service._generate_with_groq_async(
-                    prompt="Test prompt",
-                    temperature=0.7,
-                    max_tokens=100,
-                    model=None
+                    prompt="Test prompt", temperature=0.7, max_tokens=100, model=None
                 )
 
             assert result == "Rate limited response"
@@ -194,7 +178,7 @@ class TestAsyncGroqGeneration:
         """Test _generate_with_groq_async handles rate limiter timeout."""
         from app.services.llm import OllamaService
 
-        with patch.object(OllamaService, '__init__', lambda x, **kw: None):
+        with patch.object(OllamaService, "__init__", lambda x, **kw: None):
             service = OllamaService()
             service.llm_settings = MagicMock()
             service.llm_settings.groq_model = "llama-3.1-8b-instant"
@@ -207,7 +191,7 @@ class TestAsyncGroqGeneration:
             service.async_groq_client = AsyncMock()
 
             # Mock event loop for rate limiter
-            with patch('asyncio.get_event_loop') as mock_loop:
+            with patch("asyncio.get_event_loop") as mock_loop:
                 mock_loop.return_value.run_in_executor = AsyncMock(return_value=False)
 
                 with pytest.raises(Exception) as exc_info:
@@ -215,7 +199,7 @@ class TestAsyncGroqGeneration:
                         prompt="Test prompt",
                         temperature=0.7,
                         max_tokens=100,
-                        model=None
+                        model=None,
                     )
 
                 assert "Rate limiter timeout" in str(exc_info.value)
@@ -225,7 +209,7 @@ class TestAsyncGroqGeneration:
         """Test _generate_with_groq_async handles API errors."""
         from app.services.llm import OllamaService
 
-        with patch.object(OllamaService, '__init__', lambda x, **kw: None):
+        with patch.object(OllamaService, "__init__", lambda x, **kw: None):
             service = OllamaService()
             service.llm_settings = MagicMock()
             service.llm_settings.groq_model = "llama-3.1-8b-instant"
@@ -240,10 +224,7 @@ class TestAsyncGroqGeneration:
 
             with pytest.raises(Exception) as exc_info:
                 await service._generate_with_groq_async(
-                    prompt="Test prompt",
-                    temperature=0.7,
-                    max_tokens=100,
-                    model=None
+                    prompt="Test prompt", temperature=0.7, max_tokens=100, model=None
                 )
 
             assert "Groq API error" in str(exc_info.value)
@@ -259,24 +240,23 @@ class TestAsyncOllamaGeneration:
         """Test _generate_with_ollama_async wraps sync method."""
         from app.services.llm import OllamaService
 
-        with patch.object(OllamaService, '__init__', lambda x, **kw: None):
+        with patch.object(OllamaService, "__init__", lambda x, **kw: None):
             service = OllamaService()
             service.ollama_model = "llama3.1:8b"
             service.num_ctx = 4096
 
             # Mock the sync method
-            service._generate_with_ollama = MagicMock(return_value="Sync ollama response")
+            service._generate_with_ollama = MagicMock(
+                return_value="Sync ollama response"
+            )
 
             # Mock event loop
-            with patch('asyncio.get_event_loop') as mock_loop:
+            with patch("asyncio.get_event_loop") as mock_loop:
                 mock_executor = AsyncMock(return_value="Sync ollama response")
                 mock_loop.return_value.run_in_executor = mock_executor
 
                 result = await service._generate_with_ollama_async(
-                    prompt="Test prompt",
-                    temperature=0.7,
-                    max_tokens=100,
-                    model=None
+                    prompt="Test prompt", temperature=0.7, max_tokens=100, model=None
                 )
 
             assert result == "Sync ollama response"
@@ -292,16 +272,18 @@ class TestAsyncGenerateConvenienceFunction:
         """Test async_generate_with_ollama delegates to service."""
         from app.services.llm import async_generate_with_ollama
 
-        with patch('app.services.llm.get_ollama_service') as mock_get_service:
+        with patch("app.services.llm.get_ollama_service") as mock_get_service:
             mock_service = MagicMock()
-            mock_service.async_generate = AsyncMock(return_value="Async convenience response")
+            mock_service.async_generate = AsyncMock(
+                return_value="Async convenience response"
+            )
             mock_get_service.return_value = mock_service
 
             result = await async_generate_with_ollama(
                 prompt="Test prompt",
                 temperature=0.5,
                 max_tokens=200,
-                model="custom-model"
+                model="custom-model",
             )
 
             assert result == "Async convenience response"
@@ -309,7 +291,7 @@ class TestAsyncGenerateConvenienceFunction:
                 prompt="Test prompt",
                 temperature=0.5,
                 max_tokens=200,
-                model="custom-model"
+                model="custom-model",
             )
 
 

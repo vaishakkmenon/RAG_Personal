@@ -23,11 +23,17 @@ class TestRedisSessionStorageFallback:
         from app.storage.factory import create_session_store
 
         # Simulate Redis connection failure
-        with patch("app.storage.primary.RedisSessionStore.__init__", side_effect=RedisConnectionError("Connection refused")):
-            store = create_session_store(backend="redis", redis_url="redis://localhost:6379/0")
+        with patch(
+            "app.storage.primary.RedisSessionStore.__init__",
+            side_effect=RedisConnectionError("Connection refused"),
+        ):
+            store = create_session_store(
+                backend="redis", redis_url="redis://localhost:6379/0"
+            )
 
             # Should return in-memory store as fallback
             from app.storage.fallback import InMemorySessionStore
+
             assert isinstance(store, InMemorySessionStore)
 
     def test_sessions_continue_working_with_memory_fallback(self):
@@ -38,10 +44,7 @@ class TestRedisSessionStorageFallback:
         store = create_session_store(backend="memory")
 
         # Create a session
-        session = store.get_or_create_session(
-            session_id=None,
-            ip_address="127.0.0.1"
-        )
+        session = store.get_or_create_session(session_id=None, ip_address="127.0.0.1")
 
         assert session is not None
         assert session.session_id is not None
@@ -71,8 +74,7 @@ class TestRedisSessionStorageFallback:
 
         try:
             session = store.get_or_create_session(
-                session_id=None,
-                ip_address="127.0.0.1"
+                session_id=None, ip_address="127.0.0.1"
             )
 
             # Should be able to make requests up to the limit (but not exceed it)
@@ -135,11 +137,11 @@ class TestRedisCacheDegradation:
         from app.services.response_cache import ResponseCache
 
         # Simulate Redis connection failure
-        with patch("redis.Redis", side_effect=RedisConnectionError("Connection refused")):
+        with patch(
+            "redis.Redis", side_effect=RedisConnectionError("Connection refused")
+        ):
             cache = ResponseCache(
-                redis_url="redis://localhost:6379/0",
-                ttl_seconds=3600,
-                enabled=True
+                redis_url="redis://localhost:6379/0", ttl_seconds=3600, enabled=True
             )
 
             # Cache should be disabled but not crash
@@ -151,9 +153,7 @@ class TestRedisCacheDegradation:
 
         # Create disabled cache
         cache = ResponseCache(
-            redis_url="redis://localhost:6379/0",
-            ttl_seconds=3600,
-            enabled=False
+            redis_url="redis://localhost:6379/0", ttl_seconds=3600, enabled=False
         )
 
         # All operations should be safe no-ops
@@ -184,7 +184,10 @@ class TestRedisCacheDegradation:
 
         # Mock prompt guard
         mock_guard_instance = MagicMock()
-        mock_guard_instance.check_input.return_value = {"blocked": False, "label": "safe"}
+        mock_guard_instance.check_input.return_value = {
+            "blocked": False,
+            "label": "safe",
+        }
         mock_guard.return_value = mock_guard_instance
 
         # Mock search and generation
@@ -213,7 +216,9 @@ class TestRedisHealthCheckDegradation:
         with patch("app.services.response_cache.get_response_cache") as mock_cache:
             mock_cache_instance = MagicMock()
             # Health check accesses cache._redis.ping()
-            mock_cache_instance._redis.ping.side_effect = RedisConnectionError("Connection refused")
+            mock_cache_instance._redis.ping.side_effect = RedisConnectionError(
+                "Connection refused"
+            )
             mock_cache.return_value = mock_cache_instance
 
             response = client.get("/health/detailed")
@@ -241,7 +246,9 @@ class TestRedisHealthCheckDegradation:
         """Test that readiness probe focuses on critical dependencies, not Redis."""
         with patch("app.services.response_cache.get_response_cache") as mock_cache:
             mock_cache_instance = MagicMock()
-            mock_cache_instance._client.ping.side_effect = RedisConnectionError("Connection refused")
+            mock_cache_instance._client.ping.side_effect = RedisConnectionError(
+                "Connection refused"
+            )
             mock_cache.return_value = mock_cache_instance
 
             response = client.get("/health/ready")
@@ -275,7 +282,9 @@ class TestRedisMetricsWithFallback:
         """Test that fallback store has same interface as Redis store."""
         from app.storage.factory import create_session_store
 
-        memory_store = create_session_store(backend="memory")  # Using memory as fallback
+        memory_store = create_session_store(
+            backend="memory"
+        )  # Using memory as fallback
 
         # Should have same core methods as Redis store
         assert hasattr(memory_store, "get_or_create_session")
@@ -297,17 +306,19 @@ class TestRedisFailoverScenarios:
         # This test verifies the factory handles Redis unavailability at startup
         from app.storage.factory import create_session_store
 
-        with patch("app.storage.primary.RedisSessionStore.__init__", side_effect=RedisConnectionError("Connection refused")):
-            store = create_session_store(backend="redis", redis_url="redis://localhost:6379/0")
+        with patch(
+            "app.storage.primary.RedisSessionStore.__init__",
+            side_effect=RedisConnectionError("Connection refused"),
+        ):
+            store = create_session_store(
+                backend="redis", redis_url="redis://localhost:6379/0"
+            )
 
             # Should successfully create fallback store
             assert store is not None
 
             # Should be able to use it
-            session = store.get_or_create_session(
-                None,
-                "127.0.0.1"
-            )
+            session = store.get_or_create_session(None, "127.0.0.1")
             assert session is not None
 
     def test_redis_failure_logged_appropriately(self, caplog):
@@ -316,11 +327,23 @@ class TestRedisFailoverScenarios:
         import logging
 
         with caplog.at_level(logging.WARNING):
-            with patch("app.storage.primary.RedisSessionStore.__init__", side_effect=RedisConnectionError("Connection refused")):
-                store = create_session_store(backend="redis", redis_url="redis://localhost:6379/0")
+            with patch(
+                "app.storage.primary.RedisSessionStore.__init__",
+                side_effect=RedisConnectionError("Connection refused"),
+            ):
+                create_session_store(
+                    backend="redis", redis_url="redis://localhost:6379/0"
+                )
 
                 # Should log error about Redis failure
-                assert any("[FAILED]" in record.message and "Failed to initialize Redis store" in record.message for record in caplog.records)
+                assert any(
+                    "[FAILED]" in record.message
+                    and "Failed to initialize Redis store" in record.message
+                    for record in caplog.records
+                )
 
                 # Should log warning about fallback activation
-                assert any("[FALLBACK ACTIVATED]" in record.message for record in caplog.records)
+                assert any(
+                    "[FALLBACK ACTIVATED]" in record.message
+                    for record in caplog.records
+                )

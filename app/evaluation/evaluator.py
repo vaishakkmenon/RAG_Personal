@@ -3,7 +3,7 @@ Evaluation runners for retrieval and answer quality.
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from app.evaluation.metrics import (
     calculate_recall_at_k,
@@ -30,10 +30,7 @@ class RetrievalEvaluator:
         self.k_values = k_values or [1, 3, 5, 10]
 
     def evaluate_single_query(
-        self,
-        query: str,
-        retrieved_ids: List[str],
-        relevant_ids: List[str]
+        self, query: str, retrieved_ids: List[str], relevant_ids: List[str]
     ) -> Dict[str, Any]:
         """Evaluate retrieval for a single query.
 
@@ -49,7 +46,7 @@ class RetrievalEvaluator:
             "query": query,
             "num_retrieved": len(retrieved_ids),
             "num_relevant": len(relevant_ids),
-            "metrics": {}
+            "metrics": {},
         }
 
         # Calculate metrics for each K value
@@ -78,7 +75,7 @@ class RetrievalEvaluator:
         query: str,
         retrieved_chunks: List[Dict[str, Any]],
         required_content: List[str],
-        k: int = 5
+        k: int = 5,
     ) -> Dict[str, Any]:
         """Evaluate retrieval by checking if required content is in retrieved chunks.
 
@@ -96,10 +93,9 @@ class RetrievalEvaluator:
         """
         # Combine content from top-k chunks
         top_k_chunks = retrieved_chunks[:k]
-        combined_content = " ".join([
-            c.get("content", c.get("document", "")).lower()
-            for c in top_k_chunks
-        ])
+        combined_content = " ".join(
+            [c.get("content", c.get("document", "")).lower() for c in top_k_chunks]
+        )
 
         # Check which required content items are found
         found_content = []
@@ -111,7 +107,9 @@ class RetrievalEvaluator:
                 missing_content.append(item)
 
         # Calculate content coverage
-        content_coverage = len(found_content) / len(required_content) if required_content else 1.0
+        content_coverage = (
+            len(found_content) / len(required_content) if required_content else 1.0
+        )
         content_pass = content_coverage == 1.0
 
         return {
@@ -122,13 +120,11 @@ class RetrievalEvaluator:
             "content_pass": content_pass,
             "found_content": found_content,
             "missing_content": missing_content,
-            "top_k_chunk_ids": [c.get("id", "unknown") for c in top_k_chunks]
+            "top_k_chunk_ids": [c.get("id", "unknown") for c in top_k_chunks],
         }
 
     def evaluate_batch(
-        self,
-        test_cases: List[Dict[str, Any]],
-        retrieval_results: List[Dict[str, Any]]
+        self, test_cases: List[Dict[str, Any]], retrieval_results: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """Evaluate retrieval for multiple queries.
 
@@ -145,7 +141,7 @@ class RetrievalEvaluator:
             result = self.evaluate_single_query(
                 query=test_case["query"],
                 retrieved_ids=retrieval_result["chunk_ids"],
-                relevant_ids=test_case["expected_chunks"]
+                relevant_ids=test_case["expected_chunks"],
             )
             result["test_id"] = test_case.get("id", "unknown")
             result["difficulty"] = test_case.get("difficulty", "unknown")
@@ -158,7 +154,7 @@ class RetrievalEvaluator:
         return {
             "aggregate": aggregate,
             "individual": individual_results,
-            "summary": self._generate_summary(aggregate, individual_results)
+            "summary": self._generate_summary(aggregate, individual_results),
         }
 
     def _calculate_aggregate_metrics(self, results: List[Dict]) -> Dict[str, float]:
@@ -177,17 +173,18 @@ class RetrievalEvaluator:
                 aggregate[metric_name] = sum(values) / len(values)
 
         # Additional aggregate metrics
-        aggregate["found_any_rate"] = sum(r["found_any"] for r in results) / len(results)
+        aggregate["found_any_rate"] = sum(r["found_any"] for r in results) / len(
+            results
+        )
 
         return aggregate
 
-    def _generate_summary(self, aggregate: Dict, individual: List[Dict]) -> Dict[str, Any]:
+    def _generate_summary(
+        self, aggregate: Dict, individual: List[Dict]
+    ) -> Dict[str, Any]:
         """Generate human-readable summary."""
         # Find failures (recall@5 < 0.8)
-        failures = [
-            r for r in individual
-            if r["metrics"].get("recall@5", 0) < 0.8
-        ]
+        failures = [r for r in individual if r["metrics"].get("recall@5", 0) < 0.8]
 
         # Group by difficulty
         by_difficulty = {}
@@ -201,24 +198,28 @@ class RetrievalEvaluator:
         for diff, results in by_difficulty.items():
             difficulty_metrics[diff] = {
                 "count": len(results),
-                "avg_recall@5": sum(r["metrics"].get("recall@5", 0) for r in results) / len(results),
-                "avg_mrr": sum(r["metrics"].get("mrr", 0) for r in results) / len(results)
+                "avg_recall@5": sum(r["metrics"].get("recall@5", 0) for r in results)
+                / len(results),
+                "avg_mrr": sum(r["metrics"].get("mrr", 0) for r in results)
+                / len(results),
             }
 
         return {
             "total_queries": len(individual),
             "failures": len(failures),
-            "pass_rate": (len(individual) - len(failures)) / len(individual) if individual else 0,
+            "pass_rate": (len(individual) - len(failures)) / len(individual)
+            if individual
+            else 0,
             "failure_details": [
                 {
                     "test_id": f["test_id"],
                     "query": f["query"],
                     "recall@5": f["metrics"].get("recall@5", 0),
-                    "found_any": f["found_any"]
+                    "found_any": f["found_any"],
                 }
                 for f in failures
             ],
-            "by_difficulty": difficulty_metrics
+            "by_difficulty": difficulty_metrics,
         }
 
 
@@ -230,7 +231,7 @@ class AnswerEvaluator:
         query: str,
         answer: str,
         expected_facts: List[str],
-        must_not_contain: List[str] = None
+        must_not_contain: List[str] = None,
     ) -> Dict[str, Any]:
         """Evaluate a single answer.
 
@@ -251,7 +252,7 @@ class AnswerEvaluator:
         answer_lower = answer.lower()
         found_facts = []
         missing_facts = []
-        
+
         for fact in expected_facts:
             # Check if fact contains alternatives (pipe-separated)
             alternatives = [alt.strip() for alt in fact.split("|")]
@@ -261,10 +262,14 @@ class AnswerEvaluator:
                 missing_facts.append(fact)
 
         # Check prohibited content
-        found_prohibited = [fact for fact in must_not_contain if fact.lower() in answer_lower]
+        found_prohibited = [
+            fact for fact in must_not_contain if fact.lower() in answer_lower
+        ]
 
         # Calculate score
-        fact_coverage = len(found_facts) / len(expected_facts) if expected_facts else 1.0
+        fact_coverage = (
+            len(found_facts) / len(expected_facts) if expected_facts else 1.0
+        )
         has_prohibited = len(found_prohibited) > 0
 
         # Pass if all facts present and no prohibited content
@@ -278,13 +283,11 @@ class AnswerEvaluator:
             "found_facts": found_facts,
             "missing_facts": missing_facts,
             "found_prohibited": found_prohibited,
-            "has_prohibited": has_prohibited
+            "has_prohibited": has_prohibited,
         }
 
     def evaluate_batch(
-        self,
-        test_cases: List[Dict[str, Any]],
-        answers: List[str]
+        self, test_cases: List[Dict[str, Any]], answers: List[str]
     ) -> Dict[str, Any]:
         """Evaluate multiple answers.
 
@@ -302,16 +305,30 @@ class AnswerEvaluator:
                 query=test_case["query"],
                 answer=answer,
                 expected_facts=test_case.get("expected_facts", []),
-                must_not_contain=test_case.get("must_not_contain", [])
+                must_not_contain=test_case.get("must_not_contain", []),
             )
             result["test_id"] = test_case.get("id", "unknown")
             result["difficulty"] = test_case.get("difficulty", "unknown")
             individual_results.append(result)
 
         # Calculate aggregate metrics
-        pass_rate = sum(r["passed"] for r in individual_results) / len(individual_results) if individual_results else 0
-        avg_fact_coverage = sum(r["fact_coverage"] for r in individual_results) / len(individual_results) if individual_results else 0
-        prohibited_rate = sum(r["has_prohibited"] for r in individual_results) / len(individual_results) if individual_results else 0
+        pass_rate = (
+            sum(r["passed"] for r in individual_results) / len(individual_results)
+            if individual_results
+            else 0
+        )
+        avg_fact_coverage = (
+            sum(r["fact_coverage"] for r in individual_results)
+            / len(individual_results)
+            if individual_results
+            else 0
+        )
+        prohibited_rate = (
+            sum(r["has_prohibited"] for r in individual_results)
+            / len(individual_results)
+            if individual_results
+            else 0
+        )
 
         failures = [r for r in individual_results if not r["passed"]]
 
@@ -319,7 +336,7 @@ class AnswerEvaluator:
             "aggregate": {
                 "pass_rate": pass_rate,
                 "avg_fact_coverage": avg_fact_coverage,
-                "prohibited_content_rate": prohibited_rate
+                "prohibited_content_rate": prohibited_rate,
             },
             "individual": individual_results,
             "summary": {
@@ -332,9 +349,9 @@ class AnswerEvaluator:
                         "query": f["query"],
                         "fact_coverage": f["fact_coverage"],
                         "missing_facts": f["missing_facts"],
-                        "found_prohibited": f["found_prohibited"]
+                        "found_prohibited": f["found_prohibited"],
                     }
                     for f in failures
-                ]
-            }
+                ],
+            },
         }

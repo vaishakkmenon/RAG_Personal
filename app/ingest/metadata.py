@@ -118,12 +118,12 @@ def normalize_version_identifier(metadata: Dict) -> str:
     """
     # Priority order for version fields (first found wins)
     version_fields = [
-        'version_date',      # Resume
-        'earned',            # Certificates
-        'term_id',           # Terms (e.g., "2024-fall")
-        'analysis_date',     # Transcript analysis
-        'updated_date',      # Generic fallback
-        'created_date',      # Generic fallback
+        "version_date",  # Resume
+        "earned",  # Certificates
+        "term_id",  # Terms (e.g., "2024-fall")
+        "analysis_date",  # Transcript analysis
+        "updated_date",  # Generic fallback
+        "created_date",  # Generic fallback
     ]
 
     for field in version_fields:
@@ -142,7 +142,7 @@ def normalize_version_identifier(metadata: Dict) -> str:
             if isinstance(value, str):
                 try:
                     # Try parsing as date
-                    parsed = datetime.fromisoformat(value.replace('/', '-'))
+                    parsed = datetime.fromisoformat(value.replace("/", "-"))
                     return parsed.date().isoformat()
                 except (ValueError, AttributeError):
                     # Not a date, return as-is
@@ -178,16 +178,14 @@ def get_existing_versions(doc_id: str, base_version: str) -> List[str]:
 
         # Query chunks matching doc_id
         results = _collection.get(
-            where={
-                "doc_id": {"$eq": doc_id}
-            },
-            limit=10000  # Get all chunks for this doc
+            where={"doc_id": {"$eq": doc_id}},
+            limit=10000,  # Get all chunks for this doc
         )
 
         # Extract unique versions that match base_version
         versions = set()
-        for metadata in results.get('metadatas', []):
-            version = metadata.get('version_identifier', '')
+        for metadata in results.get("metadatas", []):
+            version = metadata.get("version_identifier", "")
             if version.startswith(base_version):
                 versions.add(version)
 
@@ -224,16 +222,16 @@ def get_existing_content_hash(doc_id: str, version: str) -> Optional[str]:
             where={
                 "$and": [
                     {"doc_id": {"$eq": doc_id}},
-                    {"version_identifier": {"$eq": version}}
+                    {"version_identifier": {"$eq": version}},
                 ]
             },
-            limit=1  # We only need one chunk to get the content_hash
+            limit=1,  # We only need one chunk to get the content_hash
         )
 
         # Extract content hash from metadata
-        metadatas = results.get('metadatas', [])
+        metadatas = results.get("metadatas", [])
         if metadatas and len(metadatas) > 0:
-            return metadatas[0].get('content_hash')
+            return metadatas[0].get("content_hash")
 
         return None
 
@@ -245,7 +243,9 @@ def get_existing_content_hash(doc_id: str, version: str) -> Optional[str]:
         return None
 
 
-def generate_version_identifier(metadata: Dict, doc_id: str, content_hash: Optional[str] = None) -> str:
+def generate_version_identifier(
+    metadata: Dict, doc_id: str, content_hash: Optional[str] = None
+) -> str:
     """
     Generate unique version identifier with content-based change detection.
 
@@ -291,9 +291,9 @@ def generate_version_identifier(metadata: Dict, doc_id: str, content_hash: Optio
     for version in existing_versions:
         if version.startswith(base_version):
             # Extract sequence number if present
-            if '.v' in version:
+            if ".v" in version:
                 try:
-                    seq_str = version.split('.v')[1]
+                    seq_str = version.split(".v")[1]
                     seq = int(seq_str)
                     max_sequence = max(max_sequence, seq)
                 except (IndexError, ValueError):

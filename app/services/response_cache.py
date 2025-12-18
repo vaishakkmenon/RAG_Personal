@@ -17,12 +17,12 @@ import json
 import logging
 import time
 from typing import Optional, Dict, Any
-from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 
 try:
     import redis
+
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
@@ -81,11 +81,13 @@ class ResponseCache:
                 decode_responses=True,
                 socket_connect_timeout=2,
                 socket_timeout=2,
-                retry_on_timeout=True
+                retry_on_timeout=True,
             )
             self._client = redis.Redis(connection_pool=pool)
             self._client.ping()
-            logger.info(f"Response cache initialized: {redis_url} (TTL: {ttl_seconds}s)")
+            logger.info(
+                f"Response cache initialized: {redis_url} (TTL: {ttl_seconds}s)"
+            )
         except Exception as e:
             logger.error(f"Failed to connect to Redis for caching: {e}")
             self.enabled = False
@@ -96,32 +98,29 @@ class ResponseCache:
             from prometheus_client import Counter, Histogram, Gauge
 
             self.cache_hits = Counter(
-                'response_cache_hits_total',
-                'Total cache hits',
-                ['session_aware']  # true/false
+                "response_cache_hits_total",
+                "Total cache hits",
+                ["session_aware"],  # true/false
             )
 
             self.cache_misses = Counter(
-                'response_cache_misses_total',
-                'Total cache misses',
-                ['session_aware']
+                "response_cache_misses_total", "Total cache misses", ["session_aware"]
             )
 
             self.cache_errors = Counter(
-                'response_cache_errors_total',
-                'Total cache errors',
-                ['operation']  # get/set
+                "response_cache_errors_total",
+                "Total cache errors",
+                ["operation"],  # get/set
             )
 
             self.cache_latency = Histogram(
-                'response_cache_operation_duration_seconds',
-                'Cache operation latency',
-                ['operation']  # get/set
+                "response_cache_operation_duration_seconds",
+                "Cache operation latency",
+                ["operation"],  # get/set
             )
 
             self.cache_size = Gauge(
-                'response_cache_size_bytes',
-                'Approximate cache size in bytes'
+                "response_cache_size_bytes", "Approximate cache size in bytes"
             )
 
             self._metrics_enabled = True
@@ -150,10 +149,10 @@ class ResponseCache:
         normalized = query.lower().strip()
 
         # Collapse multiple spaces
-        normalized = ' '.join(normalized.split())
+        normalized = " ".join(normalized.split())
 
         # Remove trailing question marks, exclamation points, periods
-        normalized = normalized.rstrip('?!.')
+        normalized = normalized.rstrip("?!.")
 
         return normalized
 
@@ -161,7 +160,7 @@ class ResponseCache:
         self,
         question: str,
         session_id: Optional[str] = None,
-        params: Optional[Dict[str, Any]] = None
+        params: Optional[Dict[str, Any]] = None,
     ) -> str:
         """
         Generate cache key from query and parameters.
@@ -195,7 +194,7 @@ class ResponseCache:
         if params:
             relevant_params = {
                 k: params[k]
-                for k in ['top_k', 'max_distance', 'temperature', 'model', 'doc_type']
+                for k in ["top_k", "max_distance", "temperature", "model", "doc_type"]
                 if k in params and params[k] is not None
             }
             if relevant_params:
@@ -216,7 +215,7 @@ class ResponseCache:
         self,
         question: str,
         session_id: Optional[str] = None,
-        params: Optional[Dict[str, Any]] = None
+        params: Optional[Dict[str, Any]] = None,
     ) -> Optional[Dict[str, Any]]:
         """
         Get cached response if available.
@@ -246,9 +245,11 @@ class ResponseCache:
                 response = json.loads(cached_data)
 
                 if self._metrics_enabled:
-                    self.cache_hits.labels(session_aware=str(session_aware).lower()).inc()
+                    self.cache_hits.labels(
+                        session_aware=str(session_aware).lower()
+                    ).inc()
                     latency = time.time() - start_time
-                    self.cache_latency.labels(operation='get').observe(latency)
+                    self.cache_latency.labels(operation="get").observe(latency)
 
                 logger.info(
                     f"Cache HIT: {self._normalize_query(question)[:50]}... "
@@ -259,9 +260,11 @@ class ResponseCache:
             else:
                 # Cache miss
                 if self._metrics_enabled:
-                    self.cache_misses.labels(session_aware=str(session_aware).lower()).inc()
+                    self.cache_misses.labels(
+                        session_aware=str(session_aware).lower()
+                    ).inc()
                     latency = time.time() - start_time
-                    self.cache_latency.labels(operation='get').observe(latency)
+                    self.cache_latency.labels(operation="get").observe(latency)
 
                 logger.info(f"Cache MISS: {self._normalize_query(question)[:50]}...")
 
@@ -270,7 +273,7 @@ class ResponseCache:
         except Exception as e:
             logger.error(f"Cache get error: {e}")
             if self._metrics_enabled:
-                self.cache_errors.labels(operation='get').inc()
+                self.cache_errors.labels(operation="get").inc()
             return None
 
     def set(
@@ -279,7 +282,7 @@ class ResponseCache:
         response: Dict[str, Any],
         session_id: Optional[str] = None,
         params: Optional[Dict[str, Any]] = None,
-        ttl_override: Optional[int] = None
+        ttl_override: Optional[int] = None,
     ) -> bool:
         """
         Cache a response.
@@ -307,15 +310,11 @@ class ResponseCache:
 
             # Set with TTL
             ttl = ttl_override if ttl_override is not None else self.ttl_seconds
-            self._client.setex(
-                cache_key,
-                ttl,
-                cached_data
-            )
+            self._client.setex(cache_key, ttl, cached_data)
 
             if self._metrics_enabled:
                 latency = time.time() - start_time
-                self.cache_latency.labels(operation='set').observe(latency)
+                self.cache_latency.labels(operation="set").observe(latency)
 
             logger.info(
                 f"Cached response: {self._normalize_query(question)[:50]}... "
@@ -327,7 +326,7 @@ class ResponseCache:
         except Exception as e:
             logger.error(f"Cache set error: {e}")
             if self._metrics_enabled:
-                self.cache_errors.labels(operation='set').inc()
+                self.cache_errors.labels(operation="set").inc()
             return False
 
     def invalidate_pattern(self, pattern: str) -> int:
@@ -374,18 +373,20 @@ class ResponseCache:
             return {"enabled": False}
 
         try:
-            info = self._client.info('stats')
+            info = self._client.info("stats")
             keys_count = self._client.dbsize()
 
             return {
                 "enabled": True,
                 "total_keys": keys_count,
-                "total_commands_processed": info.get('total_commands_processed', 0),
-                "keyspace_hits": info.get('keyspace_hits', 0),
-                "keyspace_misses": info.get('keyspace_misses', 0),
+                "total_commands_processed": info.get("total_commands_processed", 0),
+                "keyspace_hits": info.get("keyspace_hits", 0),
+                "keyspace_misses": info.get("keyspace_misses", 0),
                 "hit_rate": (
-                    info.get('keyspace_hits', 0) /
-                    max(1, info.get('keyspace_hits', 0) + info.get('keyspace_misses', 0))
+                    info.get("keyspace_hits", 0)
+                    / max(
+                        1, info.get("keyspace_hits", 0) + info.get("keyspace_misses", 0)
+                    )
                 ),
             }
         except Exception as e:
@@ -424,7 +425,8 @@ def get_response_cache(
             redis_url=redis_url or settings.session.redis_url,
             ttl_seconds=ttl_seconds or settings.response_cache.ttl_seconds,
             enabled=enabled if enabled is not None else settings.response_cache.enabled,
-            max_cache_size_mb=max_cache_size_mb or settings.response_cache.max_cache_size_mb,
+            max_cache_size_mb=max_cache_size_mb
+            or settings.response_cache.max_cache_size_mb,
             prompt_version=settings.response_cache.prompt_version,
         )
 

@@ -26,16 +26,19 @@ Usage Examples:
 
 import subprocess
 import sys
-from pathlib import Path
+
 
 def main():
     # Base command
     cmd = [
         sys.executable,
         "tests/runners/run_tests.py",
-        "--tests", "tests/fixtures/negative_inference_test.json",
-        "--answers-file", "test_negative_inference_answers.json",
-        "--report-file", "test_negative_inference_report.json"
+        "--tests",
+        "tests/fixtures/negative_inference_test.json",
+        "--answers-file",
+        "test_negative_inference_answers.json",
+        "--report-file",
+        "test_negative_inference_report.json",
     ]
 
     # Forward all command line arguments
@@ -47,6 +50,7 @@ def main():
         subprocess.run(cmd, check=True)
     except subprocess.CalledProcessError as e:
         sys.exit(e.returncode)
+
 
 if __name__ == "__main__":
     main()

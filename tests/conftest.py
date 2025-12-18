@@ -10,7 +10,7 @@ This file contains reusable fixtures for:
 
 import os
 from typing import Generator, Dict, List, Any
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -19,6 +19,7 @@ from fastapi.testclient import TestClient
 # ============================================================================
 # Environment Setup
 # ============================================================================
+
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_environment():
@@ -36,6 +37,7 @@ def setup_test_environment():
     # This is necessary because settings might have been initialized (and defaults locked)
     # before this fixture ran during test collection.
     from app.settings import settings
+
     settings.api_key = "test-api-key"
     settings.session.queries_per_hour = 10000  # Disable rate limiting in tests
     settings.session.max_sessions_per_ip = 10000  # Disable IP session limits
@@ -47,6 +49,7 @@ def setup_test_environment():
 # ============================================================================
 # FastAPI Test Client
 # ============================================================================
+
 
 @pytest.fixture
 def client() -> Generator[TestClient, None, None]:
@@ -71,6 +74,7 @@ def auth_headers() -> Dict[str, str]:
 # ============================================================================
 # Mock External Services
 # ============================================================================
+
 
 @pytest.fixture
 def mock_chromadb():
@@ -130,7 +134,10 @@ def mock_ollama():
         "eval_count": 20,
     }
 
-    with patch("app.services.llm.generate_with_ollama", return_value="This is a test response from the LLM."):
+    with patch(
+        "app.services.llm.generate_with_ollama",
+        return_value="This is a test response from the LLM.",
+    ):
         yield mock_response
 
 
@@ -143,13 +150,16 @@ def mock_prompt_guard():
         "score": 0.01,
     }
 
-    with patch("app.services.prompt_guard.PromptGuard.check_input", return_value=mock_result):
+    with patch(
+        "app.services.prompt_guard.PromptGuard.check_input", return_value=mock_result
+    ):
         yield mock_result
 
 
 # ============================================================================
 # Sample Data Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def sample_chunks() -> List[Dict[str, Any]]:
@@ -226,6 +236,7 @@ def sample_chat_response() -> Dict[str, Any]:
 # Metrics Fixtures
 # ============================================================================
 
+
 @pytest.fixture(autouse=True)
 def reset_prometheus_metrics():
     """
@@ -237,8 +248,11 @@ def reset_prometheus_metrics():
 
     # Clear all collectors except the default ones (gc, platform, process)
     collectors_to_remove = [
-        collector for collector in list(REGISTRY._collector_to_names.keys())
-        if not collector.__class__.__name__.startswith(('GCCollector', 'PlatformCollector', 'ProcessCollector'))
+        collector
+        for collector in list(REGISTRY._collector_to_names.keys())
+        if not collector.__class__.__name__.startswith(
+            ("GCCollector", "PlatformCollector", "ProcessCollector")
+        )
     ]
 
     for collector in collectors_to_remove:
@@ -260,6 +274,7 @@ def reset_prometheus_metrics():
 # ============================================================================
 # Session Management Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def sample_session() -> Dict[str, Any]:
@@ -286,6 +301,7 @@ def sample_session() -> Dict[str, Any]:
 # ============================================================================
 # Utility Functions
 # ============================================================================
+
 
 def assert_valid_chat_response(response_data: Dict[str, Any]):
     """

@@ -7,7 +7,7 @@ Handles file processing, chunking, deduplication, and batch insertion.
 import hashlib
 import logging
 import os
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from datetime import datetime
 
 from app.retrieval import add_documents

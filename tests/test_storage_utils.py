@@ -57,7 +57,7 @@ class TestTruncateHistory:
 
         history = [
             {"role": "user", "content": "Hello"},
-            {"role": "assistant", "content": "Hi there"}
+            {"role": "assistant", "content": "Hi there"},
         ]
 
         result = truncate_history(history, max_tokens=1000, max_turns=10)
@@ -68,10 +68,7 @@ class TestTruncateHistory:
         """Test history truncation by turn count."""
         from app.storage.utils import truncate_history
 
-        history = [
-            {"role": "user", "content": f"Message {i}"}
-            for i in range(10)
-        ]
+        history = [{"role": "user", "content": f"Message {i}"} for i in range(10)]
 
         result = truncate_history(history, max_tokens=1000, max_turns=3)
 
@@ -85,7 +82,7 @@ class TestTruncateHistory:
         history = [
             {"role": "assistant", "content": "Response 1"},
             {"role": "user", "content": "Question 2"},
-            {"role": "assistant", "content": "Response 2"}
+            {"role": "assistant", "content": "Response 2"},
         ]
 
         result = truncate_history(history, max_tokens=1000, max_turns=3)

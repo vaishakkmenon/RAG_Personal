@@ -15,7 +15,6 @@ Commands:
 """
 
 import requests
-import json
 from datetime import datetime
 
 API_URL = "http://localhost:8000/chat"
@@ -40,7 +39,7 @@ class ConversationTester:
 
         print(f"\n{'='*80}")
         print(f"[Turn {self.turn_count}] You: {question}")
-        print('='*80)
+        print("=" * 80)
 
         try:
             response = requests.post(
@@ -64,7 +63,7 @@ class ConversationTester:
             print(f"\n[Assistant]\n{answer}")
 
             # Show metadata
-            print(f"\n[Metadata]")
+            print("\n[Metadata]")
             print(f"  Grounded: {data.get('grounded', False)}")
             print(f"  Sources: {len(data.get('sources', []))}")
             print(f"  Session: {data.get('session_id', 'N/A')}")
@@ -120,7 +119,7 @@ class ConversationTester:
         print(f"\n{'='*80}")
         print(f"CONVERSATION HISTORY ({len(self.history)} turns)")
         print(f"Session: {self.session_id}")
-        print('='*80)
+        print("=" * 80)
 
         for item in self.history:
             print(f"\n[Turn {item['turn']}] {item['question']}")
@@ -130,7 +129,7 @@ class ConversationTester:
 
     def show_session(self):
         """Show current session info"""
-        print(f"\n[Session Info]")
+        print("\n[Session Info]")
         print(f"  Session ID: {self.session_id or 'No active session'}")
         print(f"  Turn count: {self.turn_count}")
         print(f"  History: {len(self.history)} turns")
@@ -138,24 +137,24 @@ class ConversationTester:
 
 def print_help():
     """Print help message"""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("COMMANDS")
-    print("="*80)
+    print("=" * 80)
     print("  Just type your question to chat")
     print("  'reset'    - Start a new conversation")
     print("  'history'  - Show conversation history")
     print("  'session'  - Show session information")
     print("  'help'     - Show this help message")
     print("  'quit'     - Exit the tester")
-    print("="*80)
+    print("=" * 80)
 
 
 def main():
     tester = ConversationTester()
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("INTERACTIVE MULTI-TURN CONVERSATION TESTER")
-    print("="*80)
+    print("=" * 80)
     print("\nType 'help' for commands or just ask questions")
     print("Examples:")
     print("  - What certifications do I have?")

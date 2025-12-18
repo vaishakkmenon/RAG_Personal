@@ -60,9 +60,7 @@ class TwoPhaseTestRunner:
         """Detect which LLM provider the API is using"""
         try:
             response = requests.get(
-                f"{self.base_url}health",
-                headers=self.headers,
-                timeout=5
+                f"{self.base_url}health", headers=self.headers, timeout=5
             )
             response.raise_for_status()
             data = response.json()
@@ -116,7 +114,9 @@ class TwoPhaseTestRunner:
 
                 # Otherwise, wait a bit and retry
                 if self.verbose:
-                    print(f"\n   Retry {attempt + 1}/{max_retries} after error: {str(e)[:50]}...")
+                    print(
+                        f"\n   Retry {attempt + 1}/{max_retries} after error: {str(e)[:50]}..."
+                    )
                 time.sleep(2)  # Wait 2 seconds before retry
 
     def collect_answers(
@@ -162,12 +162,16 @@ class TwoPhaseTestRunner:
             delay_reason = "(Unknown provider - applying delay to be safe)"
 
         print(f"{'='*80}")
-        print(f"PHASE 1: COLLECTING ANSWERS")
+        print("PHASE 1: COLLECTING ANSWERS")
         print(f"{'='*80}")
         print(f"Running {len(test_cases)} tests...")
         print(f"Provider: {self.provider}")
         print(f"Delay between requests: {effective_delay}s {delay_reason}")
-        estimated_time = len(test_cases) * effective_delay / 60 if effective_delay > 0 else len(test_cases) * 2 / 60
+        estimated_time = (
+            len(test_cases) * effective_delay / 60
+            if effective_delay > 0
+            else len(test_cases) * 2 / 60
+        )
         print(f"Estimated time: {estimated_time:.1f} minutes\n")
 
         results = []
@@ -217,19 +221,21 @@ class TwoPhaseTestRunner:
             results.append(result)
 
             # Delay between requests to avoid rate limits (skip for Ollama)
-            if i < len(test_cases) and effective_delay > 0:  # Don't delay after last test
+            if (
+                i < len(test_cases) and effective_delay > 0
+            ):  # Don't delay after last test
                 time.sleep(effective_delay)
 
         # Retry failed tests
-        errors = [r for r in results if 'error' in r]
+        errors = [r for r in results if "error" in r]
         if errors:
             print(f"\n{'='*80}")
             print(f"RETRYING {len(errors)} FAILED TESTS")
             print(f"{'='*80}")
 
             for i, error_result in enumerate(errors, 1):
-                test_id = error_result['test_id']
-                question = error_result['question']
+                test_id = error_result["test_id"]
+                question = error_result["question"]
                 print(f"[{i}/{len(errors)}] Retrying {test_id}...", end=" ")
 
                 # Retry the request
@@ -239,7 +245,7 @@ class TwoPhaseTestRunner:
                     print("SUCCESS")
                     # Update the result in the results list
                     for idx, r in enumerate(results):
-                        if r['test_id'] == test_id:
+                        if r["test_id"] == test_id:
                             results[idx] = {
                                 "test_id": test_id,
                                 "category": error_result["category"],
@@ -248,9 +254,15 @@ class TwoPhaseTestRunner:
                                 "grounded": response["data"].get("grounded", False),
                                 "num_sources": len(response["data"].get("sources", [])),
                                 "response_time": response["response_time"],
-                                "expected_keywords": error_result.get("expected_keywords", []),
-                                "expected_answer": error_result.get("expected_answer", ""),
-                                "is_impossible": error_result.get("is_impossible", False),
+                                "expected_keywords": error_result.get(
+                                    "expected_keywords", []
+                                ),
+                                "expected_answer": error_result.get(
+                                    "expected_answer", ""
+                                ),
+                                "is_impossible": error_result.get(
+                                    "is_impossible", False
+                                ),
                                 "sources": response["data"].get("sources", [])[:3],
                             }
                             break
@@ -262,16 +274,18 @@ class TwoPhaseTestRunner:
                     time.sleep(2)
 
             # Count final errors
-            final_errors = [r for r in results if 'error' in r]
-            print(f"\nRetry complete: {len(errors) - len(final_errors)} recovered, {len(final_errors)} still failed")
+            final_errors = [r for r in results if "error" in r]
+            print(
+                f"\nRetry complete: {len(errors) - len(final_errors)} recovered, {len(final_errors)} still failed"
+            )
 
         # Save collected answers
         output = {
             "timestamp": datetime.now().isoformat(),
             "phase": "collection",
             "total_tests": len(results),
-            "successful_tests": len([r for r in results if 'answer' in r]),
-            "failed_tests": len([r for r in results if 'error' in r]),
+            "successful_tests": len([r for r in results if "answer" in r]),
+            "failed_tests": len([r for r in results if "error" in r]),
             "results": results,
         }
 
@@ -279,7 +293,7 @@ class TwoPhaseTestRunner:
             json.dump(output, f, indent=2, ensure_ascii=False)
 
         print(f"\n{'='*80}")
-        print(f"PHASE 1 COMPLETE")
+        print("PHASE 1 COMPLETE")
         print(f"{'='*80}")
         print(f"Collected {len(results)} answers")
         print(f"Successful: {output['successful_tests']}")
@@ -306,7 +320,7 @@ def main():
     parser.add_argument(
         "--tests",
         default="tests/fixtures/test_suite.json",
-        help="Path to test cases JSON file (e.g., tests/fixtures/test_suite.json, tests/fixtures/negative_inference_test.json)"
+        help="Path to test cases JSON file (e.g., tests/fixtures/test_suite.json, tests/fixtures/negative_inference_test.json)",
     )
     parser.add_argument(
         "--answers-file", default="test_answers.json", help="File to save/load answers"
@@ -375,11 +389,11 @@ def main():
                     json.load(f)
             except FileNotFoundError:
                 print(f"Error: Answers file not found: {args.answers_file}")
-                print(f"Run with --phase collect first")
+                print("Run with --phase collect first")
                 sys.exit(1)
 
         print(f"\n{'='*80}")
-        print(f"PHASE 2: VALIDATING ANSWERS")
+        print("PHASE 2: VALIDATING ANSWERS")
         print(f"{'='*80}")
         print(f"Using validation provider: {args.validation_provider}")
         if args.validation_model:
@@ -391,12 +405,12 @@ def main():
                 else "llama3.1:8b"
             )
             print(f"Using default model: {default_model}")
-        print(f"This will validate all answers using a single model instance\n")
+        print("This will validate all answers using a single model instance\n")
 
         validator = BatchValidator(
             provider=args.validation_provider,
             validation_model=args.validation_model,
-            delay=args.delay
+            delay=args.delay,
         )
         validator.validate_batch(args.answers_file, args.report_file)
 

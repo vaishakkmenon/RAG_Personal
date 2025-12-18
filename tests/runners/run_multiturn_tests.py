@@ -29,7 +29,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import requests
 
@@ -145,7 +145,11 @@ class MultiTurnTestRunner:
             if not result["success"]:
                 print(f"  [FAIL] {result['error']}")
                 turn_results.append(
-                    {"turn_number": turn_num, "success": False, "error": result["error"]}
+                    {
+                        "turn_number": turn_num,
+                        "success": False,
+                        "error": result["error"],
+                    }
                 )
                 all_passed = False
                 continue
@@ -214,7 +218,9 @@ class MultiTurnTestRunner:
         conversations = test_suite["test_conversations"]
 
         if conversation_id:
-            conversations = [c for c in conversations if c["conversation_id"] == conversation_id]
+            conversations = [
+                c for c in conversations if c["conversation_id"] == conversation_id
+            ]
             if not conversations:
                 print(f"Error: Conversation ID '{conversation_id}' not found")
                 return {"error": "Conversation not found"}
@@ -283,10 +289,10 @@ def main():
         default="tests/fixtures/multiturn_test_suite.json",
         help="Path to multi-turn test suite JSON file",
     )
+    parser.add_argument("--conversation-id", help="Run only a specific conversation ID")
     parser.add_argument(
-        "--conversation-id", help="Run only a specific conversation ID"
+        "--category", help="Run only conversations in a specific category"
     )
-    parser.add_argument("--category", help="Run only conversations in a specific category")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
 
     args = parser.parse_args()

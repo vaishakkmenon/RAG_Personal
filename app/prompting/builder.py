@@ -63,6 +63,7 @@ def _format_context(chunks: List[Dict[str, Any]]) -> str:
 
     return "\n\n".join(parts)
 
+
 def _format_conversation_history(history: List[Dict[str, str]]) -> str:
     """Format conversation history for inclusion in prompt.
 
@@ -78,7 +79,7 @@ def _format_conversation_history(history: List[Dict[str, str]]) -> str:
     """
     if not history:
         return ""
-    
+
     formatted_turns = []
     for turn in history:
         role = turn.get("role", "").upper()
@@ -89,6 +90,7 @@ def _format_conversation_history(history: List[Dict[str, str]]) -> str:
     if formatted_turns:
         return "PREVIOUS CONVERSATION:\n" + "\n\n".join(formatted_turns) + "\n"
     return ""
+
 
 class PromptBuilder:
     """Handles construction and validation of prompts with safety guards."""
@@ -107,7 +109,7 @@ class PromptBuilder:
         context_chunks: List[Dict[str, Any]],
         keywords: Optional[List[str]] = None,
         negative_inference_hint: Optional[Dict[str, Any]] = None,
-        conversation_history: Optional[List[Dict[str, str]]] = None
+        conversation_history: Optional[List[Dict[str, str]]] = None,
     ) -> PromptResult:
         """Build a prompt with the given question and context chunks.
 
@@ -139,8 +141,8 @@ class PromptBuilder:
 
             # Add negative inference hint if provided
             if negative_inference_hint:
-                missing = negative_inference_hint.get('missing_entities', [])
-                category = negative_inference_hint.get('category', 'items')
+                missing = negative_inference_hint.get("missing_entities", [])
+                category = negative_inference_hint.get("category", "items")
 
                 if missing:
                     entities_str = ", ".join(missing)

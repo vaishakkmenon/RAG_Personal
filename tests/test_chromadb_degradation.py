@@ -11,7 +11,6 @@ Verifies that the application gracefully handles ChromaDB unavailability:
 import pytest
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
-from chromadb.errors import ChromaError
 
 
 @pytest.mark.integration
@@ -32,7 +31,9 @@ class TestChromaDBQueryFailures:
                 _semantic_search(query="test query", k=5, max_dist=1.0)
 
             # Should log error
-            assert any("ChromaDB query failed" in record.message for record in caplog.records)
+            assert any(
+                "ChromaDB query failed" in record.message for record in caplog.records
+            )
 
     @patch("app.api.routes.chat.search")
     @patch("app.api.routes.chat.get_prompt_guard")
@@ -46,7 +47,10 @@ class TestChromaDBQueryFailures:
         """Test that chat endpoint returns appropriate error when retrieval fails."""
         # Mock prompt guard
         mock_guard_instance = MagicMock()
-        mock_guard_instance.check_input.return_value = {"blocked": False, "label": "safe"}
+        mock_guard_instance.check_input.return_value = {
+            "blocked": False,
+            "label": "safe",
+        }
         mock_guard.return_value = mock_guard_instance
 
         # Simulate retrieval failure
@@ -180,7 +184,10 @@ class TestChromaDBGracefulDegradation:
         """Test chat endpoint behavior when retrieval returns no results."""
         # Mock prompt guard
         mock_guard_instance = MagicMock()
-        mock_guard_instance.check_input.return_value = {"blocked": False, "label": "safe"}
+        mock_guard_instance.check_input.return_value = {
+            "blocked": False,
+            "label": "safe",
+        }
         mock_guard.return_value = mock_guard_instance
 
         # Mock search returns empty
@@ -209,7 +216,7 @@ class TestChromaDBGracefulDegradation:
         try:
             count = _collection.count()
             assert isinstance(count, int)
-        except Exception as e:
+        except Exception:
             # Should log error but not crash
             assert True  # Expected behavior
 
@@ -230,7 +237,10 @@ class TestChromaDBErrorMessages:
         """Test that retrieval errors return user-friendly messages."""
         # Mock prompt guard
         mock_guard_instance = MagicMock()
-        mock_guard_instance.check_input.return_value = {"blocked": False, "label": "safe"}
+        mock_guard_instance.check_input.return_value = {
+            "blocked": False,
+            "label": "safe",
+        }
         mock_guard.return_value = mock_guard_instance
 
         # Simulate retrieval failure
@@ -264,7 +274,10 @@ class TestChromaDBErrorMessages:
 
         # Mock prompt guard
         mock_guard_instance = MagicMock()
-        mock_guard_instance.check_input.return_value = {"blocked": False, "label": "safe"}
+        mock_guard_instance.check_input.return_value = {
+            "blocked": False,
+            "label": "safe",
+        }
         mock_guard.return_value = mock_guard_instance
 
         # Raise RetrievalException
@@ -298,7 +311,9 @@ class TestBM25HybridSearchDegradation:
         # Should fall back to semantic search
         # Note: This requires actual ChromaDB, so we'll just verify it doesn't crash
         try:
-            results = search(query="test", top_k=5, use_hyde=False, use_cross_encoder=False)
+            results = search(
+                query="test", top_k=5, use_hyde=False, use_cross_encoder=False
+            )
             # If ChromaDB is available, should return results
             assert isinstance(results, list)
         except Exception:
@@ -313,7 +328,9 @@ class TestBM25HybridSearchDegradation:
         if _bm25_index is None:
             # Should still be able to do semantic-only search
             try:
-                results = search(query="test", top_k=5, use_hyde=False, use_cross_encoder=False)
+                results = search(
+                    query="test", top_k=5, use_hyde=False, use_cross_encoder=False
+                )
                 assert isinstance(results, list)
             except Exception:
                 # If ChromaDB not available, that's expected in test env

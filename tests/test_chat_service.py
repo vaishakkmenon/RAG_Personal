@@ -10,7 +10,7 @@ Tests the main business logic:
 """
 
 import pytest
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 from app.core.chat_service import ChatService
 from app.models import ChatRequest
 
@@ -48,10 +48,7 @@ class TestChatServiceFullPipeline:
         # Mock prompt builder - must return PromptResult with status and prompt
         mock_builder = MagicMock()
         mock_builder.build_prompt.return_value = PromptResult(
-            status="success",
-            prompt="Test prompt",
-            message="",
-            context=""
+            status="success", prompt="Test prompt", message="", context=""
         )
         mock_builder.is_refusal.return_value = False
         mock_prompt_builder.return_value = mock_builder
@@ -130,7 +127,9 @@ class TestChatServiceFullPipeline:
         mock_generate.return_value = "I don't have information about that."
 
         service = ChatService()
-        request = ChatRequest(question="What is my underwater basket weaving experience?")
+        request = ChatRequest(
+            question="What is my underwater basket weaving experience?"
+        )
 
         response = service.handle_chat(request=request, skip_route_cache=True)
 
@@ -220,13 +219,12 @@ class TestChatServiceConversationHistory:
         mock_generate.return_value = "You also have machine learning experience."
 
         # Mock prompt builder BEFORE creating service
-        with patch("app.core.chat_service.create_default_prompt_builder") as mock_builder_func:
+        with patch(
+            "app.core.chat_service.create_default_prompt_builder"
+        ) as mock_builder_func:
             mock_builder = MagicMock()
             mock_builder.build_prompt.return_value = PromptResult(
-                status="success",
-                prompt="Prompt with history",
-                message="",
-                context=""
+                status="success", prompt="Prompt with history", message="", context=""
             )
             mock_builder.is_refusal.return_value = False
             mock_builder_func.return_value = mock_builder
@@ -238,7 +236,7 @@ class TestChatServiceConversationHistory:
                 session_id=session.session_id,
             )
 
-            response = service.handle_chat(request=request, skip_route_cache=True)
+            service.handle_chat(request=request, skip_route_cache=True)
 
             # Verify prompt builder received conversation history
             build_call = mock_builder.build_prompt.call_args
@@ -250,7 +248,6 @@ class TestChatServiceConversationHistory:
     def test_rate_limit_enforced(self):
         """Test that rate limits are enforced."""
         from app.storage.fallback.memory import InMemorySessionStore
-        from app.settings import settings
 
         # Create real session store and mock check_rate_limit to return False
         session_store = InMemorySessionStore()
@@ -268,6 +265,7 @@ class TestChatServiceConversationHistory:
 
         # Should raise exception for rate limit
         from fastapi import HTTPException
+
         with pytest.raises(HTTPException) as exc_info:
             service.handle_chat(request=request)
 
@@ -369,7 +367,7 @@ class TestChatServiceMetadataFiltering:
         service = ChatService()
         request = ChatRequest(question="Test question")
 
-        response = service.handle_chat(
+        service.handle_chat(
             request=request,
             doc_type="resume",
             skip_route_cache=True,
@@ -415,13 +413,12 @@ class TestChatServiceReranking:
         mock_generate.return_value = "Test response"
 
         # Mock prompt builder
-        with patch("app.core.chat_service.create_default_prompt_builder") as mock_builder_func:
+        with patch(
+            "app.core.chat_service.create_default_prompt_builder"
+        ) as mock_builder_func:
             mock_builder = MagicMock()
             mock_builder.build_prompt.return_value = PromptResult(
-                status="success",
-                prompt="Test prompt",
-                message="",
-                context=""
+                status="success", prompt="Test prompt", message="", context=""
             )
             mock_builder.is_refusal.return_value = False
             mock_builder_func.return_value = mock_builder
@@ -429,7 +426,7 @@ class TestChatServiceReranking:
             service = ChatService()
             request = ChatRequest(question="Test question")
 
-            response = service.handle_chat(
+            service.handle_chat(
                 request=request,
                 rerank=True,
                 skip_route_cache=True,
@@ -468,13 +465,12 @@ class TestChatServiceReranking:
         mock_generate.return_value = "Test response"
 
         # Mock prompt builder
-        with patch("app.core.chat_service.create_default_prompt_builder") as mock_builder_func:
+        with patch(
+            "app.core.chat_service.create_default_prompt_builder"
+        ) as mock_builder_func:
             mock_builder = MagicMock()
             mock_builder.build_prompt.return_value = PromptResult(
-                status="success",
-                prompt="Test prompt",
-                message="",
-                context=""
+                status="success", prompt="Test prompt", message="", context=""
             )
             mock_builder.is_refusal.return_value = False
             mock_builder_func.return_value = mock_builder
@@ -482,7 +478,7 @@ class TestChatServiceReranking:
             service = ChatService()
             request = ChatRequest(question="Test question")
 
-            response = service.handle_chat(
+            service.handle_chat(
                 request=request,
                 rerank=False,
                 skip_route_cache=True,

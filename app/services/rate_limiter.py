@@ -109,7 +109,8 @@ class RateLimiter:
                 "requests_per_minute_limit": self.requests_per_minute,
                 "requests_last_day": len(self.day_requests),
                 "requests_per_day_limit": self.requests_per_day,
-                "minute_utilization": len(self.minute_requests) / self.requests_per_minute,
+                "minute_utilization": len(self.minute_requests)
+                / self.requests_per_minute,
                 "day_utilization": len(self.day_requests) / self.requests_per_day,
             }
 
@@ -123,9 +124,9 @@ class NoOpRateLimiter:
     def get_stats(self) -> dict:
         return {
             "requests_last_minute": 0,
-            "requests_per_minute_limit": float('inf'),
+            "requests_per_minute_limit": float("inf"),
             "requests_last_day": 0,
-            "requests_per_day_limit": float('inf'),
+            "requests_per_day_limit": float("inf"),
             "minute_utilization": 0.0,
             "day_utilization": 0.0,
         }

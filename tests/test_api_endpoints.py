@@ -40,7 +40,9 @@ class TestChatSimpleEndpoint:
             json={"question": "What is my Python experience?"},
         )
 
-        assert response.status_code == 401  # Actual implementation returns 401 UNAUTHORIZED
+        assert (
+            response.status_code == 401
+        )  # Actual implementation returns 401 UNAUTHORIZED
         assert "detail" in response.json()
 
     def test_chat_simple_invalid_api_key(self, client: TestClient):
@@ -51,7 +53,9 @@ class TestChatSimpleEndpoint:
             headers={"X-API-Key": "wrong-key"},
         )
 
-        assert response.status_code == 401  # Actual implementation returns 401 UNAUTHORIZED
+        assert (
+            response.status_code == 401
+        )  # Actual implementation returns 401 UNAUTHORIZED
 
     @patch("app.api.routes.chat.search")
     @patch("app.api.routes.chat.generate_with_ollama")
@@ -145,7 +149,10 @@ class TestChatSimpleEndpoint:
         """Test chat when no relevant chunks are found."""
         # Mock prompt guard (allow)
         mock_guard_instance = MagicMock()
-        mock_guard_instance.check_input.return_value = {"blocked": False, "label": "safe"}
+        mock_guard_instance.check_input.return_value = {
+            "blocked": False,
+            "label": "safe",
+        }
         mock_guard.return_value = mock_guard_instance
 
         # Mock search (return empty results)
@@ -198,13 +205,17 @@ class TestChatEndpoint:
 
         # Mock prompt guard
         mock_guard_instance = MagicMock()
-        mock_guard_instance.check_input.return_value = {"blocked": False, "label": "safe"}
+        mock_guard_instance.check_input.return_value = {
+            "blocked": False,
+            "label": "safe",
+        }
         mock_guard.return_value = mock_guard_instance
 
         # Mock chat service response
         with patch("app.api.dependencies.get_chat_service") as mock_chat_service:
             mock_service = MagicMock()
             from app.models import ChatResponse as ChatResponseModel
+
             mock_service.handle_chat.return_value = ChatResponseModel(
                 answer="Test response",
                 sources=[],

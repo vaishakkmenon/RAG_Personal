@@ -13,7 +13,7 @@ import yaml
 import re
 import sys
 from pathlib import Path
-from typing import Dict, List, Set
+from typing import List, Set
 
 
 def validate_patterns(config_path: str = "config/query_patterns.yaml") -> bool:
@@ -42,12 +42,12 @@ def validate_patterns(config_path: str = "config/query_patterns.yaml") -> bool:
         print(f"❌ YAML syntax error: {e}")
         return False
 
-    if not config or 'patterns' not in config:
+    if not config or "patterns" not in config:
         errors.append("Config must contain 'patterns' key")
         _print_results(errors, warnings)
         return False
 
-    patterns = config['patterns']
+    patterns = config["patterns"]
     if not isinstance(patterns, list):
         errors.append("'patterns' must be a list")
         _print_results(errors, warnings)
@@ -61,14 +61,20 @@ def validate_patterns(config_path: str = "config/query_patterns.yaml") -> bool:
         pattern_id = f"Pattern {idx + 1}"
 
         # Check required fields
-        required_fields = ['name', 'enabled', 'priority', 'matching', 'rewrite_strategy']
+        required_fields = [
+            "name",
+            "enabled",
+            "priority",
+            "matching",
+            "rewrite_strategy",
+        ]
         for field in required_fields:
             if field not in pattern:
                 errors.append(f"{pattern_id}: missing required field '{field}'")
 
         # Get pattern name for better error messages
-        if 'name' in pattern:
-            pattern_name = pattern['name']
+        if "name" in pattern:
+            pattern_name = pattern["name"]
             pattern_id = f"Pattern '{pattern_name}'"
 
             # Check for duplicate names
@@ -77,88 +83,115 @@ def validate_patterns(config_path: str = "config/query_patterns.yaml") -> bool:
             pattern_names.add(pattern_name)
 
         # Validate priority is a number
-        if 'priority' in pattern:
-            if not isinstance(pattern['priority'], (int, float)):
+        if "priority" in pattern:
+            if not isinstance(pattern["priority"], (int, float)):
                 errors.append(f"{pattern_id}: priority must be a number")
-            elif pattern['priority'] < 0 or pattern['priority'] > 100:
-                warnings.append(f"{pattern_id}: priority {pattern['priority']} outside typical range (0-100)")
+            elif pattern["priority"] < 0 or pattern["priority"] > 100:
+                warnings.append(
+                    f"{pattern_id}: priority {pattern['priority']} outside typical range (0-100)"
+                )
 
         # Validate matching section
-        if 'matching' in pattern:
-            matching = pattern['matching']
+        if "matching" in pattern:
+            matching = pattern["matching"]
 
-            if 'type' not in matching:
+            if "type" not in matching:
                 errors.append(f"{pattern_id}: matching must have 'type' field")
             else:
-                match_type = matching['type']
+                match_type = matching["type"]
 
-                if match_type == 'regex_list':
+                if match_type == "regex_list":
                     # Validate regex patterns
-                    if 'rules' not in matching:
-                        errors.append(f"{pattern_id}: regex_list matching requires 'rules'")
+                    if "rules" not in matching:
+                        errors.append(
+                            f"{pattern_id}: regex_list matching requires 'rules'"
+                        )
                     else:
-                        rules = matching['rules']
+                        rules = matching["rules"]
                         if not isinstance(rules, list):
                             errors.append(f"{pattern_id}: 'rules' must be a list")
                         else:
                             for rule_idx, rule in enumerate(rules):
                                 if not isinstance(rule, dict):
-                                    errors.append(f"{pattern_id}, rule {rule_idx + 1}: must be a dict")
+                                    errors.append(
+                                        f"{pattern_id}, rule {rule_idx + 1}: must be a dict"
+                                    )
                                     continue
 
-                                if 'pattern' not in rule:
-                                    errors.append(f"{pattern_id}, rule {rule_idx + 1}: missing 'pattern'")
+                                if "pattern" not in rule:
+                                    errors.append(
+                                        f"{pattern_id}, rule {rule_idx + 1}: missing 'pattern'"
+                                    )
                                     continue
 
                                 # Try to compile regex
                                 try:
-                                    re.compile(rule['pattern'])
+                                    re.compile(rule["pattern"])
                                 except re.error as e:
-                                    errors.append(f"{pattern_id}, rule {rule_idx + 1}: invalid regex - {e}")
+                                    errors.append(
+                                        f"{pattern_id}, rule {rule_idx + 1}: invalid regex - {e}"
+                                    )
 
-                elif match_type == 'keyword_presence':
+                elif match_type == "keyword_presence":
                     # Validate keywords
-                    if 'keywords' not in matching:
-                        errors.append(f"{pattern_id}: keyword_presence matching requires 'keywords'")
+                    if "keywords" not in matching:
+                        errors.append(
+                            f"{pattern_id}: keyword_presence matching requires 'keywords'"
+                        )
                     else:
-                        keywords = matching['keywords']
+                        keywords = matching["keywords"]
                         if not isinstance(keywords, list):
                             errors.append(f"{pattern_id}: 'keywords' must be a list")
                         elif len(keywords) == 0:
                             warnings.append(f"{pattern_id}: 'keywords' list is empty")
 
                 else:
-                    warnings.append(f"{pattern_id}: unknown matching type '{match_type}'")
+                    warnings.append(
+                        f"{pattern_id}: unknown matching type '{match_type}'"
+                    )
 
         # Validate rewrite_strategy section
-        if 'rewrite_strategy' in pattern:
-            rewrite = pattern['rewrite_strategy']
+        if "rewrite_strategy" in pattern:
+            rewrite = pattern["rewrite_strategy"]
 
-            if 'type' not in rewrite:
+            if "type" not in rewrite:
                 errors.append(f"{pattern_id}: rewrite_strategy must have 'type' field")
             else:
-                strategy_type = rewrite['type']
-                valid_types = ['category_expansion', 'list_expansion', 'synonym_expansion', 'passthrough']
+                strategy_type = rewrite["type"]
+                valid_types = [
+                    "category_expansion",
+                    "list_expansion",
+                    "synonym_expansion",
+                    "passthrough",
+                ]
 
                 if strategy_type not in valid_types:
-                    warnings.append(f"{pattern_id}: unknown rewrite strategy '{strategy_type}'")
+                    warnings.append(
+                        f"{pattern_id}: unknown rewrite strategy '{strategy_type}'"
+                    )
 
         # Validate test cases
-        if 'test_cases' in pattern:
-            test_cases = pattern['test_cases']
+        if "test_cases" in pattern:
+            test_cases = pattern["test_cases"]
             if not isinstance(test_cases, list):
                 errors.append(f"{pattern_id}: 'test_cases' must be a list")
             else:
                 for test_idx, test in enumerate(test_cases):
                     if not isinstance(test, dict):
-                        errors.append(f"{pattern_id}, test case {test_idx + 1}: must be a dict")
+                        errors.append(
+                            f"{pattern_id}, test case {test_idx + 1}: must be a dict"
+                        )
                         continue
 
-                    if 'input' not in test:
-                        errors.append(f"{pattern_id}, test case {test_idx + 1}: missing 'input'")
+                    if "input" not in test:
+                        errors.append(
+                            f"{pattern_id}, test case {test_idx + 1}: missing 'input'"
+                        )
 
-                    if 'expected_output' not in test:
-                        errors.append(f"{pattern_id}, test case {test_idx + 1}: missing 'expected_output'")
+                    if "expected_output" not in test:
+                        errors.append(
+                            f"{pattern_id}, test case {test_idx + 1}: missing 'expected_output'"
+                        )
         else:
             warnings.append(f"{pattern_id}: no test cases defined")
 

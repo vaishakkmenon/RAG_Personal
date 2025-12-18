@@ -67,44 +67,44 @@ patterns:
       course_mappings:
         # ===== AI/ML Combined =====
         "AI/ML": ["CS 660", "CS 662", "CS 665", "CS 667", "CS 673"]
-        
+
         # ===== Artificial Intelligence & Machine Learning =====
         "AI": ["CS 660", "CS 662"]
         "artificial intelligence": ["CS 660", "CS 662"]
         "ML": ["CS 667"]
         "machine learning": ["CS 667", "CS 665"]
-        
+
         # ===== Deep Learning & Neural Networks =====
         "deep learning": ["CS 665", "CS 673"]
         "neural networks": ["CS 665", "CS 673"]
         "neural network": ["CS 665", "CS 673"]
-        
+
         # ===== NLP & Computer Vision =====
         "NLP": ["CS 662"]
         "natural language processing": ["CS 662"]
         "computer vision": ["CS 673"]
         "vision": ["CS 673"]
-        
+
         # ===== Security & Cryptography =====
         "security": ["CS 436", "CS 645"]
         "cryptography": ["CS 645"]
         "crypto": ["CS 645"]
-        
+
         # ===== Cloud & Distributed Systems =====
         "cloud": ["CS 633"]
         "cloud computing": ["CS 633"]
-        
+
         # ===== Data Science & Databases =====
         "data science": ["CS 685", "CS 610"]
         "database": ["CS 410", "CS 610"]
         "databases": ["CS 410", "CS 610"]
-        
+
         # ===== Algorithms & Theory =====
         "algorithms": ["CS 303", "CS 652"]
         "data structures": ["CS 303"]
         "automata": ["CS 350"]
         "formal languages": ["CS 350"]
-        
+
         # ===== Programming & Software Engineering =====
         "programming languages": ["CS 401"]
         "software engineering": ["CS 420"]
@@ -112,11 +112,11 @@ patterns:
         "object oriented": ["CS 203"]
         "OOP": ["CS 203"]
         "python": ["CS 103"]
-        
+
         # ===== Computer Systems =====
         "computer organization": ["CS 330"]
         "assembly": ["CS 330"]
-        
+
         # ===== Electrical & Computer Engineering =====
         "networking": ["EE 432"]
         "computer networks": ["EE 432"]
@@ -125,7 +125,7 @@ patterns:
         "engineering programming": ["EGR 150", "EE 233", "EE 333"]
         "web development": ["EE 447"]
         "intranet": ["EE 447"]
-        
+
         # ===== Mathematics =====
         "calculus": ["MA 125", "MA 126"]
         "linear algebra": ["MA 260"]
@@ -136,25 +136,25 @@ patterns:
         "discrete structures": ["CS 250"]
         "math": ["MA 125", "MA 126", "MA 260", "MA 180", "MA 360", "CS 250"]
         "mathematics": ["MA 125", "MA 126", "MA 260", "MA 180", "MA 360", "CS 250"]
-        
+
         # ===== Physics =====
         "physics": ["PH 221", "PH 222"]
-        
+
         # ===== Psychology =====
         "psychology": ["PY 101", "PY 212"]
         "developmental psychology": ["PY 212"]
-        
+
         # ===== English & Writing =====
         "english": ["EH 101", "EH 102"]
         "writing": ["EH 101", "EH 102"]
         "composition": ["EH 101", "EH 102"]
         "literature": ["EH 212"]
-        
+
         # ===== History =====
         "history": ["HY 120", "HY 121"]
         "US history": ["HY 120", "HY 121"]
         "American history": ["HY 120", "HY 121"]
-        
+
         # ===== Communication & Humanities =====
         "public speaking": ["CMST 101"]
         "speech": ["CMST 101"]
@@ -163,14 +163,14 @@ patterns:
         "moral issues": ["PHI 115"]
         "music": ["MU 120"]
         "music appreciation": ["MU 120"]
-        
+
         # ===== Languages =====
         "spanish": ["SPA 101", "SPA 102"]
-        
+
         # ===== Capstone & Special =====
         "capstone": ["CS 499"]
         "senior project": ["CS 499"]
-        
+
     test_cases:
       - input: "What AI courses have I taken?"
         expected_output: "transcript CS 660 CS 662 What AI courses have I taken?"

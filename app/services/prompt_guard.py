@@ -10,16 +10,15 @@ Model options:
 """
 
 import logging
-import re
 import time
 import hashlib
 from typing import Optional, Dict, Any
-from functools import lru_cache
 
 logger = logging.getLogger(__name__)
 
 try:
     from groq import Groq
+
     GROQ_AVAILABLE = True
 except ImportError:
     GROQ_AVAILABLE = False
@@ -36,6 +35,7 @@ try:
         prompt_guard_retries_total,
         prompt_guard_context_size_chars,
     )
+
     METRICS_ENABLED = True
 except ImportError:
     METRICS_ENABLED = False
@@ -84,7 +84,9 @@ class PromptGuard:
         if self.enabled and api_key:
             try:
                 self._client = Groq(api_key=api_key, timeout=timeout_seconds)
-                logger.info(f"PromptGuard initialized with model: {model}, timeout: {timeout_seconds}s")
+                logger.info(
+                    f"PromptGuard initialized with model: {model}, timeout: {timeout_seconds}s"
+                )
             except Exception as e:
                 logger.error(f"Failed to initialize Groq client: {e}")
                 self.enabled = False
@@ -122,7 +124,7 @@ class PromptGuard:
         self,
         user_input: str,
         conversation_history: Optional[list] = None,
-        max_history_turns: int = 3
+        max_history_turns: int = 3,
     ) -> Dict[str, Any]:
         """
         Check if input contains prompt injection, with optional conversation context.
@@ -199,7 +201,9 @@ class PromptGuard:
 
                     # Exponential backoff: 0.1s, 0.2s, 0.4s...
                     backoff = 0.1 * (2 ** (attempt - 1))
-                    logger.debug(f"PromptGuard retry {attempt}/{self.max_retries} after {backoff}s")
+                    logger.debug(
+                        f"PromptGuard retry {attempt}/{self.max_retries} after {backoff}s"
+                    )
                     time.sleep(backoff)
 
                 # Track API call latency
@@ -222,10 +226,10 @@ class PromptGuard:
                 # Llama Prompt Guard 2 returns one of:
                 # - "benign" or "malicious" (text labels)
                 # - "LABEL_0" (benign) or "LABEL_1" (malicious) (numeric labels)
-                is_malicious = ("malicious" in result_lower or
-                               result.strip() == "LABEL_1")
-                is_benign = ("benign" in result_lower or
-                            result.strip() == "LABEL_0")
+                is_malicious = (
+                    "malicious" in result_lower or result.strip() == "LABEL_1"
+                )
+                is_benign = "benign" in result_lower or result.strip() == "LABEL_0"
 
                 # If we got an unexpected response format, apply fail-open/fail-closed policy
                 if not is_malicious and not is_benign:
@@ -242,7 +246,7 @@ class PromptGuard:
                 guard_result = {
                     "safe": is_benign and not is_malicious,
                     "label": result,
-                    "blocked": is_malicious
+                    "blocked": is_malicious,
                 }
 
                 # Track result metrics
@@ -261,11 +265,15 @@ class PromptGuard:
 
             except Exception as e:
                 last_exception = e
-                logger.warning(f"PromptGuard attempt {attempt + 1}/{self.max_retries + 1} failed: {e}")
+                logger.warning(
+                    f"PromptGuard attempt {attempt + 1}/{self.max_retries + 1} failed: {e}"
+                )
 
                 # Track error type
                 if METRICS_ENABLED:
-                    error_type = "timeout" if "timeout" in str(e).lower() else "api_error"
+                    error_type = (
+                        "timeout" if "timeout" in str(e).lower() else "api_error"
+                    )
                     prompt_guard_errors_total.labels(error_type=error_type).inc()
 
                 # If this was the last attempt, fall through to error handling
@@ -273,11 +281,15 @@ class PromptGuard:
                     break
 
         # All retries exhausted
-        logger.error(f"PromptGuard check failed after {self.max_retries + 1} attempts: {last_exception}")
+        logger.error(
+            f"PromptGuard check failed after {self.max_retries + 1} attempts: {last_exception}"
+        )
 
         # Track final error
         if METRICS_ENABLED:
-            prompt_guard_checks_total.labels(result="safe" if self.fail_open else "blocked").inc()
+            prompt_guard_checks_total.labels(
+                result="safe" if self.fail_open else "blocked"
+            ).inc()
             if not self.fail_open:
                 prompt_guard_blocked_total.labels(label="ERROR").inc()
 

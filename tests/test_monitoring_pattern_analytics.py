@@ -8,8 +8,6 @@ and report generation.
 import pytest
 import tempfile
 import os
-import json
-from unittest.mock import MagicMock, patch
 
 
 @pytest.mark.unit
@@ -38,7 +36,9 @@ class TestPatternAnalyticsInitialization:
             analytics.force_save()
 
             # File should be created after save
-            assert os.path.exists(storage_path) or True  # May not create until data is added
+            assert (
+                os.path.exists(storage_path) or True
+            )  # May not create until data is added
 
 
 @pytest.mark.unit
@@ -57,7 +57,7 @@ class TestPatternAnalyticsLogging:
                 query="What is Python?",
                 rewrite_metadata=None,
                 retrieval_distance=0.15,
-                grounded=True
+                grounded=True,
             )
 
             # Should not raise an error
@@ -77,14 +77,14 @@ class TestPatternAnalyticsLogging:
                 pattern_name="keyword_expansion",
                 pattern_type="keyword_presence",  # Required field
                 confidence=0.9,
-                latency_ms=5.0
+                latency_ms=5.0,
             )
 
             analytics.log_query(
                 query="experience",
                 rewrite_metadata=rewrite_metadata,
                 retrieval_distance=0.12,
-                grounded=True
+                grounded=True,
             )
 
             # Check pattern was recorded
@@ -109,7 +109,11 @@ class TestPatternEffectiveness:
             effectiveness = analytics.get_pattern_effectiveness("unknown_pattern")
 
             # Unknown pattern returns empty dict
-            assert effectiveness == {} or "total_matches" not in effectiveness or effectiveness.get("total_matches", 0) == 0
+            assert (
+                effectiveness == {}
+                or "total_matches" not in effectiveness
+                or effectiveness.get("total_matches", 0) == 0
+            )
 
     def test_get_all_pattern_effectiveness(self):
         """Test getting all pattern effectiveness."""
@@ -156,7 +160,7 @@ class TestReportGeneration:
                 pattern_name="test_pattern",
                 pattern_type="keyword_presence",  # Required field
                 confidence=0.9,
-                latency_ms=5.0
+                latency_ms=5.0,
             )
             analytics.log_query("test", rewrite, 0.1, True)
 
@@ -171,7 +175,10 @@ class TestSingletonManagement:
 
     def test_get_pattern_analytics_singleton(self):
         """Test that get_pattern_analytics returns singleton."""
-        from app.monitoring.pattern_analytics import get_pattern_analytics, reset_pattern_analytics
+        from app.monitoring.pattern_analytics import (
+            get_pattern_analytics,
+            reset_pattern_analytics,
+        )
 
         # Reset to ensure clean state
         reset_pattern_analytics()
@@ -183,9 +190,12 @@ class TestSingletonManagement:
 
     def test_reset_pattern_analytics(self):
         """Test resetting singleton instance."""
-        from app.monitoring.pattern_analytics import get_pattern_analytics, reset_pattern_analytics
+        from app.monitoring.pattern_analytics import (
+            get_pattern_analytics,
+            reset_pattern_analytics,
+        )
 
-        instance1 = get_pattern_analytics()
+        get_pattern_analytics()
         reset_pattern_analytics()
         instance2 = get_pattern_analytics()
 

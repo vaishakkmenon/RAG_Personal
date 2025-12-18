@@ -13,7 +13,7 @@ from typing import Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 # Singleton instance (lazy loaded)
-_cross_encoder_instance: Optional['CrossEncoderReranker'] = None
+_cross_encoder_instance: Optional["CrossEncoderReranker"] = None
 
 
 class CrossEncoderReranker:
@@ -31,7 +31,7 @@ class CrossEncoderReranker:
         self,
         model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2",
         cache_dir: Optional[str] = None,
-        max_latency_ms: float = 400.0
+        max_latency_ms: float = 400.0,
     ):
         """
         Initialize cross-encoder reranker.
@@ -47,7 +47,7 @@ class CrossEncoderReranker:
         self.model = None  # Lazy loaded
 
         logger.info(f"CrossEncoderReranker initialized (model: {model_name})")
-        logger.info(f"Model will be loaded on first use (lazy loading)")
+        logger.info("Model will be loaded on first use (lazy loading)")
 
     def _load_model(self):
         """Load the cross-encoder model (lazy loading)."""
@@ -66,8 +66,8 @@ class CrossEncoderReranker:
 
             # Set HuggingFace cache environment variables BEFORE loading
             # This ensures models are downloaded to writable location
-            os.environ['HF_HOME'] = self.cache_dir
-            os.environ['HUGGINGFACE_HUB_CACHE'] = self.cache_dir
+            os.environ["HF_HOME"] = self.cache_dir
+            os.environ["HUGGINGFACE_HUB_CACHE"] = self.cache_dir
 
             logger.info(f"Using cache directory: {self.cache_dir}")
 
@@ -75,7 +75,7 @@ class CrossEncoderReranker:
             self.model = CrossEncoder(
                 self.model_name,
                 max_length=512,
-                device='cpu',  # CPU for now, can be configured for GPU
+                device="cpu",  # CPU for now, can be configured for GPU
             )
 
             load_time = (time.time() - start_time) * 1000
@@ -91,12 +91,7 @@ class CrossEncoderReranker:
             logger.error(f"Failed to load cross-encoder model: {e}")
             raise
 
-    def rerank(
-        self,
-        query: str,
-        chunks: List[Dict],
-        top_k: int = 5
-    ) -> List[Dict]:
+    def rerank(self, query: str, chunks: List[Dict], top_k: int = 5) -> List[Dict]:
         """
         Rerank chunks using cross-encoder.
 
@@ -119,19 +114,19 @@ class CrossEncoderReranker:
 
         try:
             # Prepare query-chunk pairs for cross-encoder
-            pairs = [[query, chunk.get('text', '')] for chunk in chunks]
+            pairs = [[query, chunk.get("text", "")] for chunk in chunks]
 
             # Score all pairs (batch processing)
             scores = self.model.predict(pairs, show_progress_bar=False)
 
             # Combine chunks with scores
             scored_chunks = [
-                {**chunk, 'cross_encoder_score': float(score)}
+                {**chunk, "cross_encoder_score": float(score)}
                 for chunk, score in zip(chunks, scores)
             ]
 
             # Sort by cross-encoder score (descending)
-            scored_chunks.sort(key=lambda x: x['cross_encoder_score'], reverse=True)
+            scored_chunks.sort(key=lambda x: x["cross_encoder_score"], reverse=True)
 
             # Return top_k
             result = scored_chunks[:top_k]
@@ -161,7 +156,7 @@ class CrossEncoderReranker:
 def get_cross_encoder_reranker(
     model_name: Optional[str] = None,
     cache_dir: Optional[str] = None,
-    max_latency_ms: Optional[float] = None
+    max_latency_ms: Optional[float] = None,
 ) -> CrossEncoderReranker:
     """
     Get singleton cross-encoder reranker instance.
@@ -183,7 +178,7 @@ def get_cross_encoder_reranker(
         _cross_encoder_instance = CrossEncoderReranker(
             model_name=model_name or settings.cross_encoder.model,
             cache_dir=cache_dir or settings.cross_encoder.cache_dir,
-            max_latency_ms=max_latency_ms or settings.cross_encoder.max_latency_ms
+            max_latency_ms=max_latency_ms or settings.cross_encoder.max_latency_ms,
         )
 
     return _cross_encoder_instance

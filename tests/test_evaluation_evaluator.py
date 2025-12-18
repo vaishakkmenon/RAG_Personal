@@ -5,7 +5,6 @@ Tests RetrievalEvaluator and AnswerEvaluator classes.
 """
 
 import pytest
-from unittest.mock import MagicMock
 
 
 @pytest.mark.unit
@@ -21,12 +20,12 @@ class TestRetrievalEvaluator:
         result = evaluator.evaluate_single_query(
             query="Test question",
             retrieved_ids=["chunk-1", "chunk-2", "chunk-3"],
-            relevant_ids=["chunk-1", "chunk-2"]
+            relevant_ids=["chunk-1", "chunk-2"],
         )
 
         # Results are under "metrics" key
         assert result["metrics"]["recall@3"] == 1.0
-        assert result["metrics"]["precision@3"] == pytest.approx(2/3)
+        assert result["metrics"]["precision@3"] == pytest.approx(2 / 3)
         assert result["metrics"]["mrr"] == 1.0  # First result is relevant
 
     def test_evaluate_single_query_no_relevant(self):
@@ -38,7 +37,7 @@ class TestRetrievalEvaluator:
         result = evaluator.evaluate_single_query(
             query="Test",
             retrieved_ids=["chunk-1", "chunk-2", "chunk-3"],
-            relevant_ids=["chunk-99"]  # Not in retrieved
+            relevant_ids=["chunk-99"],  # Not in retrieved
         )
 
         assert result["metrics"]["recall@3"] == 0.0
@@ -52,19 +51,19 @@ class TestRetrievalEvaluator:
         evaluator = RetrievalEvaluator(k_values=[3])
 
         test_cases = [
-            {
-                "query": "Query 1",
-                "expected_chunks": ["chunk-1", "chunk-2"]
-            },
-            {
-                "query": "Query 2",
-                "expected_chunks": ["chunk-3"]
-            }
+            {"query": "Query 1", "expected_chunks": ["chunk-1", "chunk-2"]},
+            {"query": "Query 2", "expected_chunks": ["chunk-3"]},
         ]
 
         retrieval_results = [
-            {"query": "Query 1", "chunk_ids": ["chunk-1", "chunk-2", "chunk-4"]},  # 2/2 relevant
-            {"query": "Query 2", "chunk_ids": ["chunk-3", "chunk-5", "chunk-6"]}   # 1/1 relevant
+            {
+                "query": "Query 1",
+                "chunk_ids": ["chunk-1", "chunk-2", "chunk-4"],
+            },  # 2/2 relevant
+            {
+                "query": "Query 2",
+                "chunk_ids": ["chunk-3", "chunk-5", "chunk-6"],
+            },  # 1/1 relevant
         ]
 
         report = evaluator.evaluate_batch(test_cases, retrieval_results)
@@ -81,7 +80,7 @@ class TestRetrievalEvaluator:
         retrieved_chunks = [
             {"id": "chunk-1", "content": "Python experience: 5 years"},
             {"id": "chunk-2", "content": "JavaScript skills"},
-            {"id": "chunk-3", "content": "Worked with FastAPI"}
+            {"id": "chunk-3", "content": "Worked with FastAPI"},
         ]
 
         required_content = ["Python", "5 years"]
@@ -90,7 +89,7 @@ class TestRetrievalEvaluator:
             query="Python experience",
             retrieved_chunks=retrieved_chunks,
             required_content=required_content,
-            k=3
+            k=3,
         )
 
         # Uses actual return key from implementation
@@ -114,7 +113,7 @@ class TestAnswerEvaluator:
             query="What is my experience?",
             answer=answer,
             expected_facts=expected_facts,
-            must_not_contain=[]
+            must_not_contain=[],
         )
 
         # Uses actual return keys from the implementation
@@ -135,7 +134,7 @@ class TestAnswerEvaluator:
             query="Test",
             answer=answer,
             expected_facts=expected_facts,
-            must_not_contain=[]
+            must_not_contain=[],
         )
 
         assert len(result["found_facts"]) == 1  # Only "Python"
@@ -155,7 +154,7 @@ class TestAnswerEvaluator:
             query="Test",
             answer=answer,
             expected_facts=["Python"],
-            must_not_contain=must_not_contain
+            must_not_contain=must_not_contain,
         )
 
         assert result["has_prohibited"] is True
@@ -175,7 +174,7 @@ class TestAnswerEvaluator:
             query="Test",
             answer=answer,
             expected_facts=expected_facts,
-            must_not_contain=[]
+            must_not_contain=[],
         )
 
         assert result["passed"] is True
@@ -190,18 +189,18 @@ class TestAnswerEvaluator:
             {
                 "query": "Q1",
                 "expected_facts": ["Python", "5 years"],
-                "must_not_contain": []
+                "must_not_contain": [],
             },
             {
                 "query": "Q2",
                 "expected_facts": ["Google"],
-                "must_not_contain": ["I don't know"]
-            }
+                "must_not_contain": ["I don't know"],
+            },
         ]
 
         answers = [
             "I have 5 years of Python experience.",  # All facts found
-            "I don't know about that."                # Prohibited content
+            "I don't know about that.",  # Prohibited content
         ]
 
         report = evaluator.evaluate_batch(test_cases, answers)
@@ -224,10 +223,20 @@ class TestEvaluationSummary:
 
         aggregate = {"recall@5": 1.0, "precision@5": 1.0, "mrr": 1.0}
         individual = [
-            {"test_id": "test-1", "query": "Q1", "difficulty": "easy", "found_any": True,
-             "metrics": {"recall@5": 1.0, "precision@5": 1.0, "mrr": 1.0}},
-            {"test_id": "test-2", "query": "Q2", "difficulty": "easy", "found_any": True,
-             "metrics": {"recall@5": 1.0, "precision@5": 1.0, "mrr": 1.0}}
+            {
+                "test_id": "test-1",
+                "query": "Q1",
+                "difficulty": "easy",
+                "found_any": True,
+                "metrics": {"recall@5": 1.0, "precision@5": 1.0, "mrr": 1.0},
+            },
+            {
+                "test_id": "test-2",
+                "query": "Q2",
+                "difficulty": "easy",
+                "found_any": True,
+                "metrics": {"recall@5": 1.0, "precision@5": 1.0, "mrr": 1.0},
+            },
         ]
 
         summary = evaluator._generate_summary(aggregate, individual)
@@ -244,10 +253,20 @@ class TestEvaluationSummary:
 
         aggregate = {"recall@5": 0.5, "precision@5": 0.6, "mrr": 0.4}
         individual = [
-            {"test_id": "test-1", "query": "Q1", "difficulty": "easy", "found_any": True,
-             "metrics": {"recall@5": 1.0, "precision@5": 1.0, "mrr": 1.0}},
-            {"test_id": "test-2", "query": "Q2", "difficulty": "hard", "found_any": False,
-             "metrics": {"recall@5": 0.0, "precision@5": 0.0, "mrr": 0.0}}  # Failed
+            {
+                "test_id": "test-1",
+                "query": "Q1",
+                "difficulty": "easy",
+                "found_any": True,
+                "metrics": {"recall@5": 1.0, "precision@5": 1.0, "mrr": 1.0},
+            },
+            {
+                "test_id": "test-2",
+                "query": "Q2",
+                "difficulty": "hard",
+                "found_any": False,
+                "metrics": {"recall@5": 0.0, "precision@5": 0.0, "mrr": 0.0},
+            },  # Failed
         ]
 
         summary = evaluator._generate_summary(aggregate, individual)

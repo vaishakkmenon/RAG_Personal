@@ -7,7 +7,6 @@ and produces analysis results.
 
 import json
 from typing import Dict, Any, List, Optional
-from pathlib import Path
 
 from tests.analyzers.quality_checks import ALL_CHECKS
 
@@ -37,20 +36,20 @@ class TestQualityAnalyzer:
 
     def _load_json(self, file_path: str) -> Dict[str, Any]:
         """Load JSON file."""
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             return json.load(f)
 
     def _index_test_definitions(self) -> Dict[str, Dict[str, Any]]:
         """Index test definitions by test_id."""
-        test_cases = self.test_suite_data.get('test_cases', [])
-        return {test['test_id']: test for test in test_cases}
+        test_cases = self.test_suite_data.get("test_cases", [])
+        return {test["test_id"]: test for test in test_cases}
 
     def analyze(
         self,
         severity_filter: Optional[str] = None,
         category_filter: Optional[str] = None,
         passed_only: bool = False,
-        verbose: bool = False
+        verbose: bool = False,
     ) -> List[Dict[str, Any]]:
         """
         Run comprehensive quality analysis.
@@ -64,7 +63,7 @@ class TestQualityAnalyzer:
         Returns:
             List of analysis results, one per test
         """
-        results = self.validation_data.get('results', [])
+        results = self.validation_data.get("results", [])
 
         if verbose:
             print(f"Analyzing {len(results)} tests...")
@@ -72,9 +71,9 @@ class TestQualityAnalyzer:
         analysis_results = []
 
         for i, test_result in enumerate(results, 1):
-            test_id = test_result.get('test_id')
-            category = test_result.get('category')
-            passed = test_result.get('passed', False)
+            test_id = test_result.get("test_id")
+            category = test_result.get("category")
+            passed = test_result.get("passed", False)
 
             # Apply filters
             if category_filter and category != category_filter:
@@ -84,7 +83,7 @@ class TestQualityAnalyzer:
                 continue
 
             if verbose:
-                print(f"[{i}/{len(results)}] Analyzing {test_id}...", end=' ')
+                print(f"[{i}/{len(results)}] Analyzing {test_id}...", end=" ")
 
             # Get test definition
             test_definition = self.test_definitions.get(test_id, {})
@@ -94,15 +93,14 @@ class TestQualityAnalyzer:
 
             # Apply severity filter
             if severity_filter:
-                analysis['issues'] = self._filter_by_severity(
-                    analysis['issues'],
-                    severity_filter
+                analysis["issues"] = self._filter_by_severity(
+                    analysis["issues"], severity_filter
                 )
 
             analysis_results.append(analysis)
 
             if verbose:
-                issue_count = len(analysis['issues'])
+                issue_count = len(analysis["issues"])
                 if issue_count > 0:
                     print(f"{issue_count} issue(s) found")
                 else:
@@ -114,9 +112,7 @@ class TestQualityAnalyzer:
         return analysis_results
 
     def _analyze_single_test(
-        self,
-        test_result: Dict[str, Any],
-        test_definition: Dict[str, Any]
+        self, test_result: Dict[str, Any], test_definition: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
         Analyze a single test for quality issues.
@@ -136,20 +132,18 @@ class TestQualityAnalyzer:
             all_issues.extend(issues)
 
         return {
-            'test_id': test_result.get('test_id'),
-            'category': test_result.get('category'),
-            'question': test_result.get('question'),
-            'answer': test_result.get('answer'),
-            'test_result': test_result,
-            'test_definition': test_definition,
-            'issues': all_issues,
-            'issue_count': len(all_issues)
+            "test_id": test_result.get("test_id"),
+            "category": test_result.get("category"),
+            "question": test_result.get("question"),
+            "answer": test_result.get("answer"),
+            "test_result": test_result,
+            "test_definition": test_definition,
+            "issues": all_issues,
+            "issue_count": len(all_issues),
         }
 
     def _filter_by_severity(
-        self,
-        issues: List[Dict[str, Any]],
-        min_severity: str
+        self, issues: List[Dict[str, Any]], min_severity: str
     ) -> List[Dict[str, Any]]:
         """
         Filter issues by minimum severity level.
@@ -161,10 +155,11 @@ class TestQualityAnalyzer:
         Returns:
             Filtered list of issues
         """
-        severity_levels = {'CRITICAL': 4, 'HIGH': 3, 'MEDIUM': 2, 'LOW': 1}
+        severity_levels = {"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1}
         min_level = severity_levels.get(min_severity, 1)
 
         return [
-            issue for issue in issues
-            if severity_levels.get(issue.get('severity', 'LOW'), 1) >= min_level
+            issue
+            for issue in issues
+            if severity_levels.get(issue.get("severity", "LOW"), 1) >= min_level
         ]

@@ -3,7 +3,7 @@
 # Security Scan Script - Trivy Container Vulnerability Scanner
 # ============================================================================
 # Scans Docker images for HIGH and CRITICAL vulnerabilities
-# 
+#
 # Usage:
 #   ./scripts/security_scan.sh                        # Scans default image
 #   ./scripts/security_scan.sh personal-rag-system:prod  # Custom image

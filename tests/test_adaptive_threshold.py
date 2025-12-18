@@ -8,7 +8,7 @@ Tests all three threshold methods:
 """
 
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from app.retrieval.adaptive_threshold import (
     calculate_percentile_threshold,
@@ -131,7 +131,10 @@ class TestGapBasedThreshold:
         """Test moderate match in gray area."""
         mock_search.return_value = [
             {"distance": 0.36, "content": "content1"},
-            {"distance": 0.50, "content": "content2"},  # gap > 0.08, will go to gray area logic
+            {
+                "distance": 0.50,
+                "content": "content2",
+            },  # gap > 0.08, will go to gray area logic
         ]
 
         exists, distance, reason = calculate_gap_based_threshold("Moderate")

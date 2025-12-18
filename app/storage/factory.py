@@ -41,9 +41,9 @@ _session_store: Optional[SessionStore] = None
 # PRIMARY IMPLEMENTATION: REDIS (Production)
 # ============================================================================
 
+
 def create_session_store(
-    backend: str = "redis",
-    redis_url: Optional[str] = None
+    backend: str = "redis", redis_url: Optional[str] = None
 ) -> SessionStore:
     """Factory function to create session store with automatic fallback.
 
@@ -66,7 +66,9 @@ def create_session_store(
         try:
             logger.info(f"Attempting to connect to Redis: {redis_url}")
             redis_store = RedisSessionStore(redis_url)
-            logger.info("[SUCCESS] Redis session store initialized successfully (PRIMARY)")
+            logger.info(
+                "[SUCCESS] Redis session store initialized successfully (PRIMARY)"
+            )
             return redis_store
 
         except (ImportError, Exception) as e:
@@ -81,6 +83,7 @@ def create_session_store(
 # ============================================================================
 # FALLBACK IMPLEMENTATION: IN-MEMORY (High Availability)
 # ============================================================================
+
 
 def _create_fallback_store() -> InMemorySessionStore:
     """Create fallback in-memory store when Redis is unavailable.
@@ -109,7 +112,7 @@ def get_session_store() -> SessionStore:
     if _session_store is None:
         _session_store = create_session_store(
             backend=settings.session.storage_backend,
-            redis_url=settings.session.redis_url
+            redis_url=settings.session.redis_url,
         )
 
     return _session_store

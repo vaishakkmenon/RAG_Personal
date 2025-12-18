@@ -18,6 +18,7 @@ try:
         rag_rerank_latency_seconds,
         rag_rerank_score_distribution,
     )
+
     RERANK_METRICS_ENABLED = True
 except ImportError:
     RERANK_METRICS_ENABLED = False
@@ -25,10 +26,43 @@ except ImportError:
 
 # Tiny stopword set for lexical overlap calculation
 _STOPWORDS: Set[str] = {
-    "the", "a", "an", "of", "to", "in", "on", "at", "for", "and", "or",
-    "if", "is", "are", "was", "were", "by", "with", "from", "as", "that",
-    "this", "these", "those", "it", "its", "be", "been", "being", "which",
-    "who", "whom", "what", "when", "where", "why", "how",
+    "the",
+    "a",
+    "an",
+    "of",
+    "to",
+    "in",
+    "on",
+    "at",
+    "for",
+    "and",
+    "or",
+    "if",
+    "is",
+    "are",
+    "was",
+    "were",
+    "by",
+    "with",
+    "from",
+    "as",
+    "that",
+    "this",
+    "these",
+    "those",
+    "it",
+    "its",
+    "be",
+    "been",
+    "being",
+    "which",
+    "who",
+    "whom",
+    "what",
+    "when",
+    "where",
+    "why",
+    "how",
 }
 
 # Regex for tokenization
@@ -76,9 +110,7 @@ class RerankerService:
 
     @staticmethod
     def calculate_hybrid_score(
-        query: str,
-        chunk: dict,
-        lex_weight: float = 0.5
+        query: str, chunk: dict, lex_weight: float = 0.5
     ) -> float:
         """Calculate hybrid score combining lexical and semantic similarity.
 
@@ -94,11 +126,11 @@ class RerankerService:
         """
         text = chunk.get("text", "")
         distance = chunk.get("distance")
-        
+
         # Handle None distance (from BM25/hybrid chunks without semantic distance)
         if distance is None:
             distance = 0.5  # Neutral distance when unknown
-        
+
         # Lexical overlap
         overlap = RerankerService.calculate_lexical_overlap(query, text)
 
@@ -111,9 +143,7 @@ class RerankerService:
 
     @staticmethod
     def rerank(
-        question: str,
-        chunks: List[dict],
-        lex_weight: float = 0.5
+        question: str, chunks: List[dict], lex_weight: float = 0.5
     ) -> List[dict]:
         """Rerank chunks using hybrid lexical + semantic scoring.
 
@@ -143,9 +173,7 @@ class RerankerService:
 
         scored_chunks.sort(key=lambda x: x[1], reverse=True)
 
-        logger.debug(
-            f"Reranked {len(chunks)} chunks with lex_weight={lex_weight:.2f}"
-        )
+        logger.debug(f"Reranked {len(chunks)} chunks with lex_weight={lex_weight:.2f}")
 
         # Track metrics
         if RERANK_METRICS_ENABLED:
@@ -164,9 +192,7 @@ class RerankerService:
 
 # Convenience function for backward compatibility
 def rerank_chunks(
-    question: str,
-    chunks: List[dict],
-    lex_weight: float = 0.5
+    question: str, chunks: List[dict], lex_weight: float = 0.5
 ) -> List[dict]:
     """Convenience function for reranking chunks.
 

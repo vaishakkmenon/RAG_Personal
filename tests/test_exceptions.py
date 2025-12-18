@@ -5,7 +5,6 @@ Tests RAGException hierarchy and exception handlers.
 """
 
 import pytest
-from unittest.mock import MagicMock
 
 
 @pytest.mark.unit

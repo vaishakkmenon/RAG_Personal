@@ -38,10 +38,7 @@ TEST_QUESTIONS = [
 
 
 async def send_request(
-    client: httpx.AsyncClient,
-    session_id: str,
-    question: str,
-    request_num: int
+    client: httpx.AsyncClient, session_id: str, question: str, request_num: int
 ) -> Dict:
     """Send a single chat request and measure performance."""
     start = time.time()
@@ -79,9 +76,9 @@ async def scenario_1_sequential_baseline(client: httpx.AsyncClient):
     - 10 requests over ~60 seconds (respects rate limit)
     - Measures baseline latency without concurrency
     """
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("SCENARIO 1: Sequential Baseline (1 user, 10 requests)")
-    print("="*70)
+    print("=" * 70)
 
     results = []
     session_id = "load-test-sequential"
@@ -92,7 +89,7 @@ async def scenario_1_sequential_baseline(client: httpx.AsyncClient):
         question = TEST_QUESTIONS[i % len(TEST_QUESTIONS)]
         print(f"  [{i+1}/10] Sending: {question[:50]}...")
 
-        result = await send_request(client, session_id, question, i+1)
+        result = await send_request(client, session_id, question, i + 1)
         results.append(result)
 
         if result["success"]:
@@ -117,9 +114,9 @@ async def scenario_2_low_concurrency(client: httpx.AsyncClient):
     - Requests spread over 30 seconds
     - Tests realistic multi-user scenario within rate limits
     """
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("SCENARIO 2: Low Concurrency (2 users, 5 requests each)")
-    print("="*70)
+    print("=" * 70)
 
     async def user_session(user_id: int, num_requests: int):
         """Simulate one user's session"""
@@ -127,8 +124,10 @@ async def scenario_2_low_concurrency(client: httpx.AsyncClient):
         user_results = []
 
         for i in range(num_requests):
-            question = TEST_QUESTIONS[(user_id * num_requests + i) % len(TEST_QUESTIONS)]
-            result = await send_request(client, session_id, question, i+1)
+            question = TEST_QUESTIONS[
+                (user_id * num_requests + i) % len(TEST_QUESTIONS)
+            ]
+            result = await send_request(client, session_id, question, i + 1)
             user_results.append(result)
 
             # Wait 6 seconds between requests (10 req/min = well within limit)
@@ -160,9 +159,9 @@ async def scenario_3_burst_test(client: httpx.AsyncClient):
     - Tests caching, queueing, rate limiter behavior
     - Will likely hit rate limiter - expected behavior
     """
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("SCENARIO 3: Burst Test (5 rapid requests)")
-    print("="*70)
+    print("=" * 70)
     print("  Note: This will likely hit rate limiter - testing queue behavior")
 
     session_id = "load-test-burst"
@@ -171,7 +170,7 @@ async def scenario_3_burst_test(client: httpx.AsyncClient):
     # Send 5 requests concurrently
     for i in range(5):
         question = TEST_QUESTIONS[i % len(TEST_QUESTIONS)]
-        tasks.append(send_request(client, session_id, question, i+1))
+        tasks.append(send_request(client, session_id, question, i + 1))
 
     start_time = time.time()
     results = await asyncio.gather(*tasks)
@@ -185,21 +184,23 @@ def print_results(scenario_name: str, results: List[Dict], total_time: float):
     """Print formatted test results."""
     successes = [r for r in results if r["success"]]
     failures = [r for r in results if not r["success"]]
-    latencies = [r["latency"] for r in results]
+    [r["latency"] for r in results]
 
     print(f"\n{scenario_name} Results:")
     print("-" * 70)
     print(f"  Total requests:  {len(results)}")
-    print(f"  Successful:      {len(successes)} ({len(successes)/len(results)*100:.1f}%)")
+    print(
+        f"  Successful:      {len(successes)} ({len(successes)/len(results)*100:.1f}%)"
+    )
     print(f"  Failed:          {len(failures)} ({len(failures)/len(results)*100:.1f}%)")
 
     if successes:
         success_latencies = [r["latency"] for r in successes]
-        print(f"\n  Performance:")
+        print("\n  Performance:")
         print(f"    Total time:    {total_time:.2f}s")
         print(f"    Requests/sec:  {len(results)/total_time:.2f}")
 
-        print(f"\n  Latency (successful requests):")
+        print("\n  Latency (successful requests):")
         print(f"    Mean:          {statistics.mean(success_latencies):.2f}s")
         print(f"    Median:        {statistics.median(success_latencies):.2f}s")
         if len(success_latencies) > 1:
@@ -213,19 +214,19 @@ def print_results(scenario_name: str, results: List[Dict], total_time: float):
         print(f"    Max:           {max(success_latencies):.2f}s")
 
     if failures:
-        print(f"\n  Failures (first 3):")
+        print("\n  Failures (first 3):")
         for f in failures[:3]:
-            error = f.get('error', f.get('status', 'Unknown'))
+            error = f.get("error", f.get("status", "Unknown"))
             print(f"    - Request {f['request_num']}: {error}")
 
 
 async def run_all_scenarios():
     """Run all load test scenarios."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("RAG API Load Testing - Realistic Scenarios")
     print(f"Target: {API_URL}")
     print(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print("="*70)
+    print("=" * 70)
 
     async with httpx.AsyncClient() as client:
         # Test API availability
@@ -263,20 +264,22 @@ async def run_all_scenarios():
         all_results.extend(results_3)
 
         # Overall summary
-        print("\n" + "="*70)
+        print("\n" + "=" * 70)
         print("OVERALL SUMMARY - All Scenarios")
-        print("="*70)
+        print("=" * 70)
 
         total_requests = len(all_results)
         total_successes = len([r for r in all_results if r["success"]])
-        success_rate = (total_successes / total_requests * 100) if total_requests > 0 else 0
+        success_rate = (
+            (total_successes / total_requests * 100) if total_requests > 0 else 0
+        )
 
         print(f"  Total requests:      {total_requests}")
         print(f"  Total successful:    {total_successes}")
         print(f"  Overall success rate: {success_rate:.1f}%")
 
         # Performance targets check
-        print(f"\n  Performance Target Validation:")
+        print("\n  Performance Target Validation:")
 
         successful = [r for r in all_results if r["success"]]
         if successful:
@@ -294,9 +297,9 @@ async def run_all_scenarios():
             print(f"    {p95_ok} P95 latency <5s:      {p95_lat:.2f}s")
             print(f"    {success_ok} Success rate >99%:  {success_rate:.1f}%")
 
-        print("\n" + "="*70)
+        print("\n" + "=" * 70)
         print("Load testing complete!")
-        print("="*70 + "\n")
+        print("=" * 70 + "\n")
 
 
 if __name__ == "__main__":
@@ -313,4 +316,5 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\nX Error during load testing: {e}")
         import traceback
+
         traceback.print_exc()

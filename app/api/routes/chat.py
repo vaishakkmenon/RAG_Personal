@@ -3,7 +3,7 @@ Chat endpoint for Personal RAG system.
 """
 
 import time
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
@@ -28,6 +28,7 @@ try:
         rag_request_latency_seconds,
         rag_errors_total,
     )
+
     METRICS_ENABLED = True
 except ImportError:
     METRICS_ENABLED = False
@@ -79,16 +80,16 @@ except ImportError:
                         "answer": "Vaishak's GPA is 3.85 based on his undergraduate transcript.",
                         "sources": [],
                         "grounded": True,
-                        "session_id": "temp-uuid-123"
+                        "session_id": "temp-uuid-123",
                     }
                 }
-            }
+            },
         },
         400: {"description": "Bad request or prompt injection detected"},
         401: {"description": "Invalid or missing API key"},
         500: {"description": "Internal server error"},
-        503: {"description": "LLM service unavailable"}
-    }
+        503: {"description": "LLM service unavailable"},
+    },
 )
 def simple_chat(
     request: ChatRequest,
@@ -113,13 +114,13 @@ def simple_chat(
         guard = get_prompt_guard()
         guard_result = guard.check_input(
             request.question,
-            conversation_history=None  # Simple endpoint has no session support
+            conversation_history=None,  # Simple endpoint has no session support
         )
         if guard_result["blocked"]:
             logger.warning(f"Prompt injection blocked: {guard_result['label']}")
             raise HTTPException(
                 status_code=400,
-                detail="Your request could not be processed. Please rephrase your question."
+                detail="Your request could not be processed. Please rephrase your question.",
             )
 
         # Step 1: Simple search - no filters, no routing
@@ -128,7 +129,7 @@ def simple_chat(
                 query=request.question,
                 k=top_k,
                 max_distance=max_distance,
-                metadata_filter=None  # No filtering!
+                metadata_filter=None,  # No filtering!
             )
         except Exception as e:
             logger.error(f"Retrieval failed in simple_chat: {e}")
@@ -152,7 +153,7 @@ def simple_chat(
         prompt_result = prompt_builder.build_prompt(
             question=request.question,
             context_chunks=formatted_sources,  # Fixed: parameter is context_chunks not sources
-            conversation_history=[]  # Simple endpoint doesn't support conversation history
+            conversation_history=[],  # Simple endpoint doesn't support conversation history
         )
 
         # Step 3: Generate answer (use prompt from PromptResult)
@@ -160,7 +161,7 @@ def simple_chat(
             answer = generate_with_ollama(
                 prompt=prompt_result.prompt,  # Fixed: use prompt_result.prompt not just prompt
                 temperature=temperature,
-                max_tokens=max_tokens
+                max_tokens=max_tokens,
             )
         except Exception as e:
             logger.error(f"LLM generation failed in simple_chat: {e}")
@@ -184,6 +185,7 @@ def simple_chat(
 
         # Generate session_id if not provided (simple endpoint doesn't use sessions but needs to return one)
         import uuid
+
         session_id = request.session_id or str(uuid.uuid4())
 
         response = ChatResponse(
@@ -207,14 +209,13 @@ def simple_chat(
         if METRICS_ENABLED:
             rag_request_total.labels(endpoint=endpoint, status="error").inc()
             rag_errors_total.labels(
-                component="api",
-                error_type=f"http_{e.status_code}"
+                component="api", error_type=f"http_{e.status_code}"
             ).inc()
         raise
 
     except RAGException:
         # Re-raise custom exceptions to be handled by app-level handler
-        # We don't track these here because the handler/middleware will track them? 
+        # We don't track these here because the handler/middleware will track them?
         # Actually proper metrics tracking for these custom exceptions might be good.
         # For now, just re-raise.
         raise
@@ -224,10 +225,7 @@ def simple_chat(
         logger.error(f"Unexpected error in {endpoint}: {str(e)}")
         if METRICS_ENABLED:
             rag_request_total.labels(endpoint=endpoint, status="error").inc()
-            rag_errors_total.labels(
-                component="api",
-                error_type="unexpected"
-            ).inc()
+            rag_errors_total.labels(component="api", error_type="unexpected").inc()
         raise
 
 
@@ -298,14 +296,14 @@ def simple_chat(
                                 "id": "chunk_42",
                                 "source": "transcript_fall_2024.md",
                                 "text": "CS 498: Applied Machine Learning (Grade: A)",
-                                "distance": 0.23
+                                "distance": 0.23,
                             }
                         ],
                         "grounded": True,
-                        "session_id": "session-abc-123"
+                        "session_id": "session-abc-123",
                     }
                 }
-            }
+            },
         },
         400: {
             "description": "Bad request - invalid input or prompt injection detected",
@@ -315,27 +313,21 @@ def simple_chat(
                         "detail": "Your request could not be processed. Please rephrase your question."
                     }
                 }
-            }
+            },
         },
         401: {
             "description": "Unauthorized - invalid or missing API key",
             "content": {
                 "application/json": {
-                    "example": {
-                        "detail": "Invalid or missing API key"
-                    }
+                    "example": {"detail": "Invalid or missing API key"}
                 }
-            }
+            },
         },
         403: {
             "description": "Forbidden - origin not allowed",
             "content": {
-                "application/json": {
-                    "example": {
-                        "detail": "Origin not allowed"
-                    }
-                }
-            }
+                "application/json": {"example": {"detail": "Origin not allowed"}}
+            },
         },
         429: {
             "description": "Too many requests - rate limit exceeded",
@@ -345,7 +337,7 @@ def simple_chat(
                         "detail": "Rate limit exceeded. Please wait before making more requests."
                     }
                 }
-            }
+            },
         },
         500: {
             "description": "Internal server error",
@@ -355,19 +347,17 @@ def simple_chat(
                         "detail": "An internal error occurred. Please try again later."
                     }
                 }
-            }
+            },
         },
         503: {
             "description": "Service unavailable - LLM service error",
             "content": {
                 "application/json": {
-                    "example": {
-                        "detail": "Failed to generate response"
-                    }
+                    "example": {"detail": "Failed to generate response"}
                 }
-            }
-        }
-    }
+            },
+        },
+    },
 )
 def chat(
     request: ChatRequest,
@@ -406,21 +396,31 @@ def chat(
         # Build cache params from query parameters (use defaults from settings if not provided)
         cache_params = {
             "top_k": top_k if top_k is not None else settings.retrieval.top_k,
-            "max_distance": max_distance if max_distance is not None else settings.retrieval.max_distance,
-            "temperature": temperature if temperature is not None else settings.llm.temperature,
-            "model": model if model is not None else (settings.llm.groq_model if settings.llm.provider == "groq" else settings.llm.ollama_model),
+            "max_distance": max_distance
+            if max_distance is not None
+            else settings.retrieval.max_distance,
+            "temperature": temperature
+            if temperature is not None
+            else settings.llm.temperature,
+            "model": model
+            if model is not None
+            else (
+                settings.llm.groq_model
+                if settings.llm.provider == "groq"
+                else settings.llm.ollama_model
+            ),
             "doc_type": doc_type,
         }
 
         # Try cache without session_id first (for non-conversational queries)
         cached_response = response_cache.get(
-            question=request.question,
-            session_id=None,
-            params=cache_params
+            question=request.question, session_id=None, params=cache_params
         )
 
         if cached_response:
-            logger.info("Cache hit at route level - skipping prompt guard and RAG pipeline")
+            logger.info(
+                "Cache hit at route level - skipping prompt guard and RAG pipeline"
+            )
             # Add session_id from request if provided
             if request.session_id:
                 cached_response["session_id"] = request.session_id
@@ -445,14 +445,13 @@ def chat(
 
         guard = get_prompt_guard()
         guard_result = guard.check_input(
-            request.question,
-            conversation_history=conversation_history
+            request.question, conversation_history=conversation_history
         )
         if guard_result["blocked"]:
             logger.warning(f"Prompt injection blocked: {guard_result['label']}")
             raise HTTPException(
                 status_code=400,
-                detail="Your request could not be processed. Please rephrase your question."
+                detail="Your request could not be processed. Please rephrase your question.",
             )
 
         # Pass skip_route_cache=True to avoid double-checking cache in handle_chat
@@ -487,22 +486,17 @@ def chat(
         if METRICS_ENABLED:
             rag_request_total.labels(endpoint=endpoint, status="error").inc()
             rag_errors_total.labels(
-                component="api",
-                error_type=f"http_{e.status_code}"
+                component="api", error_type=f"http_{e.status_code}"
             ).inc()
         raise
 
     except RAGException:
         raise
 
-
     except Exception as e:
         # Track unexpected errors
         logger.error(f"Unexpected error in {endpoint}: {str(e)}")
         if METRICS_ENABLED:
             rag_request_total.labels(endpoint=endpoint, status="error").inc()
-            rag_errors_total.labels(
-                component="api",
-                error_type="unexpected"
-            ).inc()
+            rag_errors_total.labels(component="api", error_type="unexpected").inc()
         raise

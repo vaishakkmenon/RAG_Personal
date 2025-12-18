@@ -7,7 +7,7 @@ Handles splitting text into overlapping chunks while preserving section informat
 import logging
 import os
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from app.settings import ingest_settings
 from app.ingest.metadata import generate_version_identifier
@@ -64,34 +64,38 @@ def chunk_by_headers(
     doc_id, doc_type = extract_doc_id(source_path)
 
     # Use version from base_metadata (already set by processor with content-based detection)
-    version = base_metadata.get('version_identifier')
+    version = base_metadata.get("version_identifier")
     if not version:
         # Fallback: generate if not present (should not happen in normal flow)
         version = generate_version_identifier(base_metadata, doc_id)
-        logger.warning(f"version_identifier not in metadata for {source_path}, generating: {version}")
+        logger.warning(
+            f"version_identifier not in metadata for {source_path}, generating: {version}"
+        )
 
     # Parse markdown into section structures
     sections = _parse_markdown_sections(text, split_level)
 
     if not sections:
         logger.warning(f"No sections found in {source_path}, creating single section")
-        sections = [{
-            'header': '# Complete Document',
-            'header_text': 'Complete Document',
-            'header_level': 1,
-            'content': text,
-            'section_stack': ['Complete Document']
-        }]
+        sections = [
+            {
+                "header": "# Complete Document",
+                "header_text": "Complete Document",
+                "header_level": 1,
+                "content": text,
+                "section_stack": ["Complete Document"],
+            }
+        ]
 
     # Create chunks for each section
     all_chunks = []
     chunk_idx = 0
 
     for section in sections:
-        header_text = section['header']
-        content = section['content']
-        section_stack = section['section_stack']
-        section_name = section['header_text']
+        header_text = section["header"]
+        content = section["content"]
+        section_stack = section["section_stack"]
+        section_name = section["header_text"]
 
         # Skip empty sections
         if not content.strip():
@@ -113,14 +117,16 @@ def chunk_by_headers(
                 doc_type=doc_type,
                 version=version,
                 part_num=None,
-                total_parts=1
+                total_parts=1,
             )
 
-            all_chunks.append({
-                'text': full_text.strip(),
-                'metadata': chunk_metadata,
-                'id': f"{doc_id}@{version}#{chunk_metadata['section_slug']}:{chunk_idx}"
-            })
+            all_chunks.append(
+                {
+                    "text": full_text.strip(),
+                    "metadata": chunk_metadata,
+                    "id": f"{doc_id}@{version}#{chunk_metadata['section_slug']}:{chunk_idx}",
+                }
+            )
             chunk_idx += 1
         else:
             # Multi-chunk section - needs splitting
@@ -128,11 +134,15 @@ def chunk_by_headers(
             max_content_size = chunk_size - header_length - 15
 
             if max_content_size < 200:
-                logger.warning(f"Header too long ({header_length} chars): {header_text[:50]}...")
+                logger.warning(
+                    f"Header too long ({header_length} chars): {header_text[:50]}..."
+                )
                 max_content_size = max(chunk_size - header_length - 15, 200)
 
             # Split content into parts with overlap
-            content_parts = _split_content_with_overlap(content, max_content_size, overlap)
+            content_parts = _split_content_with_overlap(
+                content, max_content_size, overlap
+            )
             total_parts = len(content_parts)
 
             for part_num, content_part in enumerate(content_parts, start=1):
@@ -148,17 +158,21 @@ def chunk_by_headers(
                     doc_type=doc_type,
                     version=version,
                     part_num=part_num,
-                    total_parts=total_parts
+                    total_parts=total_parts,
                 )
 
-                all_chunks.append({
-                    'text': chunk_text,
-                    'metadata': chunk_metadata,
-                    'id': f"{doc_id}@{version}#{chunk_metadata['section_slug']}:{chunk_idx}"
-                })
+                all_chunks.append(
+                    {
+                        "text": chunk_text,
+                        "metadata": chunk_metadata,
+                        "id": f"{doc_id}@{version}#{chunk_metadata['section_slug']}:{chunk_idx}",
+                    }
+                )
                 chunk_idx += 1
 
-    logger.info(f"Created {len(all_chunks)} chunks from {len(sections)} sections in {source_path}")
+    logger.info(
+        f"Created {len(all_chunks)} chunks from {len(sections)} sections in {source_path}"
+    )
     return all_chunks
 
 
@@ -240,23 +254,24 @@ def chunk_by_terms(
     Returns:
         List of chunk dicts with enriched term metadata
     """
-    from app.settings import ingest_settings
 
     # Extract doc identifiers
     doc_id, doc_type = extract_doc_id(source_path)
 
     # Get version from base_metadata
-    version = base_metadata.get('version_identifier')
+    version = base_metadata.get("version_identifier")
     if not version:
         version = generate_version_identifier(base_metadata, doc_id)
-        logger.warning(f"version_identifier not in metadata for {source_path}, generating: {version}")
+        logger.warning(
+            f"version_identifier not in metadata for {source_path}, generating: {version}"
+        )
 
     all_chunks = []
     chunk_idx = 0
 
     # Parse the document into program sections (Graduate, Undergraduate, etc.)
     # and then into term sections within each program
-    lines = text.split('\n')
+    lines = text.split("\n")
     current_program = None
     current_section_type = None  # 'term', 'summary', 'analysis'
     current_section_header = None
@@ -264,12 +279,10 @@ def chunk_by_terms(
     current_term_info = {}
 
     # Track L1 and L2 headers for context
-    current_l1 = None
-    current_l2 = None
 
     for line in lines:
         # Check for headers
-        header_match = re.match(r'^(#{1,6})\s+(.+)$', line)
+        header_match = re.match(r"^(#{1,6})\s+(.+)$", line)
 
         if header_match:
             level = len(header_match.group(1))
@@ -281,7 +294,7 @@ def chunk_by_terms(
                 if current_section_content and current_section_header:
                     chunk = _create_term_chunk(
                         header=current_section_header,
-                        content='\n'.join(current_section_content),
+                        content="\n".join(current_section_content),
                         base_metadata=base_metadata,
                         doc_id=doc_id,
                         doc_type=doc_type,
@@ -295,34 +308,35 @@ def chunk_by_terms(
                         all_chunks.append(chunk)
                         chunk_idx += 1
 
-                current_l1 = title
-                current_l2 = None
-
                 # Determine program from L1 header
-                if 'graduate' in title.lower():
-                    current_program = 'graduate'
-                elif 'undergraduate' in title.lower():
-                    current_program = 'undergraduate'
-                elif 'summary' in title.lower() or 'academic summary' in title.lower():
+                if "graduate" in title.lower():
+                    current_program = "graduate"
+                elif "undergraduate" in title.lower():
+                    current_program = "undergraduate"
+                elif "summary" in title.lower() or "academic summary" in title.lower():
                     current_program = None
-                    current_section_type = 'summary'
-                elif 'specialization' in title.lower() or 'skills' in title.lower():
-                    current_section_type = 'analysis'
+                    current_section_type = "summary"
+                elif "specialization" in title.lower() or "skills" in title.lower():
+                    current_section_type = "analysis"
 
                 # Reset for new major section
                 current_section_header = line
                 current_section_content = []
                 current_term_info = {}
-                if 'summary' not in title.lower() and 'specialization' not in title.lower() and 'skills' not in title.lower():
+                if (
+                    "summary" not in title.lower()
+                    and "specialization" not in title.lower()
+                    and "skills" not in title.lower()
+                ):
                     current_section_type = None
 
             elif level == 2:
                 # L2 header: Sub-section (Graduate Summary, Coursework by Term, etc.)
                 # Save previous section if it was a term
-                if current_section_type == 'term' and current_section_content:
+                if current_section_type == "term" and current_section_content:
                     chunk = _create_term_chunk(
                         header=current_section_header,
-                        content='\n'.join(current_section_content),
+                        content="\n".join(current_section_content),
                         base_metadata=base_metadata,
                         doc_id=doc_id,
                         doc_type=doc_type,
@@ -330,35 +344,34 @@ def chunk_by_terms(
                         chunk_idx=chunk_idx,
                         term_info=current_term_info,
                         program=current_program,
-                        section_type='term',
+                        section_type="term",
                     )
                     if chunk:
                         all_chunks.append(chunk)
                         chunk_idx += 1
 
-                current_l2 = title
                 current_section_header = line
                 current_section_content = []
 
                 # Check if this is a coursework section (will contain terms)
-                if 'coursework' in title.lower() and 'term' in title.lower():
-                    current_section_type = 'coursework_container'
-                elif 'summary' in title.lower():
-                    current_section_type = 'summary'
-                elif 'transfer' in title.lower():
-                    current_section_type = 'transfer'
+                if "coursework" in title.lower() and "term" in title.lower():
+                    current_section_type = "coursework_container"
+                elif "summary" in title.lower():
+                    current_section_type = "summary"
+                elif "transfer" in title.lower():
+                    current_section_type = "transfer"
                 else:
-                    current_section_type = 'other'
+                    current_section_type = "other"
 
                 current_term_info = {}
 
             elif level == 3:
                 # L3 header: Term headers (Fall 2023, Spring 2024, etc.)
                 # Save previous term if exists
-                if current_section_type == 'term' and current_section_content:
+                if current_section_type == "term" and current_section_content:
                     chunk = _create_term_chunk(
                         header=current_section_header,
-                        content='\n'.join(current_section_content),
+                        content="\n".join(current_section_content),
                         base_metadata=base_metadata,
                         doc_id=doc_id,
                         doc_type=doc_type,
@@ -366,7 +379,7 @@ def chunk_by_terms(
                         chunk_idx=chunk_idx,
                         term_info=current_term_info,
                         program=current_program,
-                        section_type='term',
+                        section_type="term",
                     )
                     if chunk:
                         all_chunks.append(chunk)
@@ -376,7 +389,7 @@ def chunk_by_terms(
                 current_term_info = _parse_term_info(title)
                 current_section_header = line
                 current_section_content = []
-                current_section_type = 'term'
+                current_section_type = "term"
 
             else:
                 # L4+ headers: Add to current section content
@@ -389,7 +402,7 @@ def chunk_by_terms(
     if current_section_content and current_section_header:
         chunk = _create_term_chunk(
             header=current_section_header,
-            content='\n'.join(current_section_content),
+            content="\n".join(current_section_content),
             base_metadata=base_metadata,
             doc_id=doc_id,
             doc_type=doc_type,
@@ -397,7 +410,7 @@ def chunk_by_terms(
             chunk_idx=chunk_idx,
             term_info=current_term_info,
             program=current_program,
-            section_type=current_section_type or 'other',
+            section_type=current_section_type or "other",
         )
         if chunk:
             all_chunks.append(chunk)
@@ -417,35 +430,35 @@ def _parse_term_info(header_text: str) -> Dict[str, Any]:
         Dict with keys: term_name, term_year, term_season, is_dual_enrollment
     """
     info = {
-        'term_name': header_text.strip(),
-        'term_year': None,
-        'term_season': None,
-        'is_dual_enrollment': False,
-        'is_final_term': False,
+        "term_name": header_text.strip(),
+        "term_year": None,
+        "term_season": None,
+        "is_dual_enrollment": False,
+        "is_final_term": False,
     }
 
     text_lower = header_text.lower()
 
     # Check for special annotations
-    if 'dual enrollment' in text_lower:
-        info['is_dual_enrollment'] = True
-    if 'final' in text_lower:
-        info['is_final_term'] = True
+    if "dual enrollment" in text_lower:
+        info["is_dual_enrollment"] = True
+    if "final" in text_lower:
+        info["is_final_term"] = True
 
     # Extract year (4-digit number)
-    year_match = re.search(r'\b(20\d{2})\b', header_text)
+    year_match = re.search(r"\b(20\d{2})\b", header_text)
     if year_match:
-        info['term_year'] = int(year_match.group(1))
+        info["term_year"] = int(year_match.group(1))
 
     # Extract season
-    if 'fall' in text_lower:
-        info['term_season'] = 'fall'
-    elif 'spring' in text_lower:
-        info['term_season'] = 'spring'
-    elif 'summer' in text_lower:
-        info['term_season'] = 'summer'
-    elif 'winter' in text_lower:
-        info['term_season'] = 'winter'
+    if "fall" in text_lower:
+        info["term_season"] = "fall"
+    elif "spring" in text_lower:
+        info["term_season"] = "spring"
+    elif "summer" in text_lower:
+        info["term_season"] = "summer"
+    elif "winter" in text_lower:
+        info["term_season"] = "winter"
 
     return info
 
@@ -488,7 +501,7 @@ def _create_term_chunk(
     full_text = f"{header}\n\n{content}"
 
     # Generate section slug from header
-    header_text = re.sub(r'^#+\s*', '', header).strip()
+    header_text = re.sub(r"^#+\s*", "", header).strip()
     section_slug = slugify(header_text)
 
     # Build metadata
@@ -508,20 +521,20 @@ def _create_term_chunk(
 
     # Add term-specific metadata
     if term_info:
-        if term_info.get('term_name'):
-            metadata['term_name'] = term_info['term_name']
-        if term_info.get('term_year'):
-            metadata['term_year'] = term_info['term_year']
-        if term_info.get('term_season'):
-            metadata['term_season'] = term_info['term_season']
-        if term_info.get('is_dual_enrollment'):
-            metadata['is_dual_enrollment'] = True
-        if term_info.get('is_final_term'):
-            metadata['is_final_term'] = True
+        if term_info.get("term_name"):
+            metadata["term_name"] = term_info["term_name"]
+        if term_info.get("term_year"):
+            metadata["term_year"] = term_info["term_year"]
+        if term_info.get("term_season"):
+            metadata["term_season"] = term_info["term_season"]
+        if term_info.get("is_dual_enrollment"):
+            metadata["is_dual_enrollment"] = True
+        if term_info.get("is_final_term"):
+            metadata["is_final_term"] = True
 
     # Add program metadata
     if program:
-        metadata['program'] = program
+        metadata["program"] = program
 
     # Remove None values (ChromaDB doesn't accept them)
     metadata = {k: v for k, v in metadata.items() if v is not None}
@@ -529,16 +542,13 @@ def _create_term_chunk(
     chunk_id = f"{doc_id}@{version}#{section_slug}:{chunk_idx}"
 
     return {
-        'text': full_text.strip(),
-        'metadata': metadata,
-        'id': chunk_id,
+        "text": full_text.strip(),
+        "metadata": metadata,
+        "id": chunk_id,
     }
 
 
-def _parse_markdown_sections(
-    text: str,
-    split_level: int = 2
-) -> List[Dict[str, Any]]:
+def _parse_markdown_sections(text: str, split_level: int = 2) -> List[Dict[str, Any]]:
     """
     Parse markdown into section structures based on header level.
 
@@ -564,11 +574,11 @@ def _parse_markdown_sections(
     preamble_content = []
     in_preamble = True
 
-    lines = text.split('\n')
+    lines = text.split("\n")
 
     for line in lines:
         # Check for markdown header
-        header_match = re.match(r'^(#{1,6})\s+(.+)$', line)
+        header_match = re.match(r"^(#{1,6})\s+(.+)$", line)
 
         if header_match:
             in_preamble = False
@@ -604,11 +614,11 @@ def _parse_markdown_sections(
 
                 # Start new section
                 current_section = {
-                    'header': line,
-                    'header_text': title,
-                    'header_level': level,
-                    'content': '',
-                    'section_stack': section_stack.copy()
+                    "header": line,
+                    "header_text": title,
+                    "header_level": level,
+                    "content": "",
+                    "section_stack": section_stack.copy(),
                 }
             elif level == 1 and split_level == 2:
                 # Special case: Level-1 header when splitting at level 2
@@ -618,23 +628,23 @@ def _parse_markdown_sections(
 
                 # This L1 might become a section if it has no L2 children
                 current_section = {
-                    'header': line,
-                    'header_text': title,
-                    'header_level': level,
-                    'content': '',
-                    'section_stack': section_stack.copy(),
-                    'is_l1_standalone': True  # Mark for potential section creation
+                    "header": line,
+                    "header_text": title,
+                    "header_level": level,
+                    "content": "",
+                    "section_stack": section_stack.copy(),
+                    "is_l1_standalone": True,  # Mark for potential section creation
                 }
             else:
                 # Lower-level header - add to current section content
                 if current_section is not None:
-                    current_section['content'] += line + '\n'
+                    current_section["content"] += line + "\n"
         else:
             # Regular content line
             if in_preamble:
                 preamble_content.append(line)
             elif current_section is not None:
-                current_section['content'] += line + '\n'
+                current_section["content"] += line + "\n"
 
     # Don't forget last section
     if current_section is not None:
@@ -642,27 +652,28 @@ def _parse_markdown_sections(
 
     # Handle preamble if exists
     if preamble_content and any(line.strip() for line in preamble_content):
-        preamble_text = '\n'.join(preamble_content).strip()
+        preamble_text = "\n".join(preamble_content).strip()
         if preamble_text:
-            sections.insert(0, {
-                'header': '# Preamble',
-                'header_text': 'Preamble',
-                'header_level': 1,
-                'content': preamble_text,
-                'section_stack': ['Preamble']
-            })
+            sections.insert(
+                0,
+                {
+                    "header": "# Preamble",
+                    "header_text": "Preamble",
+                    "header_level": 1,
+                    "content": preamble_text,
+                    "section_stack": ["Preamble"],
+                },
+            )
 
     # Clean up content (remove trailing whitespace)
     for section in sections:
-        section['content'] = section['content'].strip()
+        section["content"] = section["content"].strip()
 
     return sections
 
 
 def _split_content_with_overlap(
-    content: str,
-    max_size: int,
-    overlap: int = 120
+    content: str, max_size: int, overlap: int = 120
 ) -> List[str]:
     """
     Split content into overlapping parts that fit within max_size.
@@ -696,31 +707,31 @@ def _split_content_with_overlap(
         chunk = remaining[:max_size]
 
         # Try to break at paragraph boundary
-        if '\n\n' in chunk:
-            break_point = chunk.rfind('\n\n')
+        if "\n\n" in chunk:
+            break_point = chunk.rfind("\n\n")
             if break_point > max_size * 0.3:  # Don't break too early
                 chunk = chunk[:break_point].strip()
             else:
                 # Paragraph break too early, try sentence break
-                if '. ' in chunk[-200:]:
-                    break_point = chunk.rfind('. ', max(0, len(chunk) - 200))
-                    chunk = chunk[:break_point + 1].strip()
-        elif '. ' in chunk[-200:]:
+                if ". " in chunk[-200:]:
+                    break_point = chunk.rfind(". ", max(0, len(chunk) - 200))
+                    chunk = chunk[: break_point + 1].strip()
+        elif ". " in chunk[-200:]:
             # Break at sentence boundary near end
-            break_point = chunk.rfind('. ', max(0, len(chunk) - 200))
+            break_point = chunk.rfind(". ", max(0, len(chunk) - 200))
             if break_point > 0:
-                chunk = chunk[:break_point + 1].strip()
+                chunk = chunk[: break_point + 1].strip()
         else:
             # No good break point, just split at max_size
             # Try to avoid splitting mid-word
-            last_space = chunk.rfind(' ')
+            last_space = chunk.rfind(" ")
             if last_space > max_size * 0.8:
                 chunk = chunk[:last_space].strip()
 
         parts.append(chunk)
 
         # Move forward in remaining text
-        remaining = remaining[len(chunk):].strip()
+        remaining = remaining[len(chunk) :].strip()
 
         # Add overlap from current chunk to beginning of next remaining
         if remaining and overlap > 0:
@@ -728,7 +739,7 @@ def _split_content_with_overlap(
             overlap_text = chunk[-overlap:] if len(chunk) >= overlap else chunk
             # Only add overlap if it's not already at start of remaining
             if not remaining.startswith(overlap_text):
-                remaining = overlap_text + ' ' + remaining
+                remaining = overlap_text + " " + remaining
 
     return parts
 
@@ -741,7 +752,7 @@ def _create_chunk_metadata(
     doc_type: str,
     version: str,
     part_num: Optional[int] = None,
-    total_parts: int = 1
+    total_parts: int = 1,
 ) -> Dict[str, Any]:
     """
     Create complete metadata dictionary for a chunk.
@@ -768,18 +779,15 @@ def _create_chunk_metadata(
     # Build metadata with all required fields
     metadata = {
         **base_metadata,  # Inherit all frontmatter metadata
-
         # Core identifiers
         "doc_id": doc_id,
         "doc_type": doc_type,
         "version_identifier": version,
-
         # Section identifiers
         "section": " > ".join(section_stack),
         "section_slug": section_slug,
         "section_doc_id": section_doc_id,
         "section_name": section_name,
-
         # Section stack for ChromaDB (string, not list)
         "section_stack": " > ".join(section_stack),
     }
@@ -824,7 +832,6 @@ def extract_doc_id(file_path: str) -> tuple[str, str]:
     Returns:
         Tuple of (doc_id, doc_type)
     """
-    import os
 
     basename = os.path.basename(file_path)
     name_without_ext = os.path.splitext(basename)[0]

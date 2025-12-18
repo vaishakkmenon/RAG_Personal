@@ -16,7 +16,6 @@ import logging
 from pathlib import Path
 from typing import Dict, List, Optional
 from datetime import datetime
-from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +23,9 @@ logger = logging.getLogger(__name__)
 class PatternAnalytics:
     """Track pattern effectiveness and retrieval improvements."""
 
-    def __init__(self, storage_path: Optional[str] = None, settings_obj: Optional[object] = None):
+    def __init__(
+        self, storage_path: Optional[str] = None, settings_obj: Optional[object] = None
+    ):
         """
         Initialize pattern analytics.
 
@@ -37,7 +38,9 @@ class PatternAnalytics:
             from app.settings import settings as settings_obj
 
         self.settings = settings_obj
-        self.storage_path = storage_path or self.settings.query_rewriter.analytics_storage_path
+        self.storage_path = (
+            storage_path or self.settings.query_rewriter.analytics_storage_path
+        )
         self.metrics: Dict = self._load_metrics()
         self.save_counter = 0
         self.save_frequency = 10  # Save every 10 queries
@@ -52,7 +55,7 @@ class PatternAnalytics:
         storage_file = Path(self.storage_path)
         if storage_file.exists():
             try:
-                with open(storage_file, encoding='utf-8') as f:
+                with open(storage_file, encoding="utf-8") as f:
                     metrics = json.load(f)
                     logger.info(f"Loaded analytics from {self.storage_path}")
                     return metrics
@@ -60,10 +63,7 @@ class PatternAnalytics:
                 logger.error(f"Failed to load analytics: {e}")
 
         # Initialize with empty structure
-        return {
-            '_total': {'total_queries': 0},
-            '_no_match': {'total_queries': 0}
-        }
+        return {"_total": {"total_queries": 0}, "_no_match": {"total_queries": 0}}
 
     def _save_metrics(self):
         """Save metrics to JSON file."""
@@ -71,7 +71,7 @@ class PatternAnalytics:
             storage_file = Path(self.storage_path)
             storage_file.parent.mkdir(parents=True, exist_ok=True)
 
-            with open(storage_file, 'w', encoding='utf-8') as f:
+            with open(storage_file, "w", encoding="utf-8") as f:
                 json.dump(self.metrics, f, indent=2)
 
             logger.debug(f"Saved analytics to {self.storage_path}")
@@ -83,7 +83,7 @@ class PatternAnalytics:
         query: str,
         rewrite_metadata: Optional[object],
         retrieval_distance: Optional[float],
-        grounded: bool
+        grounded: bool,
     ):
         """
         Log a query outcome for analytics.
@@ -95,11 +95,15 @@ class PatternAnalytics:
             grounded: Whether response was grounded in documents
         """
         # Update total queries
-        self.metrics['_total']['total_queries'] = self.metrics['_total'].get('total_queries', 0) + 1
+        self.metrics["_total"]["total_queries"] = (
+            self.metrics["_total"].get("total_queries", 0) + 1
+        )
 
         if rewrite_metadata is None:
             # No pattern matched
-            self.metrics['_no_match']['total_queries'] = self.metrics['_no_match'].get('total_queries', 0) + 1
+            self.metrics["_no_match"]["total_queries"] = (
+                self.metrics["_no_match"].get("total_queries", 0) + 1
+            )
         else:
             # Pattern matched - track metrics
             pattern_name = rewrite_metadata.pattern_name
@@ -107,30 +111,30 @@ class PatternAnalytics:
             # Initialize pattern metrics if first time
             if pattern_name not in self.metrics:
                 self.metrics[pattern_name] = {
-                    'total_matches': 0,
-                    'grounded_responses': 0,
-                    'failed_responses': 0,
-                    'total_latency_ms': 0.0,
-                    'distances': [],
-                    'last_updated': None
+                    "total_matches": 0,
+                    "grounded_responses": 0,
+                    "failed_responses": 0,
+                    "total_latency_ms": 0.0,
+                    "distances": [],
+                    "last_updated": None,
                 }
 
             pattern_metrics = self.metrics[pattern_name]
-            pattern_metrics['total_matches'] += 1
-            pattern_metrics['total_latency_ms'] += rewrite_metadata.latency_ms
+            pattern_metrics["total_matches"] += 1
+            pattern_metrics["total_latency_ms"] += rewrite_metadata.latency_ms
 
             # Track success/failure
             if grounded:
-                pattern_metrics['grounded_responses'] += 1
+                pattern_metrics["grounded_responses"] += 1
             else:
-                pattern_metrics['failed_responses'] += 1
+                pattern_metrics["failed_responses"] += 1
 
             # Track retrieval distance
             if retrieval_distance is not None:
-                pattern_metrics['distances'].append(retrieval_distance)
+                pattern_metrics["distances"].append(retrieval_distance)
 
             # Update timestamp
-            pattern_metrics['last_updated'] = datetime.now().isoformat()
+            pattern_metrics["last_updated"] = datetime.now().isoformat()
 
             logger.debug(
                 f"Logged analytics for pattern '{pattern_name}': "
@@ -157,16 +161,24 @@ class PatternAnalytics:
             return {}
 
         metrics = self.metrics[pattern_name]
-        total_queries = self.metrics['_total']['total_queries']
+        total_queries = self.metrics["_total"]["total_queries"]
 
         return {
-            'pattern_name': pattern_name,
-            'total_matches': metrics['total_matches'],
-            'match_rate': metrics['total_matches'] / total_queries if total_queries > 0 else 0.0,
-            'success_rate': metrics['grounded_responses'] / metrics['total_matches'] if metrics['total_matches'] > 0 else 0.0,
-            'avg_latency_ms': metrics['total_latency_ms'] / metrics['total_matches'] if metrics['total_matches'] > 0 else 0.0,
-            'avg_distance': sum(metrics['distances']) / len(metrics['distances']) if metrics['distances'] else None,
-            'last_updated': metrics['last_updated']
+            "pattern_name": pattern_name,
+            "total_matches": metrics["total_matches"],
+            "match_rate": metrics["total_matches"] / total_queries
+            if total_queries > 0
+            else 0.0,
+            "success_rate": metrics["grounded_responses"] / metrics["total_matches"]
+            if metrics["total_matches"] > 0
+            else 0.0,
+            "avg_latency_ms": metrics["total_latency_ms"] / metrics["total_matches"]
+            if metrics["total_matches"] > 0
+            else 0.0,
+            "avg_distance": sum(metrics["distances"]) / len(metrics["distances"])
+            if metrics["distances"]
+            else None,
+            "last_updated": metrics["last_updated"],
         }
 
     def get_all_pattern_effectiveness(self) -> List[Dict]:
@@ -179,7 +191,7 @@ class PatternAnalytics:
         pattern_stats = []
 
         for pattern_name in self.metrics:
-            if pattern_name.startswith('_'):
+            if pattern_name.startswith("_"):
                 continue  # Skip special keys
 
             stats = self.get_pattern_effectiveness(pattern_name)
@@ -187,7 +199,7 @@ class PatternAnalytics:
                 pattern_stats.append(stats)
 
         # Sort by match count (descending)
-        pattern_stats.sort(key=lambda x: x['total_matches'], reverse=True)
+        pattern_stats.sort(key=lambda x: x["total_matches"], reverse=True)
 
         return pattern_stats
 
@@ -206,14 +218,18 @@ class PatternAnalytics:
             f"({self.metrics['_no_match']['total_queries'] / max(self.metrics['_total']['total_queries'], 1) * 100:.1f}%)",
             "",
             f"{'Pattern':<30} {'Matches':<10} {'Success':<10} {'Latency':<12} {'Avg Dist':<10}",
-            "-" * 80
+            "-" * 80,
         ]
 
         # Get all patterns sorted by match count
         pattern_stats = self.get_all_pattern_effectiveness()
 
         for stats in pattern_stats:
-            avg_dist_str = f"{stats['avg_distance']:.3f}" if stats['avg_distance'] is not None else "N/A"
+            avg_dist_str = (
+                f"{stats['avg_distance']:.3f}"
+                if stats["avg_distance"] is not None
+                else "N/A"
+            )
 
             report_lines.append(
                 f"{stats['pattern_name']:<30} "

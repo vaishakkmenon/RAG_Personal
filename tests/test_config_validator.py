@@ -8,13 +8,9 @@ Tests the config_validator module to ensure:
 - Production-specific checks function correctly
 """
 
-import os
-import sys
 import pytest
-from unittest.mock import patch
-from io import StringIO
 
-from app.config_validator import validate_config, REQUIRED_VARS, INSECURE_DEFAULTS
+from app.config_validator import validate_config, REQUIRED_VARS
 
 
 class TestConfigValidator:
@@ -70,6 +66,7 @@ class TestConfigValidator:
     def test_groq_api_key_not_required_for_ollama(self, monkeypatch, caplog):
         """Test that Groq API key is NOT required when using Ollama."""
         import logging
+
         caplog.set_level(logging.INFO)
 
         # Set required vars
@@ -133,10 +130,14 @@ class TestConfigValidator:
     def test_secure_configuration_passes(self, monkeypatch, caplog):
         """Test that secure configuration passes without warnings."""
         import logging
+
         caplog.set_level(logging.INFO)
 
         # Set all required vars with secure values
-        monkeypatch.setenv("API_KEY", "d5160646e4199a5d88ea3626a3795e4139eef33adb29a56568b4b52bcbe703d5")
+        monkeypatch.setenv(
+            "API_KEY",
+            "d5160646e4199a5d88ea3626a3795e4139eef33adb29a56568b4b52bcbe703d5",
+        )
         monkeypatch.setenv("REDIS_PASSWORD", "very-secure-redis-password-12345")
         monkeypatch.setenv("LLM_PROVIDER", "ollama")
 
@@ -167,7 +168,9 @@ class TestConfigValidator:
         assert "PRODUCTION WARNING" in caplog.text
         assert "ALLOWED_ORIGINS" in caplog.text
 
-    def test_production_missing_session_require_https_warning(self, monkeypatch, caplog):
+    def test_production_missing_session_require_https_warning(
+        self, monkeypatch, caplog
+    ):
         """Test that missing SESSION_REQUIRE_HTTPS in production triggers warning."""
         # Set required vars
         monkeypatch.setenv("API_KEY", "secure-api-key-12345")
@@ -215,7 +218,9 @@ class TestConfigValidator:
         monkeypatch.setenv("ENV", "production")
 
         # Include localhost in origins (bad for production)
-        monkeypatch.setenv("ALLOWED_ORIGINS", "https://vaishakmenon.com,http://localhost:3000")
+        monkeypatch.setenv(
+            "ALLOWED_ORIGINS", "https://vaishakmenon.com,http://localhost:3000"
+        )
         monkeypatch.setenv("SESSION_REQUIRE_HTTPS", "true")
 
         # Should warn about localhost
@@ -227,6 +232,7 @@ class TestConfigValidator:
     def test_development_environment_no_production_warnings(self, monkeypatch, caplog):
         """Test that development environment doesn't trigger production warnings."""
         import logging
+
         caplog.set_level(logging.INFO)
 
         # Set required vars
@@ -289,6 +295,7 @@ class TestConfigValidator:
     def test_config_validation_logs_environment_summary(self, monkeypatch, caplog):
         """Test that successful validation logs environment summary."""
         import logging
+
         caplog.set_level(logging.INFO)
 
         # Set required vars
@@ -325,6 +332,7 @@ class TestConfigValidatorIntegration:
 
         # Should not raise
         from app.config_validator import validate_config
+
         validate_config()
 
     def test_app_startup_fails_with_missing_config(self, monkeypatch):
@@ -335,6 +343,7 @@ class TestConfigValidatorIntegration:
 
         # Should raise SystemExit
         from app.config_validator import validate_config
+
         with pytest.raises(SystemExit) as exc_info:
             validate_config()
 

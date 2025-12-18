@@ -5,7 +5,6 @@ Clean, modular application setup with middleware configuration.
 """
 
 import logging
-import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -24,7 +23,7 @@ from app.logging_config import setup_logging
 from app.exceptions import (
     RAGException,
     rag_exception_handler,
-    generic_exception_handler
+    generic_exception_handler,
 )
 
 # Configure structured logging (JSON in production, colored in development)
@@ -35,6 +34,7 @@ logger = logging.getLogger(__name__)
 # Lifespan event handler
 # ------------------------------------------------------------------------------
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Handle application startup and shutdown events."""
@@ -42,6 +42,7 @@ async def lifespan(app: FastAPI):
     validate_config()
     yield
     # Shutdown: Add cleanup logic here if needed in the future
+
 
 # ------------------------------------------------------------------------------
 # FastAPI app setup
@@ -103,6 +104,8 @@ logger.info(f"Application started: {settings.api.title} v{settings.api.version}"
 logger.info(f"LLM Provider: {settings.llm.provider}")
 if settings.llm.provider == "groq":
     logger.info(f"Groq Model: {settings.llm.groq_model}")
-    logger.info(f"Groq API Key: {'✓ Set' if settings.llm.groq_api_key else '✗ Not Set'}")
+    logger.info(
+        f"Groq API Key: {'✓ Set' if settings.llm.groq_api_key else '✗ Not Set'}"
+    )
 logger.info(f"Ollama Fallback: {settings.llm.ollama_host}")
 logger.info(f"Ollama Model: {settings.llm.ollama_model}")

@@ -7,7 +7,7 @@ All settings can be overridden via environment variables.
 
 import os
 from pydantic import BaseModel, Field, field_validator, ConfigDict
-from typing import Dict, List, Set, Any, Optional
+from typing import Dict, List, Set
 from dotenv import load_dotenv
 
 # Load .env file if present
@@ -31,11 +31,11 @@ class APISettings(BaseModel):
             url.strip()
             for url in os.getenv(
                 "ALLOWED_ORIGINS",
-                "http://localhost:3000,http://localhost:5173,https://vaishakmenon.com"
+                "http://localhost:3000,http://localhost:5173,https://vaishakmenon.com",
             ).split(",")
             if url.strip()
         ],
-        description="Allowed CORS origins"
+        description="Allowed CORS origins",
     )
 
 
@@ -91,12 +91,12 @@ class RetrievalSettings(BaseModel):
 
     top_k: int = Field(
         default=int(os.getenv("TOP_K", "5")),
-        description="Number of chunks to send to LLM after reranking"
+        description="Number of chunks to send to LLM after reranking",
     )
 
     rerank_retrieval_k: int = Field(
         default=int(os.getenv("RERANK_RETRIEVAL_K", "50")),
-        description="Number of chunks to retrieve when reranking is enabled (before reranking)"
+        description="Number of chunks to retrieve when reranking is enabled (before reranking)",
     )
 
     null_threshold: float = Field(
@@ -111,7 +111,7 @@ class RetrievalSettings(BaseModel):
 
     rerank: bool = Field(
         default=os.getenv("RERANK", "true").lower() == "true",
-        description="Whether to enable reranking of results"
+        description="Whether to enable reranking of results",
     )
 
     rerank_lex_weight: float = Field(
@@ -122,53 +122,53 @@ class RetrievalSettings(BaseModel):
 
 class SessionSettings(BaseModel):
     """Session management configuration."""
-    
+
     # Storage backend
     storage_backend: str = Field(
         default=os.getenv("SESSION_STORAGE_BACKEND", "redis"),
-        description="Session storage backend: 'redis' or 'memory'"
+        description="Session storage backend: 'redis' or 'memory'",
     )
     redis_url: str = Field(
         default=os.getenv("SESSION_REDIS_URL", "redis://localhost:6379/0"),
-        description="Redis connection URL"
+        description="Redis connection URL",
     )
-    
+
     # Session limits
     max_total_sessions: int = Field(
         default=int(os.getenv("SESSION_MAX_TOTAL", "1000")),
-        description="Maximum total active sessions"
+        description="Maximum total active sessions",
     )
     max_sessions_per_ip: int = Field(
         default=int(os.getenv("SESSION_MAX_PER_IP", "5")),
-        description="Maximum sessions per IP address"
+        description="Maximum sessions per IP address",
     )
-    
+
     # Rate limiting
     queries_per_hour: int = Field(
         default=int(os.getenv("SESSION_QUERIES_PER_HOUR", "10")),
-        description="Maximum queries per session per hour (0 = disabled)"
+        description="Maximum queries per session per hour (0 = disabled)",
     )
-    
+
     # TTL and cleanup
     ttl_seconds: int = Field(
         default=int(os.getenv("SESSION_TTL_SECONDS", "21600")),  # 6 hours
-        description="Session TTL in seconds"
+        description="Session TTL in seconds",
     )
     cleanup_interval_seconds: int = Field(
         default=int(os.getenv("SESSION_CLEANUP_INTERVAL", "1800")),  # 30 minutes
-        description="Cleanup interval in seconds"
+        description="Cleanup interval in seconds",
     )
-    
+
     # History limits (token budget management)
     max_history_tokens: int = Field(
         default=int(os.getenv("SESSION_MAX_HISTORY_TOKENS", "200")),
-        description="Maximum tokens to allocate for conversation history"
+        description="Maximum tokens to allocate for conversation history",
     )
     max_history_turns: int = Field(
         default=int(os.getenv("SESSION_MAX_HISTORY_TURNS", "5")),
-        description="Maximum number of conversation turns to keep"
+        description="Maximum number of conversation turns to keep",
     )
-    
+
     # Validation
     # Validation
     @field_validator("storage_backend")
@@ -176,7 +176,7 @@ class SessionSettings(BaseModel):
         if v not in ["redis", "memory"]:
             raise ValueError("storage_backend must be 'redis' or 'memory'")
         return v
-    
+
     @field_validator("ttl_seconds", "cleanup_interval_seconds")
     def validate_positive_seconds(cls, v):
         if v <= 0:
@@ -189,47 +189,51 @@ class QueryRewriterSettings(BaseModel):
 
     enabled: bool = Field(
         default=os.getenv("QUERY_REWRITER_ENABLED", "true").lower() == "true",
-        description="Enable/disable query rewriting"
+        description="Enable/disable query rewriting",
     )
 
     pattern_config_path: str = Field(
         default=os.getenv("QUERY_REWRITER_CONFIG", "config/query_patterns.yaml"),
-        description="Path to pattern configuration YAML"
+        description="Path to pattern configuration YAML",
     )
 
     hot_reload: bool = Field(
         default=os.getenv("QUERY_REWRITER_HOT_RELOAD", "true").lower() == "true",
-        description="Enable hot-reloading of pattern config"
+        description="Enable hot-reloading of pattern config",
     )
 
     hot_reload_interval_seconds: int = Field(
         default=int(os.getenv("QUERY_REWRITER_RELOAD_INTERVAL", "60")),
-        description="Hot-reload check interval (seconds)"
+        description="Hot-reload check interval (seconds)",
     )
 
     analytics_enabled: bool = Field(
         default=os.getenv("QUERY_REWRITER_ANALYTICS", "true").lower() == "true",
-        description="Enable pattern analytics tracking"
+        description="Enable pattern analytics tracking",
     )
 
     analytics_storage_path: str = Field(
-        default=os.getenv("QUERY_REWRITER_ANALYTICS_PATH", "data/analytics/pattern_effectiveness.json"),
-        description="Path to analytics JSON file"
+        default=os.getenv(
+            "QUERY_REWRITER_ANALYTICS_PATH", "data/analytics/pattern_effectiveness.json"
+        ),
+        description="Path to analytics JSON file",
     )
 
     failed_queries_storage_path: str = Field(
-        default=os.getenv("QUERY_REWRITER_FAILED_PATH", "data/analytics/failed_queries.json"),
-        description="Path to failed queries JSON file"
+        default=os.getenv(
+            "QUERY_REWRITER_FAILED_PATH", "data/analytics/failed_queries.json"
+        ),
+        description="Path to failed queries JSON file",
     )
 
     max_latency_ms: float = Field(
         default=float(os.getenv("QUERY_REWRITER_MAX_LATENCY", "10.0")),
-        description="Maximum allowed latency for query rewriting (ms)"
+        description="Maximum allowed latency for query rewriting (ms)",
     )
 
     capture_failed_threshold: float = Field(
         default=float(os.getenv("QUERY_REWRITER_FAILED_THRESHOLD", "0.5")),
-        description="Distance threshold for capturing failed queries"
+        description="Distance threshold for capturing failed queries",
     )
 
 
@@ -238,32 +242,34 @@ class CrossEncoderSettings(BaseModel):
 
     enabled: bool = Field(
         default=os.getenv("CROSS_ENCODER_ENABLED", "false").lower() == "true",
-        description="Enable cross-encoder neural reranking"
+        description="Enable cross-encoder neural reranking",
     )
 
     model: str = Field(
-        default=os.getenv("CROSS_ENCODER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2"),
-        description="HuggingFace cross-encoder model"
+        default=os.getenv(
+            "CROSS_ENCODER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2"
+        ),
+        description="HuggingFace cross-encoder model",
     )
 
     cache_dir: str = Field(
         default=os.getenv("CROSS_ENCODER_CACHE_DIR", "/tmp/cross-encoder"),
-        description="Directory to cache model files"
+        description="Directory to cache model files",
     )
 
     retrieval_k: int = Field(
         default=int(os.getenv("CROSS_ENCODER_RETRIEVAL_K", "15")),
-        description="Number of chunks to retrieve before cross-encoder (optimized from 25)"
+        description="Number of chunks to retrieve before cross-encoder (optimized from 25)",
     )
 
     top_k: int = Field(
         default=int(os.getenv("CROSS_ENCODER_TOP_K", "5")),
-        description="Final number of chunks after cross-encoder reranking"
+        description="Final number of chunks after cross-encoder reranking",
     )
 
     max_latency_ms: float = Field(
         default=float(os.getenv("CROSS_ENCODER_MAX_LATENCY_MS", "400.0")),
-        description="Maximum acceptable latency (warning threshold)"
+        description="Maximum acceptable latency (warning threshold)",
     )
 
 
@@ -272,22 +278,22 @@ class ResponseCacheSettings(BaseModel):
 
     enabled: bool = Field(
         default=os.getenv("RESPONSE_CACHE_ENABLED", "true").lower() == "true",
-        description="Enable/disable response caching"
+        description="Enable/disable response caching",
     )
 
     ttl_seconds: int = Field(
         default=int(os.getenv("RESPONSE_CACHE_TTL_SECONDS", "3600")),
-        description="Time-to-live for cached responses (seconds)"
+        description="Time-to-live for cached responses (seconds)",
     )
 
     max_cache_size_mb: int = Field(
         default=int(os.getenv("RESPONSE_CACHE_MAX_SIZE_MB", "100")),
-        description="Maximum cache size in MB (soft limit)"
+        description="Maximum cache size in MB (soft limit)",
     )
 
     prompt_version: str = Field(
         default=os.getenv("RESPONSE_CACHE_PROMPT_VERSION", "1"),
-        description="Prompt version for cache invalidation. Increment when system prompt changes to invalidate old cached responses."
+        description="Prompt version for cache invalidation. Increment when system prompt changes to invalidate old cached responses.",
     )
 
 
@@ -296,17 +302,17 @@ class BM25Settings(BaseModel):
 
     k1: float = Field(
         default=float(os.getenv("BM25_K1", "1.5")),
-        description="Term frequency saturation parameter (typical: 1.2-2.0)"
+        description="Term frequency saturation parameter (typical: 1.2-2.0)",
     )
 
     b: float = Field(
         default=float(os.getenv("BM25_B", "0.5")),
-        description="Document length normalization parameter (typical: 0-1)"
+        description="Document length normalization parameter (typical: 0-1)",
     )
 
     rrf_k: int = Field(
         default=int(os.getenv("BM25_RRF_K", "60")),
-        description="Reciprocal Rank Fusion parameter for combining rankings"
+        description="Reciprocal Rank Fusion parameter for combining rankings",
     )
 
 
@@ -315,37 +321,37 @@ class PromptGuardSettings(BaseModel):
 
     enabled: bool = Field(
         default=os.getenv("PROMPT_GUARD_ENABLED", "true").lower() == "true",
-        description="Enable/disable prompt injection guard"
+        description="Enable/disable prompt injection guard",
     )
 
     model: str = Field(
         default=os.getenv("PROMPT_GUARD_MODEL", "meta-llama/llama-prompt-guard-2-86m"),
-        description="Groq model for prompt guard (86m for accuracy, 22m for speed)"
+        description="Groq model for prompt guard (86m for accuracy, 22m for speed)",
     )
 
     fail_open: bool = Field(
         default=os.getenv("PROMPT_GUARD_FAIL_OPEN", "true").lower() == "true",
-        description="If True, allow requests when guard errors; if False, block on error"
+        description="If True, allow requests when guard errors; if False, block on error",
     )
 
     timeout_seconds: float = Field(
         default=float(os.getenv("PROMPT_GUARD_TIMEOUT_SECONDS", "3.0")),
-        description="Timeout for Groq API calls in seconds"
+        description="Timeout for Groq API calls in seconds",
     )
 
     max_retries: int = Field(
         default=int(os.getenv("PROMPT_GUARD_MAX_RETRIES", "2")),
-        description="Maximum number of retry attempts on transient failures"
+        description="Maximum number of retry attempts on transient failures",
     )
 
     cache_ttl_seconds: int = Field(
         default=int(os.getenv("PROMPT_GUARD_CACHE_TTL_SECONDS", "3600")),
-        description="Cache TTL for prompt guard results in seconds"
+        description="Cache TTL for prompt guard results in seconds",
     )
 
     cache_max_size: int = Field(
         default=int(os.getenv("PROMPT_GUARD_CACHE_MAX_SIZE", "1000")),
-        description="Maximum number of entries in LRU cache"
+        description="Maximum number of entries in LRU cache",
     )
 
 
@@ -418,11 +424,15 @@ class LLMSettings(BaseModel):
 
     # Ollama settings
     ollama_host: str = Field(
-        default=os.getenv("LLM_OLLAMA_HOST", os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")),
+        default=os.getenv(
+            "LLM_OLLAMA_HOST", os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
+        ),
         description="URL for the Ollama API server",
     )
     ollama_model: str = Field(
-        default=os.getenv("LLM_OLLAMA_MODEL", os.getenv("OLLAMA_MODEL", "llama3.2:3b-instruct-q4_K_M")),
+        default=os.getenv(
+            "LLM_OLLAMA_MODEL", os.getenv("OLLAMA_MODEL", "llama3.2:3b-instruct-q4_K_M")
+        ),
         description="Ollama model name (with quantization tag)",
     )
     ollama_timeout: int = Field(
@@ -561,38 +571,36 @@ class Settings(BaseModel):
     )
 
     session: SessionSettings = Field(
-        default_factory=SessionSettings,
-        description="Session management configuration"
+        default_factory=SessionSettings, description="Session management configuration"
     )
 
     query_rewriter: QueryRewriterSettings = Field(
         default_factory=QueryRewriterSettings,
-        description="Query rewriting configuration"
+        description="Query rewriting configuration",
     )
 
     cross_encoder: CrossEncoderSettings = Field(
         default_factory=CrossEncoderSettings,
-        description="Cross-encoder reranking configuration"
+        description="Cross-encoder reranking configuration",
     )
 
     response_cache: ResponseCacheSettings = Field(
         default_factory=ResponseCacheSettings,
-        description="Response cache configuration"
+        description="Response cache configuration",
     )
 
     bm25: BM25Settings = Field(
-        default_factory=BM25Settings,
-        description="BM25 parameter configuration"
+        default_factory=BM25Settings, description="BM25 parameter configuration"
     )
 
     prompt_guard: PromptGuardSettings = Field(
         default_factory=PromptGuardSettings,
-        description="Prompt injection guardrail configuration"
+        description="Prompt injection guardrail configuration",
     )
 
     model_config = ConfigDict(
         extra="forbid",  # Prevent typos in environment variables
-        validate_assignment=True  # Validate on attribute assignment
+        validate_assignment=True,  # Validate on attribute assignment
     )
 
 

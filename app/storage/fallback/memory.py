@@ -53,7 +53,7 @@ logger = logging.getLogger(__name__)
 
 class InMemorySessionStore(SessionStore):
     """In-memory session storage with sharding for high concurrency.
-    
+
     Uses 16 shards to reduce lock contention.
     Maintains a separate index for IP lookups to avoid O(N) scans.
     """
@@ -64,31 +64,32 @@ class InMemorySessionStore(SessionStore):
         """Initialize in-memory store."""
         # Session storage shards: session_id -> Session
         self._shards: List[Dict[str, Session]] = [{} for _ in range(self.NUM_SHARDS)]
-        self._shard_locks: List[threading.RLock] = [threading.RLock() for _ in range(self.NUM_SHARDS)]
+        self._shard_locks: List[threading.RLock] = [
+            threading.RLock() for _ in range(self.NUM_SHARDS)
+        ]
 
         # IP index shards: ip_address -> Set[session_id]
         self._ip_index: List[Dict[str, Set[str]]] = [{} for _ in range(self.NUM_SHARDS)]
-        self._ip_locks: List[threading.RLock] = [threading.RLock() for _ in range(self.NUM_SHARDS)]
+        self._ip_locks: List[threading.RLock] = [
+            threading.RLock() for _ in range(self.NUM_SHARDS)
+        ]
 
         # Prometheus metrics
         try:
             from prometheus_client import Counter, Gauge
+
             self._metrics_enabled = True
             self.session_count_metric = Gauge(
-                'sessions_active', 
-                'Number of active sessions'
+                "sessions_active", "Number of active sessions"
             )
             self.session_creates_metric = Counter(
-                'sessions_created_total', 
-                'Total sessions created'
+                "sessions_created_total", "Total sessions created"
             )
             self.session_cleanups_metric = Counter(
-                'sessions_expired_total', 
-                'Total expired sessions'
+                "sessions_expired_total", "Total expired sessions"
             )
             self.memory_usage_metric = Gauge(
-                'sessions_memory_mb', 
-                'Estimated memory usage in MB'
+                "sessions_memory_mb", "Estimated memory usage in MB"
             )
         except ImportError:
             logger.warning("Prometheus client not available, metrics disabled")
@@ -96,12 +97,12 @@ class InMemorySessionStore(SessionStore):
 
         # Start cleanup thread
         self._cleanup_thread = threading.Thread(
-            target=self._cleanup_loop,
-            daemon=True,
-            name="SessionCleanup"
+            target=self._cleanup_loop, daemon=True, name="SessionCleanup"
         )
         self._cleanup_thread.start()
-        logger.info(f"Started sharded in-memory session store ({self.NUM_SHARDS} shards)")
+        logger.info(
+            f"Started sharded in-memory session store ({self.NUM_SHARDS} shards)"
+        )
 
     def _get_shard_index(self, key: str) -> int:
         """Get shard index for a string key."""
@@ -117,7 +118,7 @@ class InMemorySessionStore(SessionStore):
         self,
         session_id: Optional[str] = None,
         ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None
+        user_agent: Optional[str] = None,
     ) -> Session:
         """Create new session."""
         if session_id is None:
@@ -145,13 +146,15 @@ class InMemorySessionStore(SessionStore):
                     self._ip_index[ip_shard_idx][ip_address] = set()
                 self._ip_index[ip_shard_idx][ip_address].add(session_id)
 
-        logger.debug(f"Created session {mask_session_id(session_id)} (Shard {shard_idx})")
-        
+        logger.debug(
+            f"Created session {mask_session_id(session_id)} (Shard {shard_idx})"
+        )
+
         # Update metrics
         if self._metrics_enabled:
             self.session_creates_metric.inc()
             self.session_count_metric.set(self.get_session_count())
-        
+
         return session
 
     def update_session(self, session: Session) -> None:
@@ -164,7 +167,7 @@ class InMemorySessionStore(SessionStore):
         """Delete session and update indexes."""
         shard_idx = self._get_shard_index(session_id)
         session = None
-        
+
         # Remove from storage
         with self._shard_locks[shard_idx]:
             if session_id in self._shards[shard_idx]:
@@ -207,33 +210,33 @@ class InMemorySessionStore(SessionStore):
             session = self.get_session(sid)
             if session:
                 sessions.append(session)
-        
+
         return sessions
 
     def get_memory_stats(self) -> Dict[str, any]:
         """Get memory usage statistics.
-        
+
         Returns:
             Dictionary with session counts and estimated memory usage
         """
         import sys
-        
+
         total_sessions = self.get_session_count()
-        
+
         # Estimate memory usage based on sample session
         sample_session = None
         for shard in self._shards:
             if shard:
                 sample_session = next(iter(shard.values()), None)
                 break
-        
+
         avg_session_size = sys.getsizeof(sample_session) if sample_session else 1000
         estimated_memory_mb = (total_sessions * avg_session_size) / (1024 * 1024)
-        
+
         return {
             "total_sessions": total_sessions,
             "estimated_memory_mb": round(estimated_memory_mb, 2),
-            "shards": self.NUM_SHARDS
+            "shards": self.NUM_SHARDS,
         }
 
     def _cleanup_loop(self) -> None:
@@ -250,35 +253,41 @@ class InMemorySessionStore(SessionStore):
     def _cleanup_expired(self) -> None:
         """Remove expired sessions from all shards in parallel."""
         import concurrent.futures
-        
+
         now = datetime.now()
         ttl = timedelta(seconds=settings.session.ttl_seconds)
-        
+
         def cleanup_shard(shard_idx: int) -> int:
             """Cleanup single shard, return count of expired sessions."""
             expired = []
-            
+
             # Identify expired sessions in this shard
             with self._shard_locks[shard_idx]:
                 for session_id, session in self._shards[shard_idx].items():
                     age = now - session.last_accessed
                     if age > ttl:
                         expired.append(session)
-            
+
             # Delete them (this handles index cleanup too)
             for session in expired:
                 self.delete_session(session.session_id)
-            
+
             return len(expired)
-        
+
         # Process all shards concurrently
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self.NUM_SHARDS) as executor:
-            futures = [executor.submit(cleanup_shard, i) for i in range(self.NUM_SHARDS)]
-            total_expired = sum(f.result() for f in concurrent.futures.as_completed(futures))
-        
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=self.NUM_SHARDS
+        ) as executor:
+            futures = [
+                executor.submit(cleanup_shard, i) for i in range(self.NUM_SHARDS)
+            ]
+            total_expired = sum(
+                f.result() for f in concurrent.futures.as_completed(futures)
+            )
+
         if total_expired > 0:
             logger.info(f"Cleaned up {total_expired} expired sessions")
-            
+
             # Update metrics
             if self._metrics_enabled:
                 self.session_cleanups_metric.inc(total_expired)

@@ -24,7 +24,7 @@ class TestFindFiles:
 
             # Create test files
             md_file = os.path.join(tmpdir, "test.md")
-            with open(md_file, 'w') as f:
+            with open(md_file, "w") as f:
                 f.write("# Test")
 
             files = find_files([tmpdir])
@@ -42,7 +42,7 @@ class TestFindFiles:
 
             # Create test file
             txt_file = os.path.join(tmpdir, "test.txt")
-            with open(txt_file, 'w') as f:
+            with open(txt_file, "w") as f:
                 f.write("Test content")
 
             files = find_files([tmpdir])
@@ -64,7 +64,7 @@ class TestFindFiles:
             pdf_file = os.path.join(tmpdir, "invalid.pdf")
 
             for f in [md_file, py_file, pdf_file]:
-                with open(f, 'w') as fp:
+                with open(f, "w") as fp:
                     fp.write("content")
 
             files = find_files([tmpdir])
@@ -87,7 +87,7 @@ class TestFindFiles:
             os.makedirs(subdir)
 
             md_file = os.path.join(subdir, "nested.md")
-            with open(md_file, 'w') as f:
+            with open(md_file, "w") as f:
                 f.write("Nested content")
 
             files = find_files([tmpdir])
@@ -106,7 +106,7 @@ class TestFindFiles:
 
                 # Create file outside docs_dir
                 outside_file = os.path.join(other_dir, "outside.md")
-                with open(outside_file, 'w') as f:
+                with open(outside_file, "w") as f:
                     f.write("Outside content")
 
                 # Try to find files from outside docs_dir
@@ -128,7 +128,7 @@ class TestFindFiles:
             mock_settings.docs_dir = tmpdir
 
             md_file = os.path.join(tmpdir, "single.md")
-            with open(md_file, 'w') as f:
+            with open(md_file, "w") as f:
                 f.write("Single file")
 
             files = find_files([md_file])

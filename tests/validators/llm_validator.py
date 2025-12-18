@@ -5,7 +5,6 @@ Uses an LLM to semantically validate RAG answers instead of simple keyword match
 Supports both Ollama (local) and Groq (cloud) providers.
 """
 
-import json
 import os
 from typing import Dict, Any, List, Optional
 import ollama
@@ -20,7 +19,7 @@ class LLMValidator:
         provider: str = "ollama",
         model: str = None,
         groq_api_key: str = None,
-        keep_alive: str = "10m"
+        keep_alive: str = "10m",
     ):
         """Initialize validator with specified provider and model
 
@@ -38,13 +37,19 @@ class LLMValidator:
             if self.provider == "groq":
                 self.model = "llama-3.1-8b-instant"
             else:
-                self.model = "llama3.1:8b"  # Updated to use 8B model for better validation
+                self.model = (
+                    "llama3.1:8b"  # Updated to use 8B model for better validation
+                )
         else:
             self.model = model
 
         # Initialize clients
         if self.provider == "groq":
-            api_key = groq_api_key or os.getenv("LLM_GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
+            api_key = (
+                groq_api_key
+                or os.getenv("LLM_GROQ_API_KEY")
+                or os.getenv("GROQ_API_KEY")
+            )
             if not api_key:
                 raise ValueError(
                     "Groq API key required. Set LLM_GROQ_API_KEY env var or pass groq_api_key parameter"
@@ -70,7 +75,7 @@ class LLMValidator:
                 model=self.model,
                 prompt="test",
                 options={"temperature": 0.0},
-                keep_alive=self.keep_alive
+                keep_alive=self.keep_alive,
             )
             print(f"Ollama model {self.model} warmed up")
         except Exception as e:
@@ -96,9 +101,9 @@ class LLMValidator:
                     "temperature": temperature,
                     "num_predict": 500,
                 },
-                keep_alive=self.keep_alive
+                keep_alive=self.keep_alive,
             )
-            return response['response']
+            return response["response"]
 
     def validate_answer(
         self,
@@ -144,15 +149,11 @@ class LLMValidator:
                 "is_correct": False,
                 "correctness_score": 0.0,
                 "issues": [f"Validation error: {str(e)}"],
-                "explanation": "Failed to validate answer"
+                "explanation": "Failed to validate answer",
             }
 
     def _build_validation_prompt(
-        self,
-        question: str,
-        answer: str,
-        expected_content: List[str],
-        category: str
+        self, question: str, answer: str, expected_content: List[str], category: str
     ) -> str:
         """Build the validation prompt for the LLM"""
 
@@ -197,12 +198,12 @@ Evaluation:"""
     def _parse_validation_response(self, response_text: str) -> Dict[str, Any]:
         """Parse the LLM's structured validation response"""
 
-        lines = response_text.strip().split('\n')
+        lines = response_text.strip().split("\n")
         result = {
             "is_correct": False,
             "correctness_score": 0.0,
             "issues": [],
-            "explanation": ""
+            "explanation": "",
         }
 
         for line in lines:
@@ -230,10 +231,7 @@ Evaluation:"""
         return result
 
     def validate_impossible_question(
-        self,
-        question: str,
-        answer: str,
-        grounded: bool
+        self, question: str, answer: str, grounded: bool
     ) -> Dict[str, Any]:
         """Special validation for impossible questions
 
@@ -248,9 +246,16 @@ Evaluation:"""
 
         # Check for uncertainty expression (REQUIRED)
         uncertainty_phrases = [
-            "don't know", "do not know", "not mentioned", "not available",
-            "can't find", "cannot find", "isn't mentioned", "could you clarify",
-            "unclear", "no information"
+            "don't know",
+            "do not know",
+            "not mentioned",
+            "not available",
+            "can't find",
+            "cannot find",
+            "isn't mentioned",
+            "could you clarify",
+            "unclear",
+            "no information",
         ]
 
         has_uncertainty = any(phrase in answer_lower for phrase in uncertainty_phrases)
@@ -261,7 +266,9 @@ Evaluation:"""
         # Check for false information (making up answers)
         # If answer is long and doesn't express uncertainty, likely made up info
         if not has_uncertainty and len(answer) > 50:
-            issues.append("Appears to provide made-up information for impossible question")
+            issues.append(
+                "Appears to provide made-up information for impossible question"
+            )
 
         # Grounding check is less strict (warn but don't fail)
         if grounded and not has_uncertainty:
@@ -281,7 +288,9 @@ Evaluation:"""
             "is_correct": score >= 0.8,
             "correctness_score": score,
             "issues": issues,
-            "explanation": "Impossible question handled correctly" if not issues else f"Issues: {', '.join(issues)}"
+            "explanation": "Impossible question handled correctly"
+            if not issues
+            else f"Issues: {', '.join(issues)}",
         }
 
 
@@ -301,7 +310,7 @@ if __name__ == "__main__":
         question="What certifications do I have?",
         answer="• Certified Kubernetes Administrator (CKA)\n• AWS Certified Cloud Practitioner\n• AWS Certified AI Practitioner",
         expected_content=["CKA", "AWS", "Cloud Practitioner", "AI Practitioner"],
-        category="certifications"
+        category="certifications",
     )
     print("Test 1 - Correct answer:", result1)
 
@@ -310,14 +319,17 @@ if __name__ == "__main__":
         question="Do I have any Kubernetes certifications?",
         answer="Yes.\n- Certified Kubernetes Administrator (CKA)\n- AWS Certified Cloud Practitioner (CCP)",
         expected_content=["CKA"],
-        category="certifications"
+        category="certifications",
     )
-    print("\nTest 2 - Incorrect answer (includes AWS CCP for Kubernetes question):", result2)
+    print(
+        "\nTest 2 - Incorrect answer (includes AWS CCP for Kubernetes question):",
+        result2,
+    )
 
     # Test case 3: Impossible question
     result3 = validator.validate_impossible_question(
         question="Where was I born?",
         answer="I don't know. It isn't mentioned in the provided documents.",
-        grounded=False
+        grounded=False,
     )
     print("\nTest 3 - Impossible question:", result3)

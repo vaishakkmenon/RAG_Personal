@@ -17,8 +17,12 @@ class TestFormatContext:
         from app.prompting.builder import _format_context
 
         chunks = [
-            {"source": "resume.md", "text": "I have Python experience.", "metadata": {}},
-            {"source": "certs.md", "text": "CKA certification.", "metadata": {}}
+            {
+                "source": "resume.md",
+                "text": "I have Python experience.",
+                "metadata": {},
+            },
+            {"source": "certs.md", "text": "CKA certification.", "metadata": {}},
         ]
 
         result = _format_context(chunks)
@@ -34,7 +38,7 @@ class TestFormatContext:
         chunks = [
             {"source": "file1.md", "text": "Valid content", "metadata": {}},
             {"source": "file2.md", "text": "", "metadata": {}},  # Empty
-            {"source": "file3.md", "text": "   ", "metadata": {}}  # Whitespace only
+            {"source": "file3.md", "text": "   ", "metadata": {}},  # Whitespace only
         ]
 
         result = _format_context(chunks)
@@ -53,7 +57,7 @@ class TestFormatConversationHistory:
 
         history = [
             {"role": "user", "content": "What is my GPA?"},
-            {"role": "assistant", "content": "Your GPA is 4.00."}
+            {"role": "assistant", "content": "Your GPA is 4.00."},
         ]
 
         result = _format_conversation_history(history)
@@ -101,8 +105,7 @@ class TestPromptBuilder:
         ]
 
         result = builder.build_prompt(
-            question="What is my Python experience?",
-            context_chunks=chunks
+            question="What is my Python experience?", context_chunks=chunks
         )
 
         assert result.status == "success"
@@ -117,8 +120,10 @@ class TestPromptBuilder:
 
         result = builder.build_prompt(
             question="Tell me about skills",
-            context_chunks=[{"source": "test.md", "text": "Test content", "metadata": {}}],
-            keywords=["Python", "AWS", "Docker"]
+            context_chunks=[
+                {"source": "test.md", "text": "Test content", "metadata": {}}
+            ],
+            keywords=["Python", "AWS", "Docker"],
         )
 
         assert result.status == "success"
@@ -133,13 +138,13 @@ class TestPromptBuilder:
 
         history = [
             {"role": "user", "content": "What's my GPA?"},
-            {"role": "assistant", "content": "Your GPA is 4.00."}
+            {"role": "assistant", "content": "Your GPA is 4.00."},
         ]
 
         result = builder.build_prompt(
             question="What about my coursework?",
             context_chunks=[{"source": "test.md", "text": "Test", "metadata": {}}],
-            conversation_history=history
+            conversation_history=history,
         )
 
         assert result.status == "success"
@@ -152,15 +157,14 @@ class TestPromptBuilder:
 
         builder = PromptBuilder()
 
-        hint = {
-            "missing_entities": ["Google"],
-            "category": "employers"
-        }
+        hint = {"missing_entities": ["Google"], "category": "employers"}
 
         result = builder.build_prompt(
             question="Did I work at Google?",
-            context_chunks=[{"source": "test.md", "text": "Work history", "metadata": {}}],
-            negative_inference_hint=hint
+            context_chunks=[
+                {"source": "test.md", "text": "Work history", "metadata": {}}
+            ],
+            negative_inference_hint=hint,
         )
 
         assert result.status == "success"
@@ -191,7 +195,7 @@ class TestPromptBuilderValidation:
         valid_answers = [
             "I have 5 years of Python experience.",
             "Yes, I earned the CKA certification in 2024.",
-            "My GPA is 4.00."
+            "My GPA is 4.00.",
         ]
 
         for answer in valid_answers:
@@ -204,7 +208,7 @@ class TestPromptBuilderValidation:
         builder = PromptBuilder()
 
         # Check what cues exist in config
-        if hasattr(builder.config, 'refusal_cues') and builder.config.refusal_cues:
+        if hasattr(builder.config, "refusal_cues") and builder.config.refusal_cues:
             # Test with a known refusal cue
             for cue in builder.config.refusal_cues[:1]:
                 test_answer = f"Sorry, {cue}."

@@ -24,10 +24,7 @@ class TestMemorySessionStore:
         from app.storage.fallback.memory import InMemorySessionStore
 
         store = InMemorySessionStore()
-        session = store.get_or_create_session(
-            session_id=None,
-            ip_address="127.0.0.1"
-        )
+        session = store.get_or_create_session(session_id=None, ip_address="127.0.0.1")
 
         assert session is not None
         assert session.session_id is not None
@@ -122,7 +119,6 @@ class TestMemorySessionStore:
     def test_session_expiration(self):
         """Test that old sessions can be detected as expired."""
         from app.storage.fallback.memory import InMemorySessionStore
-        from datetime import datetime, timedelta
 
         store = InMemorySessionStore()
         session = store.get_or_create_session(None, "127.0.0.1")
@@ -208,7 +204,6 @@ class TestRedisSessionStore:
         """Test retrieving existing session from Redis."""
         import json
         from app.storage.primary.redis_store import RedisSessionStore
-        from datetime import datetime
 
         # Mock connection pool
         mock_pool = MagicMock()
@@ -264,8 +259,7 @@ class TestSessionStoreFactory:
         mock_redis_class.return_value = mock_redis
 
         store = create_session_store(
-            backend="redis",
-            redis_url="redis://localhost:6379/0"
+            backend="redis", redis_url="redis://localhost:6379/0"
         )
 
         assert isinstance(store, RedisSessionStore)

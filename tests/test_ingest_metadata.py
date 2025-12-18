@@ -6,7 +6,7 @@ and ChromaDB-compatible metadata normalization.
 """
 
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 import tempfile
 import os
 
@@ -79,7 +79,10 @@ Content
         metadata, body = extract_frontmatter(text)
 
         # None values should be skipped
-        assert "optional_field" not in metadata or metadata.get("optional_field") is not None
+        assert (
+            "optional_field" not in metadata
+            or metadata.get("optional_field") is not None
+        )
 
     def test_extract_frontmatter_malformed(self):
         """Test handling malformed YAML."""
@@ -104,7 +107,9 @@ class TestReadText:
         """Test reading a text file."""
         from app.ingest.metadata import read_text
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False, encoding='utf-8') as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".md", delete=False, encoding="utf-8"
+        ) as f:
             f.write("# Test Content\nThis is a test.")
             temp_path = f.name
 
@@ -119,7 +124,9 @@ class TestReadText:
         """Test reading UTF-8 content."""
         from app.ingest.metadata import read_text
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False, encoding='utf-8') as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".md", delete=False, encoding="utf-8"
+        ) as f:
             f.write("Unicode: café, naïve, 日本語")
             temp_path = f.name
 
@@ -159,7 +166,6 @@ class TestNormalizeVersionIdentifier:
     def test_normalize_version_fallback_to_today(self):
         """Test that missing version fields fall back to today's date."""
         from app.ingest.metadata import normalize_version_identifier
-        from datetime import date
 
         metadata = {"doc_type": "resume"}  # No version_date
 
@@ -185,9 +191,7 @@ class TestGenerateVersionIdentifier:
         metadata = {"doc_type": "resume", "version_date": "2025-01-15"}
 
         version = generate_version_identifier(
-            metadata=metadata,
-            doc_id="resume",
-            content_hash="abc123"
+            metadata=metadata, doc_id="resume", content_hash="abc123"
         )
 
         assert version == "2025-01-15"
@@ -206,7 +210,7 @@ class TestGenerateVersionIdentifier:
         version = generate_version_identifier(
             metadata=metadata,
             doc_id="resume",
-            content_hash="abc123"  # Same as existing
+            content_hash="abc123",  # Same as existing
         )
 
         # Should reuse existing version
@@ -226,7 +230,7 @@ class TestGenerateVersionIdentifier:
         version = generate_version_identifier(
             metadata=metadata,
             doc_id="resume",
-            content_hash="new_hash"  # Different from existing
+            content_hash="new_hash",  # Different from existing
         )
 
         # Should get new version with .v2
@@ -245,9 +249,7 @@ class TestGenerateVersionIdentifier:
         metadata = {"doc_type": "resume", "version_date": "2025-01-15"}
 
         version = generate_version_identifier(
-            metadata=metadata,
-            doc_id="resume",
-            content_hash="new_hash"
+            metadata=metadata, doc_id="resume", content_hash="new_hash"
         )
 
         # Should get v3
@@ -281,9 +283,7 @@ class TestGetExistingContentHash:
         """Test that get_existing_content_hash works."""
         from app.ingest.metadata import get_existing_content_hash
 
-        mock_collection.get.return_value = {
-            "metadatas": [{"content_hash": "abc123"}]
-        }
+        mock_collection.get.return_value = {"metadatas": [{"content_hash": "abc123"}]}
 
         result = get_existing_content_hash("resume", "2025-01-15")
 

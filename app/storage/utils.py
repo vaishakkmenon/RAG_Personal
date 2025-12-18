@@ -4,13 +4,14 @@ Helper functions for session storage.
 
 from typing import List, Dict
 
+
 def estimate_tokens(text: str) -> int:
     """Estimate token count using word-based heuristic.
-    
+
     More accurate than character count:
     - English: ~0.75 tokens per word
     - Accounts for punctuation and whitespace
-    
+
     Args:
         text: Input text
 
@@ -23,9 +24,7 @@ def estimate_tokens(text: str) -> int:
 
 
 def truncate_history(
-    history: List[Dict[str, str]],
-    max_tokens: int = 250,
-    max_turns: int = 5
+    history: List[Dict[str, str]], max_tokens: int = 250, max_turns: int = 5
 ) -> List[Dict[str, str]]:
     """Truncate conversation history to fit token budget.
 

@@ -6,7 +6,7 @@ and error handling.
 """
 
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, MagicMock
 
 
 @pytest.mark.unit
@@ -93,7 +93,7 @@ class TestOllamaServiceGenerate:
 
         mock_groq.return_value = "Groq response"
 
-        with patch.object(OllamaService, '__init__', lambda x, **kw: None):
+        with patch.object(OllamaService, "__init__", lambda x, **kw: None):
             service = OllamaService()
             service.llm_settings = MagicMock()
             service.llm_settings.provider = "groq"
@@ -106,7 +106,7 @@ class TestOllamaServiceGenerate:
             service.ollama_model = "llama3.1:8b"  # Add ollama_model
             service._generate_with_groq = mock_groq
 
-            result = service.generate("Test prompt")
+            service.generate("Test prompt")
 
             mock_groq.assert_called_once()
 
@@ -117,7 +117,7 @@ class TestOllamaServiceGenerate:
 
         mock_ollama.return_value = "Ollama response"
 
-        with patch.object(OllamaService, '__init__', lambda x, **kw: None):
+        with patch.object(OllamaService, "__init__", lambda x, **kw: None):
             service = OllamaService()
             service.llm_settings = MagicMock()
             service.llm_settings.provider = "ollama"
@@ -129,21 +129,23 @@ class TestOllamaServiceGenerate:
             service.ollama_client = MagicMock()  # Required attribute for code path
             service._generate_with_ollama = mock_ollama
 
-            result = service.generate("Test prompt")
+            service.generate("Test prompt")
 
             mock_ollama.assert_called_once()
 
     @patch("app.services.llm.OllamaService._generate_with_ollama")
     @patch("app.services.llm.OllamaService._generate_with_groq")
     @patch("app.services.llm.OLLAMA_AVAILABLE", True)  # Mock OLLAMA_AVAILABLE
-    def test_generate_falls_back_to_ollama_on_groq_failure(self, mock_groq, mock_ollama):
+    def test_generate_falls_back_to_ollama_on_groq_failure(
+        self, mock_groq, mock_ollama
+    ):
         """Test that Groq failure triggers Ollama fallback."""
         from app.services.llm import OllamaService
 
         mock_groq.side_effect = Exception("Groq API error")
         mock_ollama.return_value = "Ollama fallback response"
 
-        with patch.object(OllamaService, '__init__', lambda x, **kw: None):
+        with patch.object(OllamaService, "__init__", lambda x, **kw: None):
             service = OllamaService()
             service.llm_settings = MagicMock()
             service.llm_settings.provider = "groq"
@@ -263,7 +265,7 @@ class TestAsyncGenerate:
 
         service = OllamaService()
 
-        assert hasattr(service, 'async_generate')
+        assert hasattr(service, "async_generate")
         assert callable(service.async_generate)
 
     def test_async_generate_with_ollama_function_exists(self):
@@ -284,7 +286,7 @@ class TestOllamaGeneration:
 
         service = OllamaService()
 
-        assert hasattr(service, '_generate_with_ollama')
+        assert hasattr(service, "_generate_with_ollama")
         assert callable(service._generate_with_ollama)
 
     @patch("ollama.Client")
@@ -300,9 +302,7 @@ class TestOllamaGeneration:
         service.ollama_client = mock_client
 
         result = service._generate_with_ollama(
-            prompt="Test prompt",
-            temperature=0.7,
-            max_tokens=500
+            prompt="Test prompt", temperature=0.7, max_tokens=500
         )
 
         assert result == "Generated text"

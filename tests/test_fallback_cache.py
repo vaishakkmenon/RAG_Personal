@@ -7,7 +7,6 @@ including fuzzy matching, TTL expiration, and statistics.
 
 import pytest
 import time
-from datetime import datetime, timedelta
 
 
 @pytest.mark.unit
@@ -19,9 +18,7 @@ class TestFallbackCacheBasics:
         from app.retrieval.fallback_cache import RetrievalFallbackCache
 
         cache = RetrievalFallbackCache(
-            max_size=50,
-            ttl_seconds=1800,
-            similarity_threshold=0.75
+            max_size=50, ttl_seconds=1800, similarity_threshold=0.75
         )
 
         assert cache.max_size == 50
@@ -177,7 +174,12 @@ class TestFallbackCacheLRU:
         assert cache.get_stats()["cache_size"] == 3
 
         # First query should be evicted (using exact match to avoid fuzzy)
-        assert cache.get_cached_results("python programming language tutorial", use_fuzzy_match=False) is None
+        assert (
+            cache.get_cached_results(
+                "python programming language tutorial", use_fuzzy_match=False
+            )
+            is None
+        )
 
     def test_lru_access_updates_order(self):
         """Test that accessing an entry moves it to the end (most recent)."""
@@ -197,9 +199,19 @@ class TestFallbackCacheLRU:
         cache.cache_results("java object oriented", [{"id": "3"}])
 
         # First query should still exist
-        assert cache.get_cached_results("python programming language", use_fuzzy_match=False) is not None
+        assert (
+            cache.get_cached_results(
+                "python programming language", use_fuzzy_match=False
+            )
+            is not None
+        )
         # Second query should be evicted
-        assert cache.get_cached_results("javascript web development", use_fuzzy_match=False) is None
+        assert (
+            cache.get_cached_results(
+                "javascript web development", use_fuzzy_match=False
+            )
+            is None
+        )
 
 
 @pytest.mark.unit

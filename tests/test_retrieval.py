@@ -33,7 +33,13 @@ class TestSemanticSearch:
             "distances": [[0.15, 0.25]],
         }
 
-        results = search(query="test question", k=5, use_hybrid=False, use_query_rewriting=False, use_cross_encoder=False)
+        results = search(
+            query="test question",
+            k=5,
+            use_hybrid=False,
+            use_query_rewriting=False,
+            use_cross_encoder=False,
+        )
         print(f"\nDEBUG: Results returned: {results}")
 
         assert len(results) == 2
@@ -55,7 +61,13 @@ class TestSemanticSearch:
             "distances": [[0.15, 0.55, 0.85]],  # Last one exceeds threshold
         }
 
-        results = search(query="test", k=10, max_distance=0.6, use_hybrid=False, use_query_rewriting=False)
+        results = search(
+            query="test",
+            k=10,
+            max_distance=0.6,
+            use_hybrid=False,
+            use_query_rewriting=False,
+        )
 
         # Should only return chunks with distance <= 0.6
         assert len(results) == 2
@@ -74,12 +86,12 @@ class TestSemanticSearch:
             "distances": [[0.15]],
         }
 
-        results = search(
+        search(
             query="test",
             k=5,
             metadata_filter={"doc_type": "resume"},
             use_hybrid=False,
-            use_query_rewriting=False
+            use_query_rewriting=False,
         )
 
         # Verify query was called with where clause
@@ -100,7 +112,9 @@ class TestSemanticSearch:
             "distances": [[]],
         }
 
-        results = search(query="nonexistent topic", k=5, use_hybrid=False, use_query_rewriting=False)
+        results = search(
+            query="nonexistent topic", k=5, use_hybrid=False, use_query_rewriting=False
+        )
 
         assert len(results) == 0
 
@@ -118,8 +132,18 @@ class TestBM25Reranking:
 
         # Mock BM25 index search results
         mock_bm25_index.search.return_value = [
-            {"id": "chunk-2", "text": "Java development", "bm25_score": 0.9, "distance": None},
-            {"id": "chunk-1", "text": "Python programming", "bm25_score": 0.5, "distance": None},
+            {
+                "id": "chunk-2",
+                "text": "Java development",
+                "bm25_score": 0.9,
+                "distance": None,
+            },
+            {
+                "id": "chunk-1",
+                "text": "Python programming",
+                "bm25_score": 0.5,
+                "distance": None,
+            },
         ]
 
         # Mock semantic search results (ChromaDB)
@@ -136,7 +160,7 @@ class TestBM25Reranking:
             k=5,
             use_hybrid=True,
             use_query_rewriting=False,
-            use_cross_encoder=False
+            use_cross_encoder=False,
         )
 
         # Verify BM25 was called
@@ -150,7 +174,9 @@ class TestBM25Reranking:
 
     @patch("app.retrieval.store._collection")
     @patch("app.retrieval.store._bm25_index")
-    def test_bm25_disabled_when_use_hybrid_false(self, mock_bm25_index, mock_collection):
+    def test_bm25_disabled_when_use_hybrid_false(
+        self, mock_bm25_index, mock_collection
+    ):
         """Test that BM25 is not applied when use_hybrid=False."""
         from app.retrieval import search
 
@@ -161,12 +187,12 @@ class TestBM25Reranking:
             "distances": [[0.15]],
         }
 
-        results = search(
+        search(
             query="test",
             k=5,
             use_hybrid=False,
             use_query_rewriting=False,
-            use_cross_encoder=False
+            use_cross_encoder=False,
         )
 
         # Verify BM25 was NOT called
@@ -203,14 +229,14 @@ class TestCrossEncoderReranking:
                 "text": "Relevant text",
                 "source": "test1.md",
                 "distance": 0.25,
-                "cross_encoder_score": 0.95
+                "cross_encoder_score": 0.95,
             },
             {
                 "id": "chunk-2",
                 "text": "Less relevant",
                 "source": "test2.md",
                 "distance": 0.15,
-                "cross_encoder_score": 0.40
+                "cross_encoder_score": 0.40,
             },
         ]
         mock_get_reranker.return_value = mock_reranker
@@ -220,7 +246,7 @@ class TestCrossEncoderReranking:
             k=5,
             use_hybrid=False,
             use_query_rewriting=False,
-            use_cross_encoder=True
+            use_cross_encoder=True,
         )
 
         # Verify cross-encoder was called
@@ -260,8 +286,8 @@ class TestQueryRewriting:
                     original_query="What is my Python experience?",
                     rewritten_query="Python programming experience skills",
                     latency_ms=5.2,
-                    confidence=0.95
-                )
+                    confidence=0.95,
+                ),
             )
             mock_get_rewriter.return_value = mock_rewriter
 
@@ -278,11 +304,13 @@ class TestQueryRewriting:
                 k=5,
                 use_hybrid=False,
                 use_query_rewriting=True,
-                use_cross_encoder=False
+                use_cross_encoder=False,
             )
 
             # Verify rewriter was called with original query
-            mock_rewriter.rewrite_query.assert_called_once_with("What is my Python experience?")
+            mock_rewriter.rewrite_query.assert_called_once_with(
+                "What is my Python experience?"
+            )
 
             # Verify search was performed
             assert len(results) >= 0
@@ -304,13 +332,15 @@ class TestQueryRewriting:
         }
 
         # Mock query rewriter to verify it's NOT called
-        with patch("app.retrieval.query_rewriter.get_query_rewriter") as mock_get_rewriter:
-            results = search(
+        with patch(
+            "app.retrieval.query_rewriter.get_query_rewriter"
+        ) as mock_get_rewriter:
+            search(
                 query="test query",
                 k=5,
                 use_hybrid=False,
                 use_query_rewriting=False,
-                use_cross_encoder=False
+                use_cross_encoder=False,
             )
 
             # Verify rewriter was NOT called
@@ -341,7 +371,7 @@ class TestRetrievalEdgeCases:
             k=5,
             use_hybrid=False,
             use_query_rewriting=False,
-            use_cross_encoder=False
+            use_cross_encoder=False,
         )
 
         assert len(results) == 0
@@ -364,7 +394,7 @@ class TestRetrievalEdgeCases:
             k=10,
             use_hybrid=False,
             use_query_rewriting=False,
-            use_cross_encoder=False
+            use_cross_encoder=False,
         )
 
         # Should return only available chunks
@@ -378,9 +408,10 @@ class TestRetrievalEdgeCases:
         # Clear fallback cache to ensure no cached results
         try:
             from app.retrieval.fallback_cache import get_fallback_cache
+
             cache = get_fallback_cache()
             cache.clear()
-        except:
+        except Exception:
             pass
 
         # Mock connection failure
@@ -392,5 +423,5 @@ class TestRetrievalEdgeCases:
                 k=5,
                 use_hybrid=False,
                 use_query_rewriting=False,
-                use_cross_encoder=False
+                use_cross_encoder=False,
             )

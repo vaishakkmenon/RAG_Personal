@@ -30,7 +30,7 @@ def clear_collection(confirm: bool = False):
         collection = _client.get_collection(COLLECTION_NAME)
         count = collection.count()
         print(f"Current collection '{COLLECTION_NAME}' has {count} documents")
-    except Exception as e:
+    except Exception:
         print(f"Collection '{COLLECTION_NAME}' does not exist or is empty")
         return
 
@@ -40,34 +40,37 @@ def clear_collection(confirm: bool = False):
 
     # Confirmation
     if confirm:
-        response = input(f"\nAre you sure you want to delete all {count} documents? (yes/no): ")
-        if response.lower() != 'yes':
+        response = input(
+            f"\nAre you sure you want to delete all {count} documents? (yes/no): "
+        )
+        if response.lower() != "yes":
             print("Aborted.")
             return
 
     # Delete the collection
     print(f"\nDeleting collection '{COLLECTION_NAME}'...")
     _client.delete_collection(COLLECTION_NAME)
-    print(f"✓ Collection deleted")
+    print("✓ Collection deleted")
 
     # Recreate empty collection
     print(f"Recreating empty collection '{COLLECTION_NAME}'...")
     from app.retrieval.store import _embed
+
     _client.create_collection(
         name=COLLECTION_NAME,
         metadata={"hnsw:space": "cosine"},
         embedding_function=_embed,
     )
-    print(f"✓ Empty collection created")
-    print(f"\nCollection '{COLLECTION_NAME}' is now empty and ready for fresh ingestion.")
+    print("✓ Empty collection created")
+    print(
+        f"\nCollection '{COLLECTION_NAME}' is now empty and ready for fresh ingestion."
+    )
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Clear ChromaDB collection")
     parser.add_argument(
-        "--confirm",
-        action="store_true",
-        help="Prompt for confirmation before deleting"
+        "--confirm", action="store_true", help="Prompt for confirmation before deleting"
     )
 
     args = parser.parse_args()

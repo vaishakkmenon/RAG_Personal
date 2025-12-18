@@ -68,7 +68,9 @@ class TestChatServiceAmbiguityDetection:
         """Test that full questions are not ambiguous."""
         from app.core.chat_service import _is_truly_ambiguous
 
-        is_ambiguous = _is_truly_ambiguous("What programming languages have I used?", None)
+        is_ambiguous = _is_truly_ambiguous(
+            "What programming languages have I used?", None
+        )
 
         assert is_ambiguous is False
 
@@ -78,7 +80,7 @@ class TestChatServiceAmbiguityDetection:
 
         history = [
             {"role": "user", "content": "Tell me about my Python experience"},
-            {"role": "assistant", "content": "You have 5 years of Python experience."}
+            {"role": "assistant", "content": "You have 5 years of Python experience."},
         ]
 
         # Single word but has context
@@ -98,7 +100,7 @@ class TestChatServiceHelpers:
 
         history = [
             {"role": "user", "content": "Tell me about Python"},
-            {"role": "assistant", "content": "Python is a programming language."}
+            {"role": "assistant", "content": "Python is a programming language."},
         ]
 
         context = _build_context_query(history, max_turns=2)
@@ -121,11 +123,11 @@ class TestChatServiceHelpers:
 
         chunks_1 = [
             {"id": "chunk-1", "text": "Content 1"},
-            {"id": "chunk-2", "text": "Content 2"}
+            {"id": "chunk-2", "text": "Content 2"},
         ]
         chunks_2 = [
             {"id": "chunk-2", "text": "Content 2"},  # Duplicate
-            {"id": "chunk-3", "text": "Content 3"}
+            {"id": "chunk-3", "text": "Content 3"},
         ]
 
         merged = _merge_and_dedupe_chunks(chunks_1, chunks_2)
@@ -171,7 +173,7 @@ class TestRetrievalQualityCheck:
 
         chunks = [
             {"text": "I have 5 years of Python experience."},
-            {"text": "I worked with FastAPI framework."}
+            {"text": "I worked with FastAPI framework."},
         ]
 
         result = _check_retrieval_quality("Python experience", chunks)
@@ -185,7 +187,7 @@ class TestRetrievalQualityCheck:
 
         chunks = [
             {"text": "I enjoy hiking and outdoor activities."},
-            {"text": "Music is my favorite hobby."}
+            {"text": "Music is my favorite hobby."},
         ]
 
         result = _check_retrieval_quality("Python programming", chunks)
@@ -221,18 +223,28 @@ class TestChatServiceSessionErrors:
 
     @patch("app.core.chat_service.search")
     @patch("app.core.chat_service.generate_with_ollama")
-    def test_session_unexpected_error_creates_temp_session(self, mock_generate, mock_search):
+    def test_session_unexpected_error_creates_temp_session(
+        self, mock_generate, mock_search
+    ):
         """Test that unexpected session error creates temp session."""
         from app.core.chat_service import ChatService
 
         # Mock session store to raise unexpected error
         mock_store = MagicMock()
-        mock_store.get_or_create_session.side_effect = RuntimeError("Redis connection failed")
+        mock_store.get_or_create_session.side_effect = RuntimeError(
+            "Redis connection failed"
+        )
         mock_store.check_rate_limit.return_value = True
         mock_store.update_session.return_value = None
 
         mock_search.return_value = [
-            {"id": "1", "text": "test", "source": "test.md", "distance": 0.1, "metadata": {}}
+            {
+                "id": "1",
+                "text": "test",
+                "source": "test.md",
+                "distance": 0.1,
+                "metadata": {},
+            }
         ]
         mock_generate.return_value = "Test answer"
 
@@ -260,7 +272,7 @@ class TestChatServiceCachePaths:
         mock_cache.get.return_value = {
             "answer": "Cached answer",
             "sources": [],
-            "grounded": True
+            "grounded": True,
         }
         mock_get_cache.return_value = mock_cache
 
@@ -274,7 +286,7 @@ class TestChatServiceCachePaths:
         service = ChatService(session_store=mock_store)
         request = ChatRequest(question="What is Python?")
 
-        response = service.handle_chat(request=request)
+        service.handle_chat(request=request)
 
         # Cache should have been checked
         mock_get_cache.assert_called()
@@ -333,4 +345,3 @@ class TestChatServiceRateLimit:
             service.handle_chat(request=request)
 
         assert exc_info.value.status_code == 429
-

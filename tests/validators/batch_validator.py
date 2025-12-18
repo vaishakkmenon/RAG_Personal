@@ -24,7 +24,7 @@ class BatchValidator:
         provider: str = "ollama",
         validation_model: str = None,
         groq_api_key: str = None,
-        delay: float = 4.0
+        delay: float = 4.0,
     ):
         """Initialize batch validator
 
@@ -40,14 +40,12 @@ class BatchValidator:
             provider=provider,
             model=validation_model,
             groq_api_key=groq_api_key,
-            keep_alive="30m"  # Keep model loaded for batch processing
+            keep_alive="30m",  # Keep model loaded for batch processing
         )
         self.validation_model = self.validator.model
 
     def validate_batch(
-        self,
-        results_file: str,
-        output_file: str = "test_validation_report.json"
+        self, results_file: str, output_file: str = "test_validation_report.json"
     ) -> Dict[str, Any]:
         """Validate a batch of test results
 
@@ -60,10 +58,10 @@ class BatchValidator:
         """
 
         print("Loading test results...")
-        with open(results_file, 'r') as f:
+        with open(results_file, "r") as f:
             test_data = json.load(f)
 
-        results = test_data.get('results', [])
+        results = test_data.get("results", [])
         print(f"Found {len(results)} tests to validate\n")
 
         print(f"Loading validation model: {self.validation_model}")
@@ -80,22 +78,22 @@ class BatchValidator:
         skipped = 0
 
         for i, result in enumerate(results, 1):
-            print(f"[{i}/{len(results)}] Validating {result['test_id']}...", end=' ')
+            print(f"[{i}/{len(results)}] Validating {result['test_id']}...", end=" ")
 
             validation = self._validate_single(result)
 
             # Merge validation into result
-            result['validation'] = validation
-            result['passed'] = validation['passed']
-            result['validation_score'] = validation['score']
-            result['validation_issues'] = validation['issues']
-            result['validation_explanation'] = validation['explanation']
+            result["validation"] = validation
+            result["passed"] = validation["passed"]
+            result["validation_score"] = validation["score"]
+            result["validation_issues"] = validation["issues"]
+            result["validation_explanation"] = validation["explanation"]
 
-            if validation.get('skipped', False):
+            if validation.get("skipped", False):
                 skipped += 1
                 failed += 1  # Count skipped as failed
                 print("SKIPPED (error)")
-            elif validation['passed']:
+            elif validation["passed"]:
                 passed += 1
                 print("PASS")
             else:
@@ -105,7 +103,9 @@ class BatchValidator:
             validated_results.append(result)
 
             # Add delay between validation requests (for Groq rate limiting only)
-            if self.provider == "groq" and i < len(results):  # Don't delay for Ollama or after last validation
+            if self.provider == "groq" and i < len(
+                results
+            ):  # Don't delay for Ollama or after last validation
                 time.sleep(self.delay)
 
         # Create report
@@ -118,17 +118,22 @@ class BatchValidator:
                 "failed": failed,
                 "skipped": skipped,
                 "pass_rate": (passed / len(results) * 100) if results else 0,
-                "average_score": sum(r['validation']['score'] for r in validated_results) / len(validated_results) if validated_results else 0
+                "average_score": sum(
+                    r["validation"]["score"] for r in validated_results
+                )
+                / len(validated_results)
+                if validated_results
+                else 0,
             },
-            "results": validated_results
+            "results": validated_results,
         }
 
         # Save report
-        with open(output_file, 'w') as f:
+        with open(output_file, "w") as f:
             json.dump(report, f, indent=2)
 
         print(f"\n{'='*80}")
-        print(f"VALIDATION COMPLETE")
+        print("VALIDATION COMPLETE")
         print(f"{'='*80}")
         print(f"Total tests: {len(results)}")
         print(f"Passed: {passed} ({passed/len(results)*100:.1f}%)")
@@ -151,35 +156,37 @@ class BatchValidator:
         """
 
         # Check if this result has an error (failed test)
-        if 'error' in result:
+        if "error" in result:
             return {
                 "passed": False,
                 "score": 0.0,
                 "issues": [f"Test failed during collection: {result['error']}"],
                 "explanation": "Test encountered an error and could not be validated",
-                "skipped": True
+                "skipped": True,
             }
 
         # Check if answer field exists
-        if 'answer' not in result:
+        if "answer" not in result:
             return {
                 "passed": False,
                 "score": 0.0,
                 "issues": ["Missing 'answer' field in test result"],
                 "explanation": "Test result is malformed (no answer field)",
-                "skipped": True
+                "skipped": True,
             }
 
-        question = result['question']
-        answer = result['answer']
-        expected_keywords = result.get('expected_keywords', [])
-        expected_answer = result.get('expected_answer', '')
-        category = result.get('category', '')
-        is_impossible = result.get('is_impossible', False)
+        question = result["question"]
+        answer = result["answer"]
+        expected_keywords = result.get("expected_keywords", [])
+        expected_answer = result.get("expected_answer", "")
+        category = result.get("category", "")
+        is_impossible = result.get("is_impossible", False)
 
         # Build validation prompt
         if is_impossible:
-            validation_prompt = self._build_impossible_validation_prompt(question, answer)
+            validation_prompt = self._build_impossible_validation_prompt(
+                question, answer
+            )
         else:
             validation_prompt = self._build_validation_prompt(
                 question, answer, expected_keywords, expected_answer, category
@@ -187,7 +194,9 @@ class BatchValidator:
 
         # Get validation from LLM
         try:
-            validation_text = self.validator._generate(validation_prompt, temperature=0.0)
+            validation_text = self.validator._generate(
+                validation_prompt, temperature=0.0
+            )
             return self._parse_validation(validation_text)
 
         except Exception as e:
@@ -195,7 +204,7 @@ class BatchValidator:
                 "passed": False,
                 "score": 0.0,
                 "issues": [f"Validation error: {str(e)}"],
-                "explanation": "Failed to validate"
+                "explanation": "Failed to validate",
             }
 
     def _build_validation_prompt(
@@ -204,7 +213,7 @@ class BatchValidator:
         answer: str,
         expected_keywords: List[str],
         expected_answer: str,
-        category: str
+        category: str,
     ) -> str:
         """Build validation prompt for normal questions"""
 
@@ -218,10 +227,12 @@ The answer should convey this information, even if worded differently."""
 
         if expected_keywords:
             if expected_content_section:
-                expected_content_section += f"\n\nKEY ELEMENTS (supporting check):\n"
+                expected_content_section += "\n\nKEY ELEMENTS (supporting check):\n"
             else:
                 expected_content_section = "KEY ELEMENTS (should be present):\n"
-            expected_content_section += chr(10).join(f"- {kw}" for kw in expected_keywords)
+            expected_content_section += chr(10).join(
+                f"- {kw}" for kw in expected_keywords
+            )
 
         if not expected_content_section:
             expected_content_section = "(No specific expectations - evaluate if answer is reasonable and complete)"
@@ -284,11 +295,7 @@ EXPLANATION: [1-2 sentences explaining the score]
 
 Evaluation:"""
 
-    def _build_impossible_validation_prompt(
-        self,
-        question: str,
-        answer: str
-    ) -> str:
+    def _build_impossible_validation_prompt(self, question: str, answer: str) -> str:
         """Build validation prompt for impossible questions"""
 
         return f"""You are evaluating if an AI correctly handled an IMPOSSIBLE question.
@@ -324,14 +331,9 @@ Evaluation:"""
     def _parse_validation(self, response_text: str) -> Dict[str, Any]:
         """Parse LLM validation response"""
 
-        lines = response_text.strip().split('\n')
+        lines = response_text.strip().split("\n")
 
-        validation = {
-            "passed": False,
-            "score": 0.0,
-            "issues": [],
-            "explanation": ""
-        }
+        validation = {"passed": False, "score": 0.0, "issues": [], "explanation": ""}
 
         for line in lines:
             line = line.strip()
@@ -345,8 +347,7 @@ Evaluation:"""
 
             elif line.startswith("PASSED:"):
                 # Read LLM's opinion but don't trust it
-                value = line.split(":", 1)[1].strip().upper()
-                llm_passed = value == "YES"
+                line.split(":", 1)[1].strip().upper()
                 # We'll override this based on score below
 
             elif line.startswith("ISSUES:"):
@@ -372,36 +373,33 @@ def main():
     parser.add_argument(
         "--results",
         default="test_results.json",
-        help="Test results file from RAG system"
+        help="Test results file from RAG system",
     )
     parser.add_argument(
         "--output",
         default="test_validation_report.json",
-        help="Output file for validation report"
+        help="Output file for validation report",
     )
     parser.add_argument(
         "--provider",
         choices=["ollama", "groq"],
         default="ollama",
-        help="LLM provider for validation"
+        help="LLM provider for validation",
     )
     parser.add_argument(
-        "--model",
-        help="Model to use for validation (optional, uses defaults)"
+        "--model", help="Model to use for validation (optional, uses defaults)"
     )
     parser.add_argument(
         "--delay",
         type=float,
         default=4.0,
-        help="Delay between validation requests in seconds (for rate limiting)"
+        help="Delay between validation requests in seconds (for rate limiting)",
     )
 
     args = parser.parse_args()
 
     validator = BatchValidator(
-        provider=args.provider,
-        validation_model=args.model,
-        delay=args.delay
+        provider=args.provider, validation_model=args.model, delay=args.delay
     )
     validator.validate_batch(args.results, args.output)
 

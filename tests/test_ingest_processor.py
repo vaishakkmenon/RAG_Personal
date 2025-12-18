@@ -6,7 +6,7 @@ chunking → deduplication → ChromaDB storage.
 """
 
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 import tempfile
 import os
 
@@ -23,7 +23,7 @@ class TestChunkIdGeneration:
             doc_id="resume",
             version="2025-01-15",
             section_slug="experience",
-            chunk_idx=0
+            chunk_idx=0,
         )
 
         assert chunk_id == "resume@2025-01-15#experience:0"
@@ -36,7 +36,7 @@ class TestChunkIdGeneration:
             doc_id="certificate-cka",
             version="2024-06-26",
             section_slug="skills",
-            chunk_idx=3
+            chunk_idx=3,
         )
 
         assert chunk_id == "certificate-cka@2024-06-26#skills:3"
@@ -52,27 +52,31 @@ class TestProcessFile:
     @patch("app.ingest.processor.extract_doc_id")
     @patch("app.ingest.processor.generate_version_identifier")
     def test_process_file_success(
-        self,
-        mock_version,
-        mock_doc_id,
-        mock_smart_chunk,
-        mock_frontmatter,
-        mock_read
+        self, mock_version, mock_doc_id, mock_smart_chunk, mock_frontmatter, mock_read
     ):
         """Test successful file processing."""
         from app.ingest.processor import _process_file
 
         # Set up mocks
-        mock_read.return_value = "---\ndoc_type: resume\n---\n# Experience\nTest content"
-        mock_frontmatter.return_value = ({"doc_type": "resume"}, "# Experience\nTest content")
+        mock_read.return_value = (
+            "---\ndoc_type: resume\n---\n# Experience\nTest content"
+        )
+        mock_frontmatter.return_value = (
+            {"doc_type": "resume"},
+            "# Experience\nTest content",
+        )
         mock_doc_id.return_value = ("resume", "resume")
         mock_version.return_value = "2025-01-15"
         mock_smart_chunk.return_value = [
-            {"id": "resume@2025-01-15#experience:0", "text": "Test content", "metadata": {}}
+            {
+                "id": "resume@2025-01-15#experience:0",
+                "text": "Test content",
+                "metadata": {},
+            }
         ]
 
         # Create temp file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
             f.write("test content")
             temp_path = f.name
 
@@ -88,7 +92,7 @@ class TestProcessFile:
         from app.ingest.processor import _process_file, MAX_FILE_SIZE
 
         # Create a temp file larger than MAX_FILE_SIZE
-        with tempfile.NamedTemporaryFile(mode='wb', suffix='.md', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=".md", delete=False) as f:
             # Write more than max size
             f.write(b"x" * (MAX_FILE_SIZE + 1000))
             temp_path = f.name
@@ -115,9 +119,7 @@ class TestIngestPaths:
     @patch("app.ingest.processor.find_files")
     @patch("app.ingest.processor._process_file")
     @patch("app.ingest.processor.add_documents")
-    def test_ingest_paths_processes_files(
-        self, mock_add_docs, mock_process, mock_find
-    ):
+    def test_ingest_paths_processes_files(self, mock_add_docs, mock_process, mock_find):
         """Test that ingest_paths processes all discovered files."""
         from app.ingest.processor import ingest_paths
 
@@ -127,7 +129,7 @@ class TestIngestPaths:
         # Mock processing to return chunks
         mock_process.side_effect = [
             [{"id": "chunk-1", "text": "Content 1", "metadata": {}}],
-            [{"id": "chunk-2", "text": "Content 2", "metadata": {}}]
+            [{"id": "chunk-2", "text": "Content 2", "metadata": {}}],
         ]
 
         result = ingest_paths(["/docs"])
@@ -139,9 +141,7 @@ class TestIngestPaths:
     @patch("app.ingest.processor.find_files")
     @patch("app.ingest.processor._process_file")
     @patch("app.ingest.processor.add_documents")
-    def test_ingest_paths_deduplication(
-        self, mock_add_docs, mock_process, mock_find
-    ):
+    def test_ingest_paths_deduplication(self, mock_add_docs, mock_process, mock_find):
         """Test that duplicate chunks are skipped."""
         from app.ingest.processor import ingest_paths
 
@@ -151,7 +151,7 @@ class TestIngestPaths:
         mock_process.return_value = [
             {"id": "chunk-1", "text": "Same content", "metadata": {}},
             {"id": "chunk-2", "text": "Same content", "metadata": {}},  # Duplicate
-            {"id": "chunk-3", "text": "Different content", "metadata": {}}
+            {"id": "chunk-3", "text": "Different content", "metadata": {}},
         ]
 
         result = ingest_paths(["/docs"])

@@ -36,7 +36,9 @@ class TestGroqGeneration:
             mock_groq_client = MagicMock()
             mock_response = MagicMock()
             mock_response.choices = [MagicMock()]
-            mock_response.choices[0].message.content = "This is a test response from Groq."
+            mock_response.choices[
+                0
+            ].message.content = "This is a test response from Groq."
             mock_groq_client.chat.completions.create.return_value = mock_response
             mock_groq_class.return_value = mock_groq_client
 
@@ -44,8 +46,7 @@ class TestGroqGeneration:
             service = OllamaService()
 
             result = service.generate(
-                prompt="Test prompt",
-                model="llama-3.1-8b-instant"
+                prompt="Test prompt", model="llama-3.1-8b-instant"
             )
 
             assert result == "This is a test response from Groq."
@@ -166,12 +167,16 @@ class TestGroqErrorHandling:
             # Mock Groq client to raise timeout
             mock_groq_client = MagicMock()
             mock_request = Request("POST", "https://api.groq.com/test")
-            mock_groq_client.chat.completions.create.side_effect = APITimeoutError(request=mock_request)
+            mock_groq_client.chat.completions.create.side_effect = APITimeoutError(
+                request=mock_request
+            )
             mock_groq_class.return_value = mock_groq_client
 
             # Mock Ollama fallback to also fail
             mock_ollama_client = MagicMock()
-            mock_ollama_client.generate.side_effect = Exception("Ollama fallback failed")
+            mock_ollama_client.generate.side_effect = Exception(
+                "Ollama fallback failed"
+            )
             mock_ollama_class.return_value = mock_ollama_client
 
             service = OllamaService()
@@ -199,17 +204,21 @@ class TestGroqErrorHandling:
 
         try:
             mock_groq_client = MagicMock()
-            mock_response = Response(429, request=Request("POST", "https://api.groq.com/test"))
+            mock_response = Response(
+                429, request=Request("POST", "https://api.groq.com/test")
+            )
             mock_groq_client.chat.completions.create.side_effect = RateLimitError(
                 "Rate limit exceeded",
                 response=mock_response,
-                body={"error": "rate_limit"}
+                body={"error": "rate_limit"},
             )
             mock_groq_class.return_value = mock_groq_client
 
             # Mock Ollama fallback to also fail
             mock_ollama_client = MagicMock()
-            mock_ollama_client.generate.side_effect = Exception("Ollama fallback failed")
+            mock_ollama_client.generate.side_effect = Exception(
+                "Ollama fallback failed"
+            )
             mock_ollama_class.return_value = mock_ollama_client
 
             service = OllamaService()
@@ -236,17 +245,21 @@ class TestGroqErrorHandling:
 
         try:
             mock_groq_client = MagicMock()
-            mock_response = Response(500, request=Request("POST", "https://api.groq.com/test"))
+            mock_response = Response(
+                500, request=Request("POST", "https://api.groq.com/test")
+            )
             mock_groq_client.chat.completions.create.side_effect = InternalServerError(
                 "Internal Server Error",
                 response=mock_response,
-                body={"error": "server_error"}
+                body={"error": "server_error"},
             )
             mock_groq_class.return_value = mock_groq_client
 
             # Mock Ollama fallback to also fail
             mock_ollama_client = MagicMock()
-            mock_ollama_client.generate.side_effect = Exception("Ollama fallback failed")
+            mock_ollama_client.generate.side_effect = Exception(
+                "Ollama fallback failed"
+            )
             mock_ollama_class.return_value = mock_ollama_client
 
             service = OllamaService()
@@ -273,17 +286,21 @@ class TestGroqErrorHandling:
 
         try:
             mock_groq_client = MagicMock()
-            mock_response = Response(401, request=Request("POST", "https://api.groq.com/test"))
+            mock_response = Response(
+                401, request=Request("POST", "https://api.groq.com/test")
+            )
             mock_groq_client.chat.completions.create.side_effect = AuthenticationError(
                 "Invalid API key",
                 response=mock_response,
-                body={"error": "invalid_api_key"}
+                body={"error": "invalid_api_key"},
             )
             mock_groq_class.return_value = mock_groq_client
 
             # Mock Ollama fallback to also fail
             mock_ollama_client = MagicMock()
-            mock_ollama_client.generate.side_effect = Exception("Ollama fallback failed")
+            mock_ollama_client.generate.side_effect = Exception(
+                "Ollama fallback failed"
+            )
             mock_ollama_class.return_value = mock_ollama_client
 
             service = OllamaService()
@@ -316,7 +333,9 @@ class TestGroqErrorHandling:
 
             # Mock Ollama fallback to also fail
             mock_ollama_client = MagicMock()
-            mock_ollama_client.generate.side_effect = Exception("Ollama fallback failed")
+            mock_ollama_client.generate.side_effect = Exception(
+                "Ollama fallback failed"
+            )
             mock_ollama_class.return_value = mock_ollama_client
 
             service = OllamaService()
@@ -389,17 +408,12 @@ class TestLLMWrapperFunction:
         mock_service.generate.return_value = "Test response from Groq"
 
         result = generate_with_ollama(
-            prompt="Test prompt",
-            temperature=0.1,
-            max_tokens=500
+            prompt="Test prompt", temperature=0.1, max_tokens=500
         )
 
         # Verify service.generate was called with correct parameters
         mock_service.generate.assert_called_once_with(
-            prompt="Test prompt",
-            temperature=0.1,
-            max_tokens=500,
-            model=None
+            prompt="Test prompt", temperature=0.1, max_tokens=500, model=None
         )
         assert result == "Test response from Groq"
 
@@ -410,18 +424,11 @@ class TestLLMWrapperFunction:
 
         mock_service.generate.return_value = "Test"
 
-        generate_with_ollama(
-            prompt="Test prompt",
-            temperature=0.7,
-            max_tokens=1000
-        )
+        generate_with_ollama(prompt="Test prompt", temperature=0.7, max_tokens=1000)
 
         # Verify parameters were passed
         mock_service.generate.assert_called_once_with(
-            prompt="Test prompt",
-            temperature=0.7,
-            max_tokens=1000,
-            model=None
+            prompt="Test prompt", temperature=0.7, max_tokens=1000, model=None
         )
 
 
@@ -448,12 +455,16 @@ class TestLLMFallback:
             # Mock Groq client to raise timeout
             mock_groq_client = MagicMock()
             mock_request = Request("POST", "https://api.groq.com/test")
-            mock_groq_client.chat.completions.create.side_effect = APITimeoutError(request=mock_request)
+            mock_groq_client.chat.completions.create.side_effect = APITimeoutError(
+                request=mock_request
+            )
             mock_groq_class.return_value = mock_groq_client
 
             # Mock Ollama fallback to SUCCEED
             mock_ollama_client = MagicMock()
-            mock_ollama_client.generate.return_value = {"response": "Fallback response from Ollama"}
+            mock_ollama_client.generate.return_value = {
+                "response": "Fallback response from Ollama"
+            }
             mock_ollama_class.return_value = mock_ollama_client
 
             service = OllamaService()

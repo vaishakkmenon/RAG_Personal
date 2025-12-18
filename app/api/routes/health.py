@@ -46,12 +46,12 @@ logger = logging.getLogger(__name__)
                         "status": "healthy",
                         "provider": "groq",
                         "model": "llama-3.1-8b-instant",
-                        "socket": "hostname"
+                        "socket": "hostname",
                     }
                 }
-            }
+            },
         }
-    }
+    },
 )
 async def health() -> Dict[str, Any]:
     """Returns basic system health status."""
@@ -74,14 +74,12 @@ async def health() -> Dict[str, Any]:
 @router.get("/health/detailed", status_code=status.HTTP_200_OK)
 async def detailed_health_check() -> Dict[str, Any]:
     """Detailed health check with dependency status"""
-    health_status = {
-        "status": "healthy",
-        "dependencies": {}
-    }
+    health_status = {"status": "healthy", "dependencies": {}}
 
     # Check Redis
     try:
         from app.services.response_cache import get_response_cache
+
         # Note: Depending on how your cache is implemented, you might need a different way to ping
         # Assuming get_response_cache returns an object with a redis client or similar
         cache = get_response_cache()
@@ -90,8 +88,8 @@ async def detailed_health_check() -> Dict[str, Any]:
         if hasattr(cache, "_redis"):
             cache._redis.ping()
         else:
-             # Fallback if interface is different, just check instantiation
-             pass
+            # Fallback if interface is different, just check instantiation
+            pass
         health_status["dependencies"]["redis"] = "healthy"
     except Exception as e:
         logger.warning(f"Redis health check failed: {e}")
@@ -101,9 +99,10 @@ async def detailed_health_check() -> Dict[str, Any]:
     # Check ChromaDB
     try:
         from app.retrieval.store import get_chroma_client
+
         client = get_chroma_client()
         # Try to heartbeat or list collections to verify connectivity
-        client.heartbeat() 
+        client.heartbeat()
         health_status["dependencies"]["chromadb"] = "healthy"
     except Exception as e:
         logger.warning(f"ChromaDB health check failed: {e}")
@@ -122,6 +121,7 @@ async def readiness_check() -> Dict[str, str]:
     # Check if app can serve requests (e.g. DB is accessible)
     try:
         from app.retrieval.store import get_chroma_client
+
         client = get_chroma_client()
         # Simple verification
         client.heartbeat()

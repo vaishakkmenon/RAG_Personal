@@ -213,7 +213,9 @@ def validate_config() -> None:
 
     # 3. Check Grafana password (warn if default)
     grafana_pass = os.getenv("GRAFANA_ADMIN_PASSWORD", "")
-    if grafana_pass and grafana_pass in INSECURE_DEFAULTS.get("GRAFANA_ADMIN_PASSWORD", []):
+    if grafana_pass and grafana_pass in INSECURE_DEFAULTS.get(
+        "GRAFANA_ADMIN_PASSWORD", []
+    ):
         insecure_vars.append(("GRAFANA_ADMIN_PASSWORD", grafana_pass))
 
     # 4. Report critical errors (missing variables)
@@ -229,7 +231,9 @@ def validate_config() -> None:
         logger.critical("  2. Fill in all required values")
         logger.critical("  3. Generate secure keys where indicated")
         logger.critical("")
-        logger.critical("For documentation, run: python -c 'from app.config_validator import ENV_VAR_DOCUMENTATION; print(ENV_VAR_DOCUMENTATION)'")
+        logger.critical(
+            "For documentation, run: python -c 'from app.config_validator import ENV_VAR_DOCUMENTATION; print(ENV_VAR_DOCUMENTATION)'"
+        )
         logger.critical("=" * 80)
         sys.exit(1)
 
@@ -241,7 +245,9 @@ def validate_config() -> None:
         for var, val in insecure_vars:
             logger.warning(f"  ⚠ {var} = '{val}' (default placeholder)")
         logger.warning("")
-        logger.warning("These default values are INSECURE and must be changed for production!")
+        logger.warning(
+            "These default values are INSECURE and must be changed for production!"
+        )
         logger.warning("Generate secure values:")
         logger.warning("  API_KEY: openssl rand -hex 32")
         logger.warning("  REDIS_PASSWORD: openssl rand -base64 32")
@@ -259,12 +265,16 @@ def validate_config() -> None:
 
         if missing_prod_vars:
             logger.warning("=" * 80)
-            logger.warning("PRODUCTION WARNING: Missing recommended production variables")
+            logger.warning(
+                "PRODUCTION WARNING: Missing recommended production variables"
+            )
             logger.warning("=" * 80)
             for var in missing_prod_vars:
                 logger.warning(f"  ⚠ {var} is not set")
             logger.warning("")
-            logger.warning("These variables should be configured for production deployments.")
+            logger.warning(
+                "These variables should be configured for production deployments."
+            )
             logger.warning("See .env.example for details.")
             logger.warning("=" * 80)
             logger.warning("")
@@ -272,12 +282,16 @@ def validate_config() -> None:
         # Warn if HTTPS is not required in production
         require_https = os.getenv("SESSION_REQUIRE_HTTPS", "false").lower()
         if require_https != "true":
-            logger.warning("⚠ SESSION_REQUIRE_HTTPS=false in production - cookies may be insecure!")
+            logger.warning(
+                "⚠ SESSION_REQUIRE_HTTPS=false in production - cookies may be insecure!"
+            )
 
         # Warn if using default origins
         allowed_origins = os.getenv("ALLOWED_ORIGINS", "")
         if "localhost" in allowed_origins:
-            logger.warning("⚠ ALLOWED_ORIGINS includes localhost in production - potential security risk!")
+            logger.warning(
+                "⚠ ALLOWED_ORIGINS includes localhost in production - potential security risk!"
+            )
 
     # 7. Success message
     logger.info("=" * 80)
@@ -286,8 +300,12 @@ def validate_config() -> None:
     logger.info(f"Environment: {env}")
     logger.info(f"LLM Provider: {provider}")
     logger.info(f"Session Backend: {os.getenv('SESSION_STORAGE_BACKEND', 'redis')}")
-    logger.info(f"Response Caching: {'enabled' if os.getenv('RESPONSE_CACHE_ENABLED', 'true') == 'true' else 'disabled'}")
-    logger.info(f"Prompt Guard: {'enabled' if os.getenv('PROMPT_GUARD_ENABLED', 'true') == 'true' else 'disabled'}")
+    logger.info(
+        f"Response Caching: {'enabled' if os.getenv('RESPONSE_CACHE_ENABLED', 'true') == 'true' else 'disabled'}"
+    )
+    logger.info(
+        f"Prompt Guard: {'enabled' if os.getenv('PROMPT_GUARD_ENABLED', 'true') == 'true' else 'disabled'}"
+    )
     logger.info("=" * 80)
     logger.info("")
 

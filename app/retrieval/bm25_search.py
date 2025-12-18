@@ -18,11 +18,15 @@ logger = logging.getLogger(__name__)
 # Try to import NLTK components for improved tokenization
 try:
     import nltk
+
     # Add NLTK data search paths (for Docker container)
-    nltk.data.path.append('/home/nonroot/nltk_data')  # Persistent location (baked into image)
-    nltk.data.path.append('/tmp/nltk_data')  # Fallback temporary location
+    nltk.data.path.append(
+        "/home/nonroot/nltk_data"
+    )  # Persistent location (baked into image)
+    nltk.data.path.append("/tmp/nltk_data")  # Fallback temporary location
     from nltk.corpus import stopwords
     from nltk.stem import PorterStemmer
+
     NLTK_AVAILABLE = True
     logger.info("NLTK tokenization enabled")
 except ImportError:
@@ -38,7 +42,9 @@ except LookupError:
 class BM25Index:
     """BM25 index for keyword-based document retrieval."""
 
-    def __init__(self, index_path: Optional[str] = None, k1: float = 1.5, b: float = 0.5):
+    def __init__(
+        self, index_path: Optional[str] = None, k1: float = 1.5, b: float = 0.5
+    ):
         """Initialize BM25 index.
 
         Args:
@@ -93,22 +99,32 @@ class BM25Index:
             return text.lower().split()
 
         # Initialize stemmer and stopwords (lazy initialization)
-        if not hasattr(self, '_stemmer'):
+        if not hasattr(self, "_stemmer"):
             self._stemmer = PorterStemmer()
             # Get English stopwords but exclude some important ones
-            self._stopwords = set(stopwords.words('english'))
+            self._stopwords = set(stopwords.words("english"))
             # Keep interrogative words that are important for queries
-            self._stopwords -= {'what', 'when', 'where', 'which', 'who', 'how', 'did', 'do', 'does'}
+            self._stopwords -= {
+                "what",
+                "when",
+                "where",
+                "which",
+                "who",
+                "how",
+                "did",
+                "do",
+                "does",
+            }
 
         # Lowercase
         text = text.lower()
 
         # Preserve course codes: CS 350, CS350, CS-350 → cs350
         # This regex finds patterns like CS 350, CS-350, CS350
-        text = re.sub(r'\b([a-z]{2,4})\s*[-]?\s*(\d{3,4})\b', r'\1\2', text)
+        text = re.sub(r"\b([a-z]{2,4})\s*[-]?\s*(\d{3,4})\b", r"\1\2", text)
 
         # Split on whitespace and punctuation (but keep alphanumeric)
-        tokens = re.findall(r'\b[a-z0-9]+\b', text)
+        tokens = re.findall(r"\b[a-z0-9]+\b", text)
 
         # Filter and stem tokens
         processed_tokens = []
@@ -118,7 +134,7 @@ class BM25Index:
             #     continue
 
             # Keep course codes intact (e.g., cs350, cs662)
-            if re.match(r'^[a-z]{2,4}\d{3,4}$', token):
+            if re.match(r"^[a-z]{2,4}\d{3,4}$", token):
                 processed_tokens.append(token)
                 continue
 
@@ -157,7 +173,9 @@ class BM25Index:
         scores = self.bm25.get_scores(tokenized_query)
 
         # Get top K document indices
-        top_k_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:k]
+        top_k_indices = sorted(
+            range(len(scores)), key=lambda i: scores[i], reverse=True
+        )[:k]
 
         # Build results
         results = []
@@ -185,7 +203,7 @@ class BM25Index:
         index_data = {
             "bm25": self.bm25,
             "documents": self.documents,
-            "doc_ids": self.doc_ids
+            "doc_ids": self.doc_ids,
         }
 
         with open(self.index_path, "wb") as f:
@@ -211,7 +229,9 @@ class BM25Index:
             self.documents = index_data["documents"]
             self.doc_ids = index_data["doc_ids"]
 
-            logger.info(f"BM25 index loaded from {self.index_path} ({len(self.documents)} docs)")
+            logger.info(
+                f"BM25 index loaded from {self.index_path} ({len(self.documents)} docs)"
+            )
             return True
 
         except Exception as e:
@@ -220,8 +240,7 @@ class BM25Index:
 
 
 def reciprocal_rank_fusion(
-    results_list: List[List[Dict[str, Any]]],
-    k: int = 60
+    results_list: List[List[Dict[str, Any]]], k: int = 60
 ) -> List[Dict[str, Any]]:
     """Merge multiple ranked result lists using Reciprocal Rank Fusion (RRF).
 
@@ -260,7 +279,9 @@ def reciprocal_rank_fusion(
                 doc_data[doc_id] = doc
 
     # Sort by RRF score
-    sorted_doc_ids = sorted(doc_scores.keys(), key=lambda x: doc_scores[x], reverse=True)
+    sorted_doc_ids = sorted(
+        doc_scores.keys(), key=lambda x: doc_scores[x], reverse=True
+    )
 
     # Build final result list
     merged_results = []
@@ -272,7 +293,9 @@ def reciprocal_rank_fusion(
             doc["distance"] = None
         merged_results.append(doc)
 
-    logger.info(f"RRF fusion: merged {len(results_list)} result lists into {len(merged_results)} unique docs")
+    logger.info(
+        f"RRF fusion: merged {len(results_list)} result lists into {len(merged_results)} unique docs"
+    )
     return merged_results
 
 
@@ -282,7 +305,7 @@ def hybrid_search(
     semantic_search_fn,
     k: int = 5,
     bm25_k: int = 20,
-    semantic_k: int = 20
+    semantic_k: int = 20,
 ) -> List[Dict[str, Any]]:
     """Perform hybrid search combining BM25 and semantic search.
 
@@ -301,7 +324,9 @@ def hybrid_search(
     bm25_results = bm25_index.search(query, k=bm25_k)
     semantic_results = semantic_search_fn(query, k=semantic_k)
 
-    logger.info(f"Hybrid search: BM25={len(bm25_results)} docs, Semantic={len(semantic_results)} docs")
+    logger.info(
+        f"Hybrid search: BM25={len(bm25_results)} docs, Semantic={len(semantic_results)} docs"
+    )
 
     # Merge using RRF
     merged_results = reciprocal_rank_fusion([bm25_results, semantic_results])

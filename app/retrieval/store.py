@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 # Import BM25 for hybrid search
 try:
     from app.retrieval.bm25_search import BM25Index, reciprocal_rank_fusion
+
     BM25_AVAILABLE = True
 except ImportError:
     BM25_AVAILABLE = False
@@ -56,6 +57,7 @@ def get_chroma_client():
     """Get the ChromaDB client instance."""
     return _client
 
+
 # Initialize BM25 index for hybrid search
 _bm25_index = None
 if BM25_AVAILABLE:
@@ -63,12 +65,16 @@ if BM25_AVAILABLE:
     if bm25_index_path.exists():
         _bm25_index = BM25Index(index_path=str(bm25_index_path))
         if _bm25_index.load_index():
-            logger.info(f"BM25 hybrid search enabled ({_bm25_index.documents and len(_bm25_index.documents)} docs)")
+            logger.info(
+                f"BM25 hybrid search enabled ({_bm25_index.documents and len(_bm25_index.documents)} docs)"
+            )
         else:
             _bm25_index = None
             logger.warning("BM25 index file found but failed to load")
     else:
-        logger.info(f"BM25 index not found at {bm25_index_path} - run build_bm25_index.py to enable hybrid search")
+        logger.info(
+            f"BM25 index not found at {bm25_index_path} - run build_bm25_index.py to enable hybrid search"
+        )
 else:
     logger.info("BM25 library not installed - hybrid search disabled")
 
@@ -137,7 +143,6 @@ def search(
     Returns:
         List of dicts with keys: id, text, source, distance, metadata
     """
-    import time
     from app.settings import settings
 
     original_query = (query or "").strip()
@@ -151,9 +156,10 @@ def search(
     if use_query_rewriting and settings.query_rewriter.enabled:
         try:
             from app.retrieval.query_rewriter import get_query_rewriter
+
             rewriter = get_query_rewriter()
             rewritten_query, rewrite_metadata = rewriter.rewrite_query(original_query)
-            
+
             if rewrite_metadata:
                 search_query = rewritten_query
                 logger.info(
@@ -178,7 +184,9 @@ def search(
     if use_cross_encoder:
         retrieval_k = settings.cross_encoder.retrieval_k  # Default 15
         final_k = k
-        logger.info(f"Cross-encoder enabled: retrieving {retrieval_k} candidates for reranking")
+        logger.info(
+            f"Cross-encoder enabled: retrieving {retrieval_k} candidates for reranking"
+        )
     else:
         retrieval_k = k
         final_k = k
@@ -195,6 +203,7 @@ def search(
         if results:
             try:
                 from app.retrieval.fallback_cache import get_fallback_cache
+
                 cache = get_fallback_cache()
                 cache.cache_results(query, results)
             except Exception as cache_error:
@@ -206,11 +215,14 @@ def search(
         # Try fallback cache
         try:
             from app.retrieval.fallback_cache import get_fallback_cache
+
             cache = get_fallback_cache()
             cached_results = cache.get_fallback_results(query)
 
             if cached_results:
-                logger.warning(f"Using {len(cached_results)} cached results as fallback")
+                logger.warning(
+                    f"Using {len(cached_results)} cached results as fallback"
+                )
                 results = cached_results
             else:
                 # No cached results available, re-raise original error
@@ -223,11 +235,10 @@ def search(
     if use_cross_encoder and len(results) > 0:
         try:
             from app.services.cross_encoder_reranker import get_cross_encoder_reranker
+
             cross_encoder = get_cross_encoder_reranker()
             results = cross_encoder.rerank(
-                query=query,
-                chunks=results,
-                top_k=settings.cross_encoder.top_k
+                query=query, chunks=results, top_k=settings.cross_encoder.top_k
             )
             logger.info(f"Cross-encoder reranked to {len(results)} results")
         except Exception as e:
@@ -313,7 +324,9 @@ def _semantic_search(
             continue
 
     # Sort results by distance (ascending) to ensure best matches are first
-    output.sort(key=lambda x: x["distance"] if x["distance"] is not None else float('inf'))
+    output.sort(
+        key=lambda x: x["distance"] if x["distance"] is not None else float("inf")
+    )
 
     logger.info(
         f"Semantic search '{query[:50]}...': {len(output)}/{len(ids)} results within max_distance {max_dist:.3f}"
@@ -352,7 +365,9 @@ def _hybrid_search(
     logger.info(f"Semantic retrieved {len(semantic_results)} candidates")
 
     # Merge using RRF with configurable k parameter
-    merged = reciprocal_rank_fusion([bm25_results, semantic_results], k=settings.bm25.rrf_k)
+    merged = reciprocal_rank_fusion(
+        [bm25_results, semantic_results], k=settings.bm25.rrf_k
+    )
 
     # Return top K
     final_results = merged[:k]
