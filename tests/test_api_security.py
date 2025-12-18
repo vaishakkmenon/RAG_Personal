@@ -126,34 +126,29 @@ def test_oversized_request_rejected():
         f"Oversized request got status {response.status_code}, expected 413 or 422"
 
 
-def test_rapid_fire_rate_limiting():
+def test_rapid_fire_rate_limiting(monkeypatch):
     """Test that rapid-fire requests trigger rate limiting."""
+    # Temporarily set a lower rate limit for testing (15 queries per hour)
+    monkeypatch.setattr(settings.session, 'queries_per_hour', 15)
+    
     session_id = "rapid-fire-test"
 
-    # Determine the rate limit from settings
-    # Default is 20 queries per hour per session
-    rate_limit = getattr(settings, 'session_queries_per_hour', 20)
-
-    # Send requests up to the limit + 5 extra
+    # Send 20 requests (more than the 15 allowed)
     responses = []
-    for i in range(min(rate_limit + 5, 25)):  # Cap at 25 to avoid test taking too long
+    for i in range(20):
         response = client.post(
             "/chat",
-            json={
-                "question": f"Test question {i}",
-                "session_id": session_id
-            },
+            json={"question": f"Test question {i}", "session_id": session_id},
             headers={"X-API-Key": settings.api_key}
         )
-        responses.append((i, response.status_code))
-
-    # Count how many succeeded vs were rate limited
-    successes = [r for r in responses if r[1] == 200]
-    rate_limited = [r for r in responses if r[1] == 429]
-
-    # Should have at least some successful requests
-    assert len(successes) > 0, "No requests succeeded - rate limiter may be too strict"
-
-    # Should have rate limited the excess requests
+        responses.append(response)
+    
+    # Count successful and rate-limited responses
+    successful = [r for r in responses if r.status_code == 200]
+    rate_limited = [r for r in responses if r.status_code == 429]
+    
+    # Expect rate limiting to kick in after 15 requests
     assert len(rate_limited) > 0, \
-        f"Expected rate limiting after {rate_limit} requests, but all {len(responses)} succeeded"
+        f"Expected rate limiting after 15 requests, but all {len(responses)} succeeded. " \
+        f"Got {len(successful)} successful, {len(rate_limited)} rate limited"
+

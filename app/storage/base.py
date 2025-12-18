@@ -85,6 +85,7 @@ class SessionStore(ABC):
             session = self.get_session(session_id)
             if session:
                 session.record_request()
+                self.update_session(session)  # Persist updated timestamps to Redis
                 return session
 
         # Create new session with IP limit check
@@ -103,6 +104,7 @@ class SessionStore(ABC):
             user_agent=user_agent
         )
         session.record_request()
+        self.update_session(session)  # Persist initial request timestamp
         return session
 
     def check_rate_limit(self, session: Session) -> bool:

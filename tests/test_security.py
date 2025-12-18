@@ -12,6 +12,7 @@ Tests security controls including:
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
+from app.settings import settings
 
 client = TestClient(app)
 
@@ -30,9 +31,9 @@ class TestPromptInjectionProtection:
 
         for prompt in malicious_prompts:
             response = client.post(
-                "/api/chat",
+                "/chat",
                 json={"question": prompt},
-                headers={"X-API-Key": "test-key"}
+                headers={"X-API-Key": settings.api_key}
             )
             
             # Should either be caught by prompt guard or handled safely
@@ -61,9 +62,9 @@ class TestPromptInjectionProtection:
 
         for prompt in xss_prompts:
             response = client.post(
-                "/api/chat",
+                "/chat",
                 json={"question": prompt},
-                headers={"X-API-Key": "test-key"}
+                headers={"X-API-Key": settings.api_key}
             )
             
             # Should handle safely (either reject or sanitize)
@@ -79,9 +80,9 @@ class TestRequestSizeLimits:
         huge_message = "x" * 3000
         
         response = client.post(
-            "/api/chat",
+            "/chat",
             json={"question": huge_message},
-            headers={"X-API-Key": "test-key"}
+            headers={"X-API-Key": settings.api_key}
         )
         
         # Should be rejected by Pydantic validation
@@ -91,9 +92,9 @@ class TestRequestSizeLimits:
     def test_empty_message(self):
         """Test that empty messages are rejected."""
         response = client.post(
-            "/api/chat",
+            "/chat",
             json={"question": ""},
-            headers={"X-API-Key": "test-key"}
+            headers={"X-API-Key": settings.api_key}
         )
         
         assert response.status_code == 422
@@ -101,9 +102,9 @@ class TestRequestSizeLimits:
     def test_whitespace_only_message(self):
         """Test that whitespace-only messages are rejected."""
         response = client.post(
-            "/api/chat",
+            "/chat",
             json={"question": "   \n\t  "},
-            headers={"X-API-Key": "test-key"}
+            headers={"X-API-Key": settings.api_key}
         )
         
         assert response.status_code == 422
@@ -112,22 +113,25 @@ class TestRequestSizeLimits:
 class TestRateLimiting:
     """Test that rate limiting works correctly."""
 
-    def test_rate_limit_per_session(self):
+
+    def test_rate_limit_per_session(self, monkeypatch):
         """Test that sessions are rate limited."""
+        # Temporarily set a lower rate limit for testing
+        monkeypatch.setattr(settings.session, 'queries_per_hour', 10)
+        
         session_id = f"test-rate-limit-session"
         
-        # Get the rate limit from settings (default: 10 per hour in dev)
-        # We'll send more requests than allowed
+        # Send 15 requests (more than the 10 allowed)
         responses = []
         
         for i in range(15):
             response = client.post(
-                "/api/chat",
+                "/chat",
                 json={
                     "question": f"Test question {i}",
                     "session_id": session_id
                 },
-                headers={"X-API-Key": "test-key"}
+                headers={"X-API-Key": settings.api_key}
             )
             responses.append(response)
         
@@ -137,10 +141,9 @@ class TestRateLimiting:
         # Some requests should be rate limited (429)
         rate_limited_count = sum(1 for r in responses if r.status_code == 429)
         
-        # We should see at least one rate limited response
-        # (exact number depends on SESSION_QUERIES_PER_HOUR setting)
+        # We should see rate limiting kick in
         assert rate_limited_count > 0, \
-            "Expected to see rate limiting after multiple requests"
+            f"Expected rate limiting after 10 requests, got {success_count} successful, {rate_limited_count} rate limited"
 
     def test_different_sessions_not_rate_limited_together(self):
         """Test that different sessions have independent rate limits."""
@@ -152,15 +155,15 @@ class TestRateLimiting:
         
         # Send requests to different sessions
         response_1 = client.post(
-            "/api/chat",
+            "/chat",
             json={"question": "Test 1", "session_id": session_1},
-            headers={"X-API-Key": "test-key"}
+            headers={"X-API-Key": settings.api_key}
         )
         
         response_2 = client.post(
-            "/api/chat",
+            "/chat",
             json={"question": "Test 2", "session_id": session_2},
-            headers={"X-API-Key": "test-key"}
+            headers={"X-API-Key": settings.api_key}
         )
         
         # Both should succeed (independent rate limits)
@@ -176,7 +179,7 @@ class TestAPIKeySecurity:
     def test_missing_api_key(self):
         """Test that requests without API key are rejected."""
         response = client.post(
-            "/api/chat",
+            "/chat",
             json={"question": "Test"}
         )
         
@@ -186,7 +189,7 @@ class TestAPIKeySecurity:
     def test_invalid_api_key(self):
         """Test that requests with invalid API key are rejected."""
         response = client.post(
-            "/api/chat",
+            "/chat",
             json={"question": "Test"},
             headers={"X-API-Key": "invalid-key-12345"}
         )
@@ -215,12 +218,12 @@ class TestInputValidation:
 
         for session_id in invalid_session_ids:
             response = client.post(
-                "/api/chat",
+                "/chat",
                 json={
                     "question": "Test",
                     "session_id": session_id
                 },
-                headers={"X-API-Key": "test-key"}
+                headers={"X-API-Key": settings.api_key}
             )
             
             # Should be rejected by validation
@@ -233,9 +236,9 @@ class TestInputValidation:
         spam_query = "test " * 50  # 50 repetitions of "test"
         
         response = client.post(
-            "/api/chat",
+            "/chat",
             json={"question": spam_query},
-            headers={"X-API-Key": "test-key"}
+            headers={"X-API-Key": settings.api_key}
         )
         
         # Should be rejected by custom validator
@@ -251,9 +254,9 @@ class TestInputValidation:
 
         for injection in sql_injections:
             response = client.post(
-                "/api/chat",
+                "/chat",
                 json={"question": injection},
-                headers={"X-API-Key": "test-key"}
+                headers={"X-API-Key": settings.api_key}
             )
             
             # Should handle safely (treated as normal text)
@@ -289,10 +292,10 @@ class TestErrorHandling:
     def test_malformed_json(self):
         """Test handling of malformed JSON."""
         response = client.post(
-            "/api/chat",
+            "/chat",
             data="not valid json",
             headers={
-                "X-API-Key": "test-key",
+                "X-API-Key": settings.api_key,
                 "Content-Type": "application/json"
             }
         )
