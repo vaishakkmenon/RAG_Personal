@@ -112,7 +112,8 @@ class TestConfigValidator:
 
         assert "SECURITY WARNING" in caplog.text
         assert "REDIS_PASSWORD" in caplog.text
-        assert "change-me-devpassword123" in caplog.text
+        # Note: The actual password is redacted in logs, so we check for the warning presence
+        assert "default placeholder" in caplog.text
 
     def test_insecure_grafana_password_default(self, monkeypatch, caplog):
         """Test that insecure default GRAFANA_ADMIN_PASSWORD triggers warning."""
@@ -282,7 +283,8 @@ class TestConfigValidator:
 
         assert "SECURITY WARNING" in caplog.text
         assert "LLM_GROQ_API_KEY" in caplog.text
-        assert "your-groq-api-key-here" in caplog.text
+        # Note: The actual API key is redacted in logs, so we check for the warning presence
+        assert "default placeholder" in caplog.text
 
     def test_config_validation_logs_environment_summary(self, monkeypatch, caplog):
         """Test that successful validation logs environment summary."""

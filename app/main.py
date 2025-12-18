@@ -5,6 +5,7 @@ Clean, modular application setup with middleware configuration.
 """
 
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -18,6 +19,7 @@ from app.middleware.max_size import MaxSizeMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.settings import settings
 from app.config_validator import validate_config
+from app.logging_config import setup_logging
 
 from app.exceptions import (
     RAGException,
@@ -25,11 +27,8 @@ from app.exceptions import (
     generic_exception_handler
 )
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
+# Configure structured logging (JSON in production, colored in development)
+setup_logging()
 logger = logging.getLogger(__name__)
 
 # ------------------------------------------------------------------------------

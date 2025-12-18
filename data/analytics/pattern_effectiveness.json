@@ -1,9 +1,9 @@
 {
   "_total": {
-    "total_queries": 260
+    "total_queries": 302
   },
   "_no_match": {
-    "total_queries": 218
+    "total_queries": 260
   },
   "negative_inference": {
     "total_matches": 27,

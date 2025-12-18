@@ -13,12 +13,48 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.get("/health", status_code=status.HTTP_200_OK)
-async def health() -> Dict[str, Any]:
-    """Health check endpoint.
+@router.get(
+    "/health",
+    status_code=status.HTTP_200_OK,
+    summary="Basic health check",
+    description="""
+    Quick health check endpoint that returns system status and configuration.
 
-    Returns basic system information including provider, model, host, and hostname.
-    """
+    **Use Cases:**
+    - Verify API is running
+    - Check LLM provider configuration
+    - Monitor system availability
+
+    **Response Time:** <10ms
+
+    **Example Response:**
+    ```json
+    {
+      "status": "healthy",
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "socket": "rag-api-container"
+    }
+    ```
+    """,
+    responses={
+        200: {
+            "description": "System is healthy",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "status": "healthy",
+                        "provider": "groq",
+                        "model": "llama-3.1-8b-instant",
+                        "socket": "hostname"
+                    }
+                }
+            }
+        }
+    }
+)
+async def health() -> Dict[str, Any]:
+    """Returns basic system health status."""
     # Get model based on provider
     if settings.llm.provider == "ollama":
         model = settings.llm.ollama_model

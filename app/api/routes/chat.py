@@ -34,7 +34,62 @@ except ImportError:
     logger.debug("End-to-end metrics not available")
 
 
-@router.post("/chat/simple", response_model=ChatResponse)
+@router.post(
+    "/chat/simple",
+    response_model=ChatResponse,
+    summary="Simple RAG chat without advanced features",
+    description="""
+    Simplified chat endpoint for testing and debugging. No query routing, filtering, or reranking.
+
+    **Use Cases:**
+    - Testing RAG functionality
+    - Debugging retrieval issues
+    - Simple question answering without advanced features
+
+    **What's Different from /chat:**
+    - No query routing or domain detection
+    - No metadata filtering
+    - No hybrid reranking
+    - No session support (no conversation history)
+    - Faster but less accurate
+
+    **Example Request:**
+    ```json
+    {
+      "question": "What is Vaishak's GPA?"
+    }
+    ```
+
+    **Example Response:**
+    ```json
+    {
+      "answer": "Based on the transcript, Vaishak's GPA is 3.85.",
+      "sources": [...],
+      "grounded": true,
+      "session_id": "generated-uuid"
+    }
+    ```
+    """,
+    responses={
+        200: {
+            "description": "Successful response",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "answer": "Vaishak's GPA is 3.85 based on his undergraduate transcript.",
+                        "sources": [],
+                        "grounded": True,
+                        "session_id": "temp-uuid-123"
+                    }
+                }
+            }
+        },
+        400: {"description": "Bad request or prompt injection detected"},
+        401: {"description": "Invalid or missing API key"},
+        500: {"description": "Internal server error"},
+        503: {"description": "LLM service unavailable"}
+    }
+)
 def simple_chat(
     request: ChatRequest,
     # Optional parameters (with sensible defaults)
@@ -45,27 +100,7 @@ def simple_chat(
     # Dependencies
     api_key: str = Depends(check_api_key),
 ):
-    """Simple RAG chat endpoint without routing or filtering.
-
-    This endpoint provides a bare-bones RAG experience:
-    - Direct semantic search without query routing
-    - No metadata filtering or doc_type restrictions
-    - No reranking or multi-domain logic
-    - Simple prompt building and generation
-
-    Perfect for testing, debugging, or when you want straightforward retrieval.
-
-    Args:
-        request: Chat request with question
-        top_k: Number of chunks to retrieve (default: 10)
-        max_distance: Maximum distance for retrieval (default: 0.6)
-        temperature: LLM temperature (default: 0.1)
-        max_tokens: Maximum tokens to generate (default: 500)
-        api_key: API key (from dependency)
-
-    Returns:
-        ChatResponse with answer and sources
-    """
+    """Bare-bones RAG chat for testing. See description for details."""
     # Track request start time
     start_time = time.time()
     endpoint = "/chat/simple"
@@ -196,7 +231,144 @@ def simple_chat(
         raise
 
 
-@router.post("/chat", response_model=ChatResponse)
+@router.post(
+    "/chat",
+    response_model=ChatResponse,
+    summary="Ask a question about Vaishak's background",
+    description="""
+    Ask a question and receive an AI-generated answer based on Vaishak's documents (resume, transcripts, certifications).
+
+    **Features:**
+    - Retrieval Augmented Generation (RAG) for accurate, grounded responses
+    - Semantic search across all documents
+    - Optional hybrid reranking for better relevance
+    - Session-based conversation history
+    - Response caching for fast repeated queries
+    - Prompt injection protection
+
+    **Rate Limits:**
+    - 50 queries per hour per session (adjustable in production)
+    - 5 sessions per IP address
+    - 1000 max total sessions
+
+    **Session Management:**
+    - Provide `session_id` to maintain conversation context
+    - Sessions expire after 6 hours
+    - Previous messages are used for follow-up questions
+
+    **Performance:**
+    - Mean latency: ~2.1s (cache miss), ~1.4s (cache hit)
+    - 100% success rate with Groq Developer tier
+    - Response caching enabled by default
+
+    **Example Request:**
+    ```json
+    {
+      "question": "What AI courses has Vaishak taken?",
+      "session_id": "optional-session-id"
+    }
+    ```
+
+    **Example Response:**
+    ```json
+    {
+      "answer": "Vaishak has taken several AI/ML courses including...",
+      "sources": [
+        {
+          "id": "chunk_123",
+          "source": "transcript_fall_2024.md",
+          "text": "CS 498: Applied Machine Learning...",
+          "distance": 0.23
+        }
+      ],
+      "grounded": true,
+      "session_id": "abc-123-def"
+    }
+    ```
+    """,
+    responses={
+        200: {
+            "description": "Successful response with answer and sources",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "answer": "Vaishak has taken several AI courses including CS 498 Applied Machine Learning, CS 444 Deep Learning, and CS 410 Text Information Systems.",
+                        "sources": [
+                            {
+                                "id": "chunk_42",
+                                "source": "transcript_fall_2024.md",
+                                "text": "CS 498: Applied Machine Learning (Grade: A)",
+                                "distance": 0.23
+                            }
+                        ],
+                        "grounded": True,
+                        "session_id": "session-abc-123"
+                    }
+                }
+            }
+        },
+        400: {
+            "description": "Bad request - invalid input or prompt injection detected",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Your request could not be processed. Please rephrase your question."
+                    }
+                }
+            }
+        },
+        401: {
+            "description": "Unauthorized - invalid or missing API key",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Invalid or missing API key"
+                    }
+                }
+            }
+        },
+        403: {
+            "description": "Forbidden - origin not allowed",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Origin not allowed"
+                    }
+                }
+            }
+        },
+        429: {
+            "description": "Too many requests - rate limit exceeded",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Rate limit exceeded. Please wait before making more requests."
+                    }
+                }
+            }
+        },
+        500: {
+            "description": "Internal server error",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "An internal error occurred. Please try again later."
+                    }
+                }
+            }
+        },
+        503: {
+            "description": "Service unavailable - LLM service error",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Failed to generate response"
+                    }
+                }
+            }
+        }
+    }
+)
 def chat(
     request: ChatRequest,
     http_request: Request,
@@ -217,28 +389,7 @@ def chat(
     api_key: str = Depends(check_api_key),
     chat_service: ChatService = Depends(get_chat_service),
 ):
-    """Answer a question using RAG with filtering and reranking.
-
-    Args:
-        request: Chat request with question
-        grounded_only: Whether to require grounded responses
-        null_threshold: Distance threshold for grounding
-        max_distance: Maximum distance for retrieval
-        top_k: Number of chunks to retrieve
-        temperature: LLM temperature
-        max_tokens: Maximum tokens to generate
-        rerank: Whether to rerank results
-        rerank_lex_weight: Weight for lexical reranking
-        doc_type: Document type filter
-        term_id: Term ID filter
-        level: Level filter
-        model: LLM model override
-        api_key: API key (from dependency)
-        chat_service: Chat service (from dependency)
-
-    Returns:
-        ChatResponse with answer and metadata
-    """
+    """This docstring is shown in the endpoint list. Full docs above."""
     # Track request start time
     start_time = time.time()
     endpoint = "/chat"

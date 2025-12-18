@@ -15,7 +15,13 @@ from typing import Optional
 import asyncio
 from functools import wraps
 
-import ollama
+# Conditional import for Ollama (not available in production Groq-only builds)
+try:
+    import ollama
+    OLLAMA_AVAILABLE = True
+except ImportError:
+    ollama = None
+    OLLAMA_AVAILABLE = False
 from groq import Groq, AsyncGroq
 from groq.types.chat import ChatCompletion
 
@@ -123,8 +129,12 @@ class OllamaService:
         else:
             self.model = self.ollama_model
 
-        # Initialize Ollama client (always available as fallback)
-        self.ollama_client = ollama.Client(host=self.host, timeout=self.timeout)
+        # Initialize Ollama client if available (fallback option)
+        self.ollama_client = None
+        if OLLAMA_AVAILABLE:
+            self.ollama_client = ollama.Client(host=self.host, timeout=self.timeout)
+        elif self.llm_settings.provider != "groq":
+            logger.warning("Ollama not available and provider is not groq - LLM calls will fail")
 
         # Initialize Groq client and rate limiter if configured
         self.groq_client = None
@@ -135,20 +145,23 @@ class OllamaService:
                 self.groq_client = Groq(api_key=self.llm_settings.groq_api_key)
                 self.async_groq_client = AsyncGroq(api_key=self.llm_settings.groq_api_key)
 
-                # Initialize rate limiter for Groq free tier
-                # 8B model: 30 req/min, 14,400 req/day
-                # 70B model: 30 req/min, 1,000 req/day
-                requests_per_day = 1000 if "70b" in self.llm_settings.groq_model.lower() else 14400
+                # Initialize rate limiter based on configured Groq tier
+                # Tier limits (from settings):
+                # - Free: 30 rpm, 14,400 rpd (8B) or 1,000 rpd (70B)
+                # - Developer: 300-1000 rpm, 50,000-500,000 rpd
+                # - Enterprise: Custom limits
                 self.rate_limiter = RateLimiter(
-                    requests_per_minute=28,  # 30 limit, use 28 for safety margin
-                    requests_per_day=int(requests_per_day * 0.95)  # 5% safety margin
+                    requests_per_minute=self.llm_settings.groq_requests_per_minute,
+                    requests_per_day=self.llm_settings.groq_requests_per_day
                 )
 
                 logger.info(
-                    f"Initialized Groq client with model: {self.llm_settings.groq_model}"
+                    f"Initialized Groq client with model: {self.llm_settings.groq_model} "
+                    f"(tier: {self.llm_settings.groq_tier})"
                 )
                 logger.info(
-                    f"Rate limiter: 28 req/min, {int(requests_per_day * 0.95)} req/day"
+                    f"Rate limiter: {self.llm_settings.groq_requests_per_minute} req/min, "
+                    f"{self.llm_settings.groq_requests_per_day} req/day"
                 )
             except Exception as e:
                 logger.warning(f"Failed to initialize Groq client: {e}")
@@ -209,6 +222,8 @@ class OllamaService:
                     prompt, temperature, max_tokens, model
                 )
             else:
+                if not self.ollama_client:
+                    raise RuntimeError("No LLM provider available - Groq not configured and Ollama not installed")
                 logger.debug("Generating with Ollama")
                 return self._generate_with_ollama(
                     prompt, temperature, max_tokens, model
@@ -219,8 +234,8 @@ class OllamaService:
                 f"LLM generation failed with {self.llm_settings.provider}: {e}"
             )
 
-            # Fallback to Ollama if we were trying Groq
-            if self.llm_settings.provider == "groq":
+            # Fallback to Ollama if we were trying Groq and Ollama is available
+            if self.llm_settings.provider == "groq" and OLLAMA_AVAILABLE and self.ollama_client:
                 logger.warning("Falling back to Ollama due to Groq failure")
 
                 # Track fallback operation
@@ -237,6 +252,10 @@ class OllamaService:
                 except Exception as fallback_error:
                     logger.error(f"Ollama fallback also failed: {fallback_error}")
                     raise fallback_error
+            elif self.llm_settings.provider == "groq" and not OLLAMA_AVAILABLE:
+                # Production: Groq-only, no fallback available
+                logger.error("Groq failed and Ollama is not available (production mode)")
+                raise
             else:
                 # Already using Ollama, can't fallback further
                 raise
@@ -449,6 +468,8 @@ class OllamaService:
                     prompt, temperature, max_tokens, model
                 )
             else:
+                if not self.ollama_client:
+                    raise RuntimeError("No LLM provider available - Groq not configured and Ollama not installed")
                 logger.debug("Generating with Ollama (async wrapper)")
                 return await self._generate_with_ollama_async(
                     prompt, temperature, max_tokens, model
@@ -459,8 +480,8 @@ class OllamaService:
                 f"Async LLM generation failed with {self.llm_settings.provider}: {e}"
             )
 
-            # Fallback to Ollama if we were trying Groq
-            if self.llm_settings.provider == "groq":
+            # Fallback to Ollama if we were trying Groq and Ollama is available
+            if self.llm_settings.provider == "groq" and OLLAMA_AVAILABLE and self.ollama_client:
                 logger.warning("Falling back to Ollama due to Groq failure")
 
                 # Track fallback operation
@@ -477,6 +498,10 @@ class OllamaService:
                 except Exception as fallback_error:
                     logger.error(f"Ollama fallback also failed: {fallback_error}")
                     raise fallback_error
+            elif self.llm_settings.provider == "groq" and not OLLAMA_AVAILABLE:
+                # Production: Groq-only, no fallback available
+                logger.error("Groq failed and Ollama is not available (production mode)")
+                raise
             else:
                 # Already using Ollama, can't fallback further
                 raise

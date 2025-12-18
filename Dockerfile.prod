@@ -40,13 +40,19 @@ WORKDIR /workspace
 # Create virtualenv
 RUN python -m venv "$VENV"
 
+# Upgrade system pip to fix CVE-2025-8869 (base image has older pip)
+RUN python -m pip install --upgrade "pip>=25.3"
+
 # Create cache directories
 RUN mkdir -p /home/nonroot/.cache/huggingface \
     && chown -R nonroot:nonroot /home/nonroot/.cache
 
 # Install PRODUCTION dependencies ONLY
+# Step 1: Install CPU-only PyTorch first (saves ~8GB vs GPU version)
 COPY --chown=nonroot:nonroot requirements-prod.txt .
-RUN /opt/venv/bin/python -m pip install --upgrade pip wheel setuptools \
+RUN /opt/venv/bin/python -m pip install --upgrade "pip>=25.3" wheel setuptools \
+    && /opt/venv/bin/python -m pip install --no-cache-dir \
+    torch --index-url https://download.pytorch.org/whl/cpu \
     && /opt/venv/bin/python -m pip install --no-cache-dir -r requirements-prod.txt
 
 # Verify critical dependencies
@@ -98,6 +104,9 @@ ENV VENV=/opt/venv \
 
 # Create non-root user
 RUN useradd -m -u 65532 -s /bin/bash nonroot || true
+
+# Upgrade system pip to fix CVE-2025-8869 (base image has older pip)
+RUN python -m pip install --upgrade "pip>=25.3"
 
 WORKDIR /workspace
 

@@ -74,7 +74,86 @@ def test_cors_deploy_preview_regex():
         "Access-Control-Request-Method": "POST",
         **headers_dict
     }
-    
+
     response = client.options("/chat", headers=headers)
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == origin
+
+
+def test_xss_payload_handling():
+    """Test that XSS payloads in responses are handled safely."""
+    xss_payloads = [
+        "<script>alert('xss')</script>",
+        "<img src=x onerror=alert('xss')>",
+        "javascript:alert('xss')",
+        "<svg onload=alert('xss')>",
+    ]
+
+    for payload in xss_payloads:
+        response = client.post(
+            "/chat",
+            json={"question": payload, "session_id": "xss-test"},
+            headers={"X-API-Key": settings.api_key}
+        )
+
+        # Response should either succeed or be caught by prompt guard
+        assert response.status_code in [200, 400, 403], \
+            f"Unexpected status {response.status_code} for XSS payload"
+
+        # If successful, response should not contain unescaped HTML
+        if response.status_code == 200:
+            response_text = response.json().get("response", "")
+            # Response should not contain raw script tags or event handlers
+            assert "<script>" not in response_text.lower(), \
+                "Response contains unescaped <script> tag"
+            assert "onerror=" not in response_text.lower(), \
+                "Response contains unescaped event handler"
+
+
+def test_oversized_request_rejected():
+    """Test that excessively large requests are rejected."""
+    # Create a 100KB message (exceeds typical limits)
+    huge_message = "x" * 100000
+
+    response = client.post(
+        "/chat",
+        json={"question": huge_message, "session_id": "size-test"},
+        headers={"X-API-Key": settings.api_key}
+    )
+
+    # Should be rejected with 413 (Payload Too Large) or 422 (Validation Error)
+    assert response.status_code in [413, 422], \
+        f"Oversized request got status {response.status_code}, expected 413 or 422"
+
+
+def test_rapid_fire_rate_limiting():
+    """Test that rapid-fire requests trigger rate limiting."""
+    session_id = "rapid-fire-test"
+
+    # Determine the rate limit from settings
+    # Default is 20 queries per hour per session
+    rate_limit = getattr(settings, 'session_queries_per_hour', 20)
+
+    # Send requests up to the limit + 5 extra
+    responses = []
+    for i in range(min(rate_limit + 5, 25)):  # Cap at 25 to avoid test taking too long
+        response = client.post(
+            "/chat",
+            json={
+                "question": f"Test question {i}",
+                "session_id": session_id
+            },
+            headers={"X-API-Key": settings.api_key}
+        )
+        responses.append((i, response.status_code))
+
+    # Count how many succeeded vs were rate limited
+    successes = [r for r in responses if r[1] == 200]
+    rate_limited = [r for r in responses if r[1] == 429]
+
+    # Should have at least some successful requests
+    assert len(successes) > 0, "No requests succeeded - rate limiter may be too strict"
+
+    # Should have rate limited the excess requests
+    assert len(rate_limited) > 0, \
+        f"Expected rate limiting after {rate_limit} requests, but all {len(responses)} succeeded"

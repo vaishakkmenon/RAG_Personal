@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+!.env.production.template
 
 # Python cache, venvs, tools
 __pycache__/

@@ -29,12 +29,16 @@ def setup_test_environment():
     os.environ["RESPONSE_CACHE_ENABLED"] = "false"
     os.environ["QUERY_REWRITER_ENABLED"] = "false"
     os.environ["CROSS_ENCODER_ENABLED"] = "false"
+    os.environ["SESSION_QUERIES_PER_HOUR"] = "10000"  # Disable rate limiting in tests
+    os.environ["SESSION_MAX_SESSIONS_PER_IP"] = "10000"  # Disable IP session limits
 
     # Force update the global settings object to ensure it reflects the env vars
     # This is necessary because settings might have been initialized (and defaults locked)
     # before this fixture ran during test collection.
     from app.settings import settings
     settings.api_key = "test-api-key"
+    settings.session.queries_per_hour = 10000  # Disable rate limiting in tests
+    settings.session.max_sessions_per_ip = 10000  # Disable IP session limits
 
     yield
     # Cleanup after all tests
@@ -102,6 +106,13 @@ def mock_redis():
 
     with patch("redis.Redis", return_value=mock_client):
         yield mock_client
+
+
+@pytest.fixture
+def mock_rate_limit():
+    """Mock rate limiter to always allow requests during tests."""
+    with patch("app.storage.base.SessionStore.check_rate_limit", return_value=True):
+        yield
 
 
 @pytest.fixture

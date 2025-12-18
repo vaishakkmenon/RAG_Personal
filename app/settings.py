@@ -403,6 +403,18 @@ class LLMSettings(BaseModel):
         default=os.getenv("LLM_GROQ_MODEL", "llama-3.1-8b-instant"),
         description="Groq model name",
     )
+    groq_tier: str = Field(
+        default=os.getenv("LLM_GROQ_TIER", "free"),
+        description="Groq API tier: 'free', 'developer', or 'enterprise'",
+    )
+    groq_requests_per_minute: int = Field(
+        default=int(os.getenv("LLM_GROQ_REQUESTS_PER_MINUTE", "28")),
+        description="Rate limit: requests per minute (based on Groq tier)",
+    )
+    groq_requests_per_day: int = Field(
+        default=int(os.getenv("LLM_GROQ_REQUESTS_PER_DAY", "13680")),
+        description="Rate limit: requests per day (based on Groq tier)",
+    )
 
     # Ollama settings
     ollama_host: str = Field(

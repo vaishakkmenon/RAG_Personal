@@ -10,7 +10,7 @@
 # ============================================================================
 
 # --- API & server ---
-fastapi==0.116.1
+fastapi>=0.120.0
 uvicorn[standard]==0.35.0  # ASGI server (includes uvloop, httptools, websockets)
 uvloop==0.21.0              # High-performance event loop
 httptools==0.6.4            # Fast HTTP parsing
@@ -28,8 +28,13 @@ rank-bm25==0.2.2              # BM25 keyword search for hybrid retrieval
 
 # --- Core ML deps (REQUIRED for embeddings) ---
 # sentence-transformers needs torch for BGE model inference
-torch>=2.4.0,<2.6.0
+torch>=2.6.0
 transformers==4.55.2
+
+# --- Security Fixes ---
+starlette>=0.49.1  # CVE-2025-62727
+urllib3>=2.6.0     # CVE-2025-50182, CVE-2025-66418
+filelock>=3.20.1   # CVE-2025-68146
 
 # --- Data / utils ---
 tqdm==4.67.1
