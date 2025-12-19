@@ -92,23 +92,53 @@ def _is_chitchat(question: str) -> tuple[bool, str]:
     return False, ""
 
 
+def _clean_answer(answer: str, question: str) -> str:
+    """Clean up common answer formatting issues.
+
+    Args:
+        answer: The generated answer
+        question: The original question
+
+    Returns:
+        Cleaned answer
+    """
+    if not answer:
+        return answer
+
+    # Fix pattern: "No, I have X but..." → "I have X"
+    # This happens when LLM incorrectly starts with "No" for listing questions
+    if answer.startswith("No, ") and " but " in answer:
+        parts = answer.split(" but ", 1)
+        if len(parts) == 2:
+            # Check if the question is asking "Which" or "What" (listing questions)
+            q_lower = question.lower().strip()
+            if any(q_lower.startswith(word) for word in ("which", "what", "list")):
+                cleaned = parts[1].strip()
+                # Capitalize first letter
+                if cleaned:
+                    cleaned = cleaned[0].upper() + cleaned[1:]
+                logger.info(
+                    "Cleaned answer: removed 'No, ... but' prefix for listing question"
+                )
+                return cleaned
+
+    return answer
+
+
 def _is_truly_ambiguous(
     question: str, conversation_history: Optional[List[Dict[str, str]]] = None
 ) -> bool:
-    """Detect ONLY obviously vague questions (1-2 words).
+    """Detect truly vague questions using simple rules.
 
-    Catches the clear-cut cases where questions are too short to be meaningful.
-    Lets the LLM handle gray areas via the system prompt.
-
-    If conversation history exists, be more lenient with short questions since
-    they may be valid follow-ups that rely on context.
+    Trust the system prompt (Rule 11) to handle most ambiguity.
+    Only catch extremely minimal queries here.
 
     Args:
         question: User's question
         conversation_history: Optional conversation history for context-aware detection
 
     Returns:
-        True if question is obviously too vague (1-2 words with filler)
+        True if question is obviously too vague
     """
     q = question.strip()
 
@@ -116,30 +146,19 @@ def _is_truly_ambiguous(
     if not q or len(q) <= 2:
         return True
 
-    # Remove punctuation and split into words
+    # Remove punctuation and count words
     words = q.replace("?", "").replace(".", "").replace("!", "").strip().split()
 
-    # If we have conversation history, be more lenient with short questions
-    # They might be valid context-dependent follow-ups
+    # With conversation context, allow very short follow-ups
     if conversation_history and len(conversation_history) > 0:
-        # Allow single-word questions if context exists (e.g., "Expiration?", "When?", "Why?")
-        # Only reject truly empty or nonsensical queries
         if len(words) >= 1 and len(q) > 2:
-            # Has at least one meaningful word and context - not ambiguous
-            return False
+            return False  # Trust context
 
-    # Without conversation history, apply stricter rules
-    # Single word queries (always vague without context)
+    # Without context: only flag truly minimal queries
     if len(words) <= 1:
         return True
 
-    # Two words with filler words (very likely vague)
-    if len(words) == 2:
-        filler_words = {"my", "the", "a", "an", "your"}
-        if any(word.lower() in filler_words for word in words):
-            return True  # "My experience?", "The background?"
-
-    # Everything else: let the LLM decide via system prompt
+    # Let the system prompt (Rule 11) handle everything else
     return False
 
 
@@ -224,97 +243,6 @@ def _merge_and_dedupe_chunks(chunks_1: List[dict], chunks_2: List[dict]) -> List
         f"Merged chunks: {len(chunks_1)} + {len(chunks_2)} = {len(merged)} (after deduplication)"
     )
     return merged
-
-
-def _check_retrieval_quality(
-    query: str, chunks: List[dict], min_term_overlap: int = 1
-) -> dict:
-    """Check if retrieved chunks contain important query terms.
-
-    This pre-check runs BEFORE the LLM call to detect weak retrieval
-    that might lead to incorrect answers.
-
-    Args:
-        query: The user's query
-        chunks: Retrieved chunks
-        min_term_overlap: Minimum number of query terms that should appear in chunks
-
-    Returns:
-        Dict with 'is_weak', 'reason', and 'found_terms'
-    """
-    if not chunks:
-        return {"is_weak": True, "reason": "no_chunks", "found_terms": []}
-
-    # Extract important terms from query (skip common words)
-    stop_words = {
-        "what",
-        "which",
-        "where",
-        "when",
-        "who",
-        "how",
-        "why",
-        "is",
-        "are",
-        "was",
-        "were",
-        "do",
-        "does",
-        "did",
-        "have",
-        "has",
-        "had",
-        "the",
-        "a",
-        "an",
-        "in",
-        "on",
-        "at",
-        "to",
-        "for",
-        "of",
-        "with",
-        "by",
-        "my",
-        "i",
-        "me",
-        "you",
-        "your",
-        "any",
-        "get",
-    }
-
-    query_words = (
-        query.lower().replace("?", "").replace(".", "").replace(",", "").split()
-    )
-    important_terms = [w for w in query_words if w not in stop_words and len(w) > 2]
-
-    if not important_terms:
-        # No important terms to check - consider OK
-        return {"is_weak": False, "reason": "no_terms_to_check", "found_terms": []}
-
-    # Check if important terms appear in any chunk
-    all_chunk_text = " ".join([c.get("text", "").lower() for c in chunks])
-    found_terms = [term for term in important_terms if term in all_chunk_text]
-
-    # Check for weak retrieval
-    overlap_ratio = len(found_terms) / len(important_terms) if important_terms else 1.0
-
-    if len(found_terms) < min_term_overlap or overlap_ratio < 0.3:
-        return {
-            "is_weak": True,
-            "reason": "low_term_overlap",
-            "found_terms": found_terms,
-            "missing_terms": [t for t in important_terms if t not in found_terms],
-            "overlap_ratio": overlap_ratio,
-        }
-
-    return {
-        "is_weak": False,
-        "reason": "ok",
-        "found_terms": found_terms,
-        "overlap_ratio": overlap_ratio,
-    }
 
 
 class ChatService:
@@ -615,25 +543,6 @@ class ChatService:
             )
         # ===== END QUERY REWRITING =====
 
-        # Check for negative inference opportunity
-        # If the question asks about a specific entity that doesn't exist in the KB,
-        # search for the category instead to find complete lists
-        from app.retrieval.negative_inference_helper import (
-            detect_negative_inference_opportunity,
-        )
-
-        neg_inf_result = detect_negative_inference_opportunity(search_query)
-
-        if neg_inf_result and neg_inf_result["is_negative_inference_candidate"]:
-            # Use category search instead of entity search
-            search_query = neg_inf_result["suggested_category_search"]
-            logger.info(
-                f"Negative inference detected: '{rewritten_query}' → "
-                f"searching for category: '{search_query}'"
-            )
-            missing = [e["entity"] for e in neg_inf_result["missing_entities"]]
-            logger.info(f"Missing entities: {missing}")
-
         # Retrieve chunks with hybrid retrieval if conversation history exists
         # If reranking is enabled, retrieve more chunks initially for better reranking
         retrieval_k = params["top_k"]
@@ -713,24 +622,6 @@ class ChatService:
                 distance = chunk.get("distance")
                 if distance is not None:
                     rag_retrieval_distance.observe(distance)
-
-        # ===== RETRIEVAL QUALITY PRE-CHECK =====
-        # Check if retrieved chunks actually contain relevant query terms
-        # This helps detect weak retrieval before sending to LLM
-        quality_check = _check_retrieval_quality(request.question, chunks)
-        if quality_check["is_weak"]:
-            logger.warning(
-                f"Weak retrieval detected: {quality_check['reason']} - "
-                f"missing terms: {quality_check.get('missing_terms', [])}"
-            )
-            # Log for debugging but continue - the LLM may still be able to answer
-            # In production, could add retry logic here
-        else:
-            logger.info(
-                f"Retrieval quality OK: found terms {quality_check['found_terms']} "
-                f"(overlap: {quality_check.get('overlap_ratio', 1.0):.0%})"
-            )
-        # ===== END QUALITY PRE-CHECK =====
 
         # Grounding check - no chunks
         if not chunks:
@@ -837,7 +728,6 @@ class ChatService:
             chunks,
             session,
             conversation_history,
-            neg_inf_result,
             rewrite_metadata,
         )
 
@@ -848,7 +738,6 @@ class ChatService:
         chunks: List[dict],
         session: "Session",
         conversation_history: List[Dict[str, str]],
-        neg_inf_result: Optional[Dict[str, Any]] = None,
         rewrite_metadata: Optional[RewriteMetadata] = None,
     ) -> ChatResponse:
         """Handle standard RAG query with LLM generation.
@@ -859,7 +748,7 @@ class ChatService:
             chunks: Retrieved chunks
             session: Session object
             conversation_history: Conversation history
-            neg_inf_result: Optional negative inference detection result
+            rewrite_metadata: Query rewrite metadata
 
         Returns:
             ChatResponse
@@ -867,37 +756,11 @@ class ChatService:
         # Prepare context for prompt builder
         formatted_chunks = self._format_sources(chunks)
 
-        # Prepare negative inference hint if detected
-        negative_inference_hint = None
-        if neg_inf_result and neg_inf_result.get("is_negative_inference_candidate"):
-            # Map category search query to human-readable category name
-            category_map = {
-                "work experience": "employers/companies",
-                "certifications": "professional certifications",
-                "personal projects": "personal projects",
-                "education": "degrees",
-            }
-
-            category_search = neg_inf_result.get("suggested_category_search", "")
-            category_name = "items"
-            for key, value in category_map.items():
-                if key in category_search.lower():
-                    category_name = value
-                    break
-
-            negative_inference_hint = {
-                "missing_entities": [
-                    e["entity"] for e in neg_inf_result["missing_entities"]
-                ],
-                "category": category_name,
-            }
-
         # Build and validate prompt
         prompt_result = self.prompt_builder.build_prompt(
             question=question,
             context_chunks=formatted_chunks,
             keywords=params.get("all_keywords", []),
-            negative_inference_hint=negative_inference_hint,
             conversation_history=conversation_history,
         )
 
@@ -945,6 +808,9 @@ class ChatService:
 
         # Use natural language response directly
         answer = response_text.strip()
+
+        # Clean answer to fix common formatting issues
+        answer = _clean_answer(answer, question)
         logger.info(f"Generated answer: {answer[:100]}...")
 
         # Check for refusal

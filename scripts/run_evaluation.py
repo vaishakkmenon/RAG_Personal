@@ -171,7 +171,7 @@ def run_retrieval_evaluation(test_cases: List[Dict], k: int = 5) -> Dict[str, An
 
 
 def run_answer_evaluation(
-    test_cases: List[Dict], delay_seconds: float = 15.0, max_retries: int = 3
+    test_cases: List[Dict], delay_seconds: float = 5.0, max_retries: int = 3
 ) -> Dict[str, Any]:
     """Run answer quality evaluation on test cases.
 
@@ -387,8 +387,43 @@ def main():
         "--test-id", type=str, help="Run only a specific test by ID (e.g., answer-002)"
     )
     parser.add_argument("--output", type=str, help="Output file for results")
+    parser.add_argument(
+        "--clear-cache",
+        action="store_true",
+        help="Clear Redis cache before running evaluation to ensure fresh responses",
+    )
 
     args = parser.parse_args()
+
+    # Clear Redis cache if requested
+    if args.clear_cache:
+        print(f"{'='*80}")
+        print("CLEARING REDIS CACHE")
+        print(f"{'='*80}")
+        try:
+            import os
+
+            redis_url = os.getenv(
+                "SESSION_REDIS_URL", "redis://:devpassword123@localhost:6379/0"
+            )
+
+            from app.storage.primary.redis_store import (
+                RedisSessionStore,
+                REDIS_AVAILABLE,
+            )
+
+            if not REDIS_AVAILABLE:
+                print("⚠️  Redis not available - skipping cache clear")
+            else:
+                store = RedisSessionStore(redis_url)
+                if store.clear_cache():
+                    print("✅ Redis cache cleared successfully")
+                else:
+                    print("❌ Failed to clear Redis cache")
+        except Exception as e:
+            print(f"⚠️  Could not clear cache: {e}")
+            print("Continuing with evaluation...")
+        print()
 
     # Load test queries
     logger.info(f"Loading test queries from {args.test_file}")

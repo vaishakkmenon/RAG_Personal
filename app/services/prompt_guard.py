@@ -217,19 +217,33 @@ class PromptGuard:
                 if METRICS_ENABLED:
                     prompt_guard_api_latency_seconds.observe(api_duration)
 
-                # Parse response - model returns simple binary classification
+                # Parse response - model can return:
+                # 1. Text labels: "benign"/"malicious"
+                # 2. Numeric labels: "LABEL_0" (benign) / "LABEL_1" (malicious)
+                # 3. Probability scores: "0.00035" (low = benign) / "0.95" (high = malicious)
                 result = response.choices[0].message.content.strip()
                 result_lower = result.lower()
 
                 logger.debug(f"PromptGuard raw response: '{result}'")
 
-                # Llama Prompt Guard 2 returns one of:
-                # - "benign" or "malicious" (text labels)
-                # - "LABEL_0" (benign) or "LABEL_1" (malicious) (numeric labels)
-                is_malicious = (
-                    "malicious" in result_lower or result.strip() == "LABEL_1"
-                )
-                is_benign = "benign" in result_lower or result.strip() == "LABEL_0"
+                # Try to parse as float first (probability score)
+                is_malicious = False
+                is_benign = False
+
+                try:
+                    score = float(result)
+                    # Score < 0.5 = benign, >= 0.5 = malicious
+                    is_benign = score < 0.5
+                    is_malicious = score >= 0.5
+                    logger.debug(
+                        f"PromptGuard parsed as probability: {score:.6f} → {'malicious' if is_malicious else 'benign'}"
+                    )
+                except ValueError:
+                    # Not a number, check for text labels
+                    is_malicious = (
+                        "malicious" in result_lower or result.strip() == "LABEL_1"
+                    )
+                    is_benign = "benign" in result_lower or result.strip() == "LABEL_0"
 
                 # If we got an unexpected response format, apply fail-open/fail-closed policy
                 if not is_malicious and not is_benign:

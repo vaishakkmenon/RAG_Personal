@@ -94,21 +94,78 @@ class RedisSessionStore(SessionStore):
 
             self._metrics_enabled = True
 
-            self.redis_operations = Counter(
-                "redis_operations_total",
-                "Total Redis operations",
-                ["operation", "status"],  # get/set/delete, success/error
-            )
+            # Try to create metrics, but handle duplicates gracefully
+            try:
+                self.redis_operations = Counter(
+                    "redis_operations_total",
+                    "Total Redis operations",
+                    ["operation", "status"],  # get/set/delete, success/error
+                )
+            except ValueError:
+                # Metric already exists, retrieve it from registry
+                from prometheus_client import REGISTRY
 
-            self.redis_latency = Histogram(
-                "redis_operation_duration_seconds",
-                "Redis operation latency",
-                ["operation"],
-            )
+                for collector in list(REGISTRY._collector_to_names.keys()):
+                    if (
+                        hasattr(collector, "_name")
+                        and collector._name == "redis_operations_total"
+                    ):
+                        self.redis_operations = collector
+                        break
+                else:
+                    # Fallback: disable this metric
+                    self.redis_operations = None
 
-            self.redis_memory = Gauge("redis_memory_usage_bytes", "Redis memory usage")
+            try:
+                self.redis_latency = Histogram(
+                    "redis_operation_duration_seconds",
+                    "Redis operation latency",
+                    ["operation"],
+                )
+            except ValueError:
+                from prometheus_client import REGISTRY
 
-            self.redis_keys = Gauge("redis_keys_total", "Total keys in Redis")
+                for collector in list(REGISTRY._collector_to_names.keys()):
+                    if (
+                        hasattr(collector, "_name")
+                        and collector._name == "redis_operation_duration_seconds"
+                    ):
+                        self.redis_latency = collector
+                        break
+                else:
+                    self.redis_latency = None
+
+            try:
+                self.redis_memory = Gauge(
+                    "redis_memory_usage_bytes", "Redis memory usage"
+                )
+            except ValueError:
+                from prometheus_client import REGISTRY
+
+                for collector in list(REGISTRY._collector_to_names.keys()):
+                    if (
+                        hasattr(collector, "_name")
+                        and collector._name == "redis_memory_usage_bytes"
+                    ):
+                        self.redis_memory = collector
+                        break
+                else:
+                    self.redis_memory = None
+
+            try:
+                self.redis_keys = Gauge("redis_keys_total", "Total keys in Redis")
+            except ValueError:
+                from prometheus_client import REGISTRY
+
+                for collector in list(REGISTRY._collector_to_names.keys()):
+                    if (
+                        hasattr(collector, "_name")
+                        and collector._name == "redis_keys_total"
+                    ):
+                        self.redis_keys = collector
+                        break
+                else:
+                    self.redis_keys = None
         except ImportError:
             logger.warning("Prometheus client not available, metrics disabled")
             self._metrics_enabled = False
@@ -161,10 +218,14 @@ class RedisSessionStore(SessionStore):
 
             # Record metrics
             if self._metrics_enabled:
-                self.redis_operations.labels(operation="get", status="success").inc()
-                self.redis_latency.labels(operation="get").observe(
-                    time.time() - start_time
-                )
+                if self.redis_operations:
+                    self.redis_operations.labels(
+                        operation="get", status="success"
+                    ).inc()
+                if self.redis_latency:
+                    self.redis_latency.labels(operation="get").observe(
+                        time.time() - start_time
+                    )
 
             if data:
                 # Track session retrieval
@@ -176,7 +237,7 @@ class RedisSessionStore(SessionStore):
             logger.error(f"Redis get error: {e}")
 
             # Record error metric
-            if self._metrics_enabled:
+            if self._metrics_enabled and self.redis_operations:
                 self.redis_operations.labels(operation="get", status="error").inc()
 
             return None
@@ -225,10 +286,14 @@ class RedisSessionStore(SessionStore):
 
             # Record metrics
             if self._metrics_enabled:
-                self.redis_operations.labels(operation="create", status="success").inc()
-                self.redis_latency.labels(operation="create").observe(
-                    time.time() - start_time
-                )
+                if self.redis_operations:
+                    self.redis_operations.labels(
+                        operation="create", status="success"
+                    ).inc()
+                if self.redis_latency:
+                    self.redis_latency.labels(operation="create").observe(
+                        time.time() - start_time
+                    )
 
             # Track session creation and update active count
             if SESSION_METRICS_ENABLED:
@@ -242,7 +307,7 @@ class RedisSessionStore(SessionStore):
         except Exception as e:
             logger.error(f"Redis create error: {e}")
 
-            if self._metrics_enabled:
+            if self._metrics_enabled and self.redis_operations:
                 self.redis_operations.labels(operation="create", status="error").inc()
 
         return session
@@ -285,14 +350,18 @@ class RedisSessionStore(SessionStore):
 
             # Record metrics
             if self._metrics_enabled:
-                self.redis_operations.labels(operation="update", status="success").inc()
-                self.redis_latency.labels(operation="update").observe(
-                    time.time() - start_time
-                )
+                if self.redis_operations:
+                    self.redis_operations.labels(
+                        operation="update", status="success"
+                    ).inc()
+                if self.redis_latency:
+                    self.redis_latency.labels(operation="update").observe(
+                        time.time() - start_time
+                    )
         except Exception as e:
             logger.error(f"Redis update error: {e}")
 
-            if self._metrics_enabled:
+            if self._metrics_enabled and self.redis_operations:
                 self.redis_operations.labels(operation="update", status="error").inc()
 
     def delete_session(self, session_id: str) -> None:
@@ -319,16 +388,18 @@ class RedisSessionStore(SessionStore):
 
                 # Record metrics
                 if self._metrics_enabled:
-                    self.redis_operations.labels(
-                        operation="delete", status="success"
-                    ).inc()
-                    self.redis_latency.labels(operation="delete").observe(
-                        time.time() - start_time
-                    )
+                    if self.redis_operations:
+                        self.redis_operations.labels(
+                            operation="delete", status="success"
+                        ).inc()
+                    if self.redis_latency:
+                        self.redis_latency.labels(operation="delete").observe(
+                            time.time() - start_time
+                        )
         except Exception as e:
             logger.error(f"Redis delete error: {e}")
 
-            if self._metrics_enabled:
+            if self._metrics_enabled and self.redis_operations:
                 self.redis_operations.labels(operation="delete", status="error").inc()
 
     def get_session_count(self) -> int:
@@ -349,7 +420,7 @@ class RedisSessionStore(SessionStore):
                     break
 
             # Update metrics
-            if self._metrics_enabled:
+            if self._metrics_enabled and self.redis_keys:
                 self.redis_keys.set(count)
 
             return count
@@ -386,20 +457,85 @@ class RedisSessionStore(SessionStore):
 
             # Record metrics
             if self._metrics_enabled:
-                self.redis_operations.labels(
-                    operation="get_by_ip", status="success"
-                ).inc()
-                self.redis_latency.labels(operation="get_by_ip").observe(
-                    time.time() - start_time
-                )
+                if self.redis_operations:
+                    self.redis_operations.labels(
+                        operation="get_by_ip", status="success"
+                    ).inc()
+                if self.redis_latency:
+                    self.redis_latency.labels(operation="get_by_ip").observe(
+                        time.time() - start_time
+                    )
 
             return sessions
         except Exception as e:
             logger.error(f"Redis IP query error: {e}")
 
-            if self._metrics_enabled:
+            if self._metrics_enabled and self.redis_operations:
                 self.redis_operations.labels(
                     operation="get_by_ip", status="error"
                 ).inc()
 
             return []
+
+    def clear_cache(self) -> bool:
+        """Clear all session data from Redis (useful for testing).
+
+        WARNING: This removes ALL sessions AND response cache. Use only for testing!
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Count keys before clearing
+            before_count = self.get_session_count()
+
+            # Flush session keys, IP indexes, AND response cache (safer than FLUSHDB)
+            deleted = 0
+
+            # Clear session keys
+            cursor = 0
+            while True:
+                cursor, keys = self._client.scan(cursor, match="session:*", count=1000)
+                if keys:
+                    deleted += self._client.delete(*keys)
+
+                if cursor == 0:
+                    break
+
+            # Clear IP indexes
+            cursor = 0
+            while True:
+                cursor, keys = self._client.scan(cursor, match="ip_index:*", count=1000)
+                if keys:
+                    deleted += self._client.delete(*keys)
+
+                if cursor == 0:
+                    break
+
+            # Clear response cache (THIS WAS MISSING!)
+            cursor = 0
+            response_keys_deleted = 0
+            while True:
+                cursor, keys = self._client.scan(
+                    cursor, match="rag:response:*", count=1000
+                )
+                if keys:
+                    response_keys_deleted += self._client.delete(*keys)
+
+                if cursor == 0:
+                    break
+
+            logger.info(
+                f"Cleared Redis cache: {before_count} sessions, "
+                f"{response_keys_deleted} response cache entries, "
+                f"{deleted} total keys deleted"
+            )
+
+            # Update metrics
+            if SESSION_METRICS_ENABLED:
+                rag_sessions_active.set(0)
+
+            return True
+        except Exception as e:
+            logger.error(f"Failed to clear Redis cache: {e}")
+            return False

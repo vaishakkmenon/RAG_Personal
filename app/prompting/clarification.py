@@ -25,6 +25,18 @@ def _clarification_examples(question: str) -> Tuple[str, List[str]]:
         "your skills",
     ]
 
+    if any(
+        word in stripped
+        for word in ("certification", "certifications", "cert", "certs")
+    ):
+        return (
+            "your certifications",
+            [
+                "specific certification details (name, date, expiration)",
+                "which certifications you hold",
+                "skills validated by each certification",
+            ],
+        )
     if "gpa" in stripped:
         return (
             "your academic performance",
@@ -45,14 +57,12 @@ def _clarification_examples(question: str) -> Tuple[str, List[str]]:
         )
     if any(word in stripped for word in ("background", "qualifications")):
         return (
-            "your background and qualifications",
+            "your background",
             [
-                "your education",
-                "your work experience",
-                "your certifications",
-                "projects that used Kubernetes",
-                "certifications like the CKA",
-                "work experience involving Kubernetes",
+                "your education (degrees, GPA, coursework)",
+                "your work experience (roles, companies, responsibilities)",
+                "your certifications (CKA, AWS certifications)",
+                "your technical skills and projects",
             ],
         )
     if "history" in stripped:
@@ -89,6 +99,21 @@ def build_clarification_message(question: str, config) -> str:
     """
     topic, domains = _clarification_examples(question)
 
+    # For domain-specific queries (3 or fewer options), use simpler message
+    if len(domains) <= 3:
+        if len(domains) == 1:
+            examples_text = domains[0]
+        elif len(domains) == 2:
+            examples_text = " or ".join(domains)
+        else:
+            examples_text = ", ".join(domains[:-1]) + ", or " + domains[-1]
+
+        return (
+            f"Could you clarify what you'd like to know about {topic}? "
+            f"For example, I can provide information about {examples_text}."
+        )
+
+    # For broad queries, include more context
     core_domains = [
         "education",
         "work experience",

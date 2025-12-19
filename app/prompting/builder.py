@@ -1,7 +1,8 @@
 """
-Prompt Builder - Prompt construction and validation
+Prompt Builder - Prompt construction and validation (OPTIMIZED)
 
 Handles building and validating prompts with safety guards.
+Uses conditional example injection for token efficiency.
 """
 
 import logging
@@ -108,7 +109,6 @@ class PromptBuilder:
         question: str,
         context_chunks: List[Dict[str, Any]],
         keywords: Optional[List[str]] = None,
-        negative_inference_hint: Optional[Dict[str, Any]] = None,
         conversation_history: Optional[List[Dict[str, str]]] = None,
     ) -> PromptResult:
         """Build a prompt with the given question and context chunks.
@@ -117,8 +117,6 @@ class PromptBuilder:
             question: The user's question
             context_chunks: Retrieved context chunks
             keywords: Optional list of keywords to guide LLM focus
-            negative_inference_hint: Optional hint about negative inference opportunity
-                Dict with keys: 'missing_entities', 'category'
             conversation_history: Optional list of previous conversation turns
 
         Returns:
@@ -139,33 +137,26 @@ class PromptBuilder:
                 keyword_str = ", ".join(keywords)
                 question_section += f"\n[Focus areas: {keyword_str}]"
 
-            # Add negative inference hint if provided
-            if negative_inference_hint:
-                missing = negative_inference_hint.get("missing_entities", [])
-                category = negative_inference_hint.get("category", "items")
+            # OPTIMIZED: Get system prompt with conditional examples based on query
+            system_prompt = self.config.get_system_prompt_with_examples(question)
 
-                if missing:
-                    entities_str = ", ".join(missing)
-                    hint = (
-                        f"\n\n[IMPORTANT INSTRUCTION: The question asks about '{entities_str}' which does not appear in the provided context. "
-                        f"However, the context DOES contain a complete list of {category}. "
-                        f"You MUST apply NEGATIVE INFERENCE by examining the complete list and answering 'No' with what IS present. "
-                        f"Do NOT say 'I don't know' - instead, use the complete list to infer the negative answer.]"
-                    )
-                    question_section += hint
+            # OPTIMIZED: Get certification guidelines only if query mentions certifications
+            cert_guidelines = self.config.get_certification_guidelines_with_check(
+                question
+            )
 
             # Build prompt sections
             prompt_sections = [
-                self.config.system_prompt.strip(),
-                self.config.certification_guidelines.strip(),
+                system_prompt.strip(),
+                cert_guidelines.strip() if cert_guidelines else None,
                 history_text,
                 context,
                 "QUESTION:",
-                question_section,  # Now includes keyword annotation and negative inference hint if present
+                question_section,
                 "ANSWER:",
             ]
 
-            # Join sections with double newlines
+            # Join sections with double newlines (filter out None/empty strings)
             prompt = "\n\n".join(section for section in prompt_sections if section)
 
             return PromptResult(status="success", prompt=prompt, context=context)

@@ -123,7 +123,7 @@ class TwoPhaseTestRunner:
         self,
         test_suite: Dict[str, Any],
         output_file: str = "test_answers.json",
-        delay: float = 4.0,
+        delay: float = 5.0,
         filter_category: str = None,
         filter_test_ids: List[str] = None,
     ) -> List[Dict[str, Any]]:
@@ -344,7 +344,7 @@ def main():
     parser.add_argument(
         "--delay",
         type=float,
-        default=4.0,
+        default=5.0,
         help="Delay between requests in seconds (applies to both collection and validation phases)",
     )
     parser.add_argument(
@@ -357,8 +357,45 @@ def main():
         dest="test_ids",
         help="Filter by specific test ID(s). Can be used multiple times (e.g., --test-id skills_001 --test-id skills_002)",
     )
+    parser.add_argument(
+        "--clear-cache",
+        action="store_true",
+        help="Clear Redis cache before running tests to ensure fresh responses (no cache hits)",
+    )
 
     args = parser.parse_args()
+
+    # Clear Redis cache if requested
+    if args.clear_cache:
+        print(f"{'='*80}")
+        print("CLEARING REDIS CACHE")
+        print(f"{'='*80}")
+        try:
+            # Import Redis connection settings
+            import os
+
+            redis_url = os.getenv(
+                "SESSION_REDIS_URL", "redis://:devpassword123@localhost:6379/0"
+            )
+
+            # Import required modules
+            from app.storage.primary.redis_store import (
+                RedisSessionStore,
+                REDIS_AVAILABLE,
+            )
+
+            if not REDIS_AVAILABLE:
+                print("⚠️  Redis not available - skipping cache clear")
+            else:
+                store = RedisSessionStore(redis_url)
+                if store.clear_cache():
+                    print("✅ Redis cache cleared successfully")
+                else:
+                    print("❌ Failed to clear Redis cache")
+        except Exception as e:
+            print(f"⚠️  Could not clear cache: {e}")
+            print("Continuing with tests...")
+        print()
 
     # Phase 1: Collect answers
     if args.phase in ["collect", "both"]:

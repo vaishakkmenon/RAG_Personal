@@ -332,8 +332,8 @@ def chunk_by_terms(
 
             elif level == 2:
                 # L2 header: Sub-section (Graduate Summary, Coursework by Term, etc.)
-                # Save previous section if it was a term
-                if current_section_type == "term" and current_section_content:
+                # Save previous section (ALL types, not just "term")
+                if current_section_content and current_section_header:
                     chunk = _create_term_chunk(
                         header=current_section_header,
                         content="\n".join(current_section_content),
@@ -344,7 +344,7 @@ def chunk_by_terms(
                         chunk_idx=chunk_idx,
                         term_info=current_term_info,
                         program=current_program,
-                        section_type="term",
+                        section_type=current_section_type or "other",
                     )
                     if chunk:
                         all_chunks.append(chunk)

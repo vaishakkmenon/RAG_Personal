@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "created": "2025-10-24",
     "description": "Comprehensive test suite for Personal RAG system",
-    "total_tests": 43,
+    "total_tests": 53,
     "api_endpoint": "http://localhost:8000/chat",
     "api_key": "dev-key-1"
   },
@@ -903,6 +903,270 @@
         "expected_response": {
           "should_ask_clarification": false,
           "max_sources": 5
+        }
+      }
+    },
+    {
+      "test_id": "control_specific_003",
+      "category": "ambiguity_control",
+      "question": "What personal projects have I built?",
+      "expected_keywords": [
+        "RAG",
+        "GPT",
+        "projects"
+      ],
+      "expected_answer": "Should list personal projects without asking for clarification.",
+      "is_impossible": false,
+      "expected_doc_type": "resume",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "easy",
+      "notes": "CONTROL - Full question should NOT trigger ambiguity",
+      "expected_behavior": {
+        "should_detect_ambiguity": false,
+        "max_ambiguity_score": 0.5,
+        "expected_response": {
+          "should_ask_clarification": false,
+          "min_sources": 1
+        }
+      }
+    },
+    {
+      "test_id": "control_specific_004",
+      "category": "ambiguity_control",
+      "question": "Give me a summary of my academic performance including GPA and honors",
+      "expected_keywords": [
+        "GPA",
+        "3.97",
+        "4.00",
+        "Summa Cum Laude"
+      ],
+      "expected_answer": "Should provide academic summary without requesting clarification.",
+      "is_impossible": false,
+      "expected_doc_type": "transcript_analysis",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "medium",
+      "notes": "CONTROL - Detailed request should NOT trigger ambiguity",
+      "expected_behavior": {
+        "should_detect_ambiguity": false,
+        "max_ambiguity_score": 0.3,
+        "expected_response": {
+          "should_ask_clarification": false,
+          "min_sources": 1
+        }
+      }
+    },
+    {
+      "test_id": "control_specific_005",
+      "category": "ambiguity_control",
+      "question": "List all the AWS certifications I have with their expiration dates",
+      "expected_keywords": [
+        "AWS",
+        "Cloud Practitioner",
+        "AI Practitioner",
+        "2028"
+      ],
+      "expected_answer": "Should list AWS certifications with dates without requesting clarification.",
+      "is_impossible": false,
+      "expected_doc_type": "certificate",
+      "min_sources": 1,
+      "grounded_expected": true,
+      "difficulty": "medium",
+      "notes": "CONTROL - Specific multi-part query should NOT trigger ambiguity",
+      "expected_behavior": {
+        "should_detect_ambiguity": false,
+        "max_ambiguity_score": 0.3,
+        "expected_response": {
+          "should_ask_clarification": false,
+          "min_sources": 1
+        }
+      }
+    },
+    {
+      "test_id": "vague_001",
+      "category": "ambiguity_detection",
+      "question": "Projects?",
+      "expected_keywords": [
+        "clarify",
+        "which",
+        "specific",
+        "projects"
+      ],
+      "expected_answer": "Should request clarification about which aspect of projects (personal projects, coursework projects, work projects).",
+      "is_impossible": false,
+      "expected_doc_type": null,
+      "min_sources": 0,
+      "grounded_expected": false,
+      "difficulty": "easy",
+      "notes": "KEY PHASE 1 TEST - Single word vague query should trigger ambiguity detection",
+      "expected_behavior": {
+        "should_detect_ambiguity": true,
+        "min_ambiguity_score": 0.85,
+        "expected_response": {
+          "should_ask_clarification": true,
+          "allowed_keywords": [
+            "clarify",
+            "which",
+            "specific",
+            "detail",
+            "projects",
+            "personal projects",
+            "coursework",
+            "work"
+          ],
+          "max_sources": 0
+        }
+      }
+    },
+    {
+      "test_id": "vague_002",
+      "category": "ambiguity_detection",
+      "question": "tell me more",
+      "expected_keywords": [
+        "clarify",
+        "what",
+        "specific"
+      ],
+      "expected_answer": "Should request clarification - 'more' about what?",
+      "is_impossible": false,
+      "expected_doc_type": null,
+      "min_sources": 0,
+      "grounded_expected": false,
+      "difficulty": "easy",
+      "notes": "Generic follow-up without context should be ambiguous",
+      "expected_behavior": {
+        "should_detect_ambiguity": true,
+        "min_ambiguity_score": 0.85,
+        "expected_response": {
+          "should_ask_clarification": true,
+          "max_sources": 0
+        }
+      }
+    },
+    {
+      "test_id": "vague_003",
+      "category": "ambiguity_detection",
+      "question": "summary",
+      "expected_keywords": [
+        "clarify",
+        "which",
+        "what"
+      ],
+      "expected_answer": "Should request clarification about what to summarize.",
+      "is_impossible": false,
+      "expected_doc_type": null,
+      "min_sources": 0,
+      "grounded_expected": false,
+      "difficulty": "easy",
+      "notes": "Single word 'summary' is too vague",
+      "expected_behavior": {
+        "should_detect_ambiguity": true,
+        "min_ambiguity_score": 0.85,
+        "expected_response": {
+          "should_ask_clarification": true,
+          "max_sources": 0
+        }
+      }
+    },
+    {
+      "test_id": "vague_004",
+      "category": "ambiguity_detection",
+      "question": "details",
+      "expected_keywords": [
+        "clarify",
+        "which",
+        "what"
+      ],
+      "expected_answer": "Should request clarification about which details.",
+      "is_impossible": false,
+      "expected_doc_type": null,
+      "min_sources": 0,
+      "grounded_expected": false,
+      "difficulty": "easy",
+      "notes": "Single word 'details' needs context",
+      "expected_behavior": {
+        "should_detect_ambiguity": true,
+        "min_ambiguity_score": 0.85,
+        "expected_response": {
+          "should_ask_clarification": true,
+          "max_sources": 0
+        }
+      }
+    },
+    {
+      "test_id": "vague_005",
+      "category": "ambiguity_detection",
+      "question": "history",
+      "expected_keywords": [
+        "clarify",
+        "which",
+        "what",
+        "type"
+      ],
+      "expected_answer": "Should request clarification about which type of history (work, education, etc).",
+      "is_impossible": false,
+      "expected_doc_type": null,
+      "min_sources": 0,
+      "grounded_expected": false,
+      "difficulty": "easy",
+      "notes": "Single word 'history' is ambiguous",
+      "expected_behavior": {
+        "should_detect_ambiguity": true,
+        "min_ambiguity_score": 0.85,
+        "expected_response": {
+          "should_ask_clarification": true,
+          "max_sources": 0
+        }
+      }
+    },
+    {
+      "test_id": "vague_006",
+      "category": "ambiguity_detection",
+      "question": "Certifications?",
+      "expected_keywords": [
+        "clarify",
+        "which",
+        "specific"
+      ],
+      "expected_answer": "Should request clarification about certifications (Kubernetes, AWS, etc).",
+      "is_impossible": false,
+      "expected_doc_type": null,
+      "min_sources": 0,
+      "grounded_expected": false,
+      "difficulty": "easy",
+      "notes": "Single word with question mark - semantically vague",
+      "expected_behavior": {
+        "should_detect_ambiguity": true,
+        "min_ambiguity_score": 0.85,
+        "expected_response": {
+          "should_ask_clarification": true,
+          "max_sources": 0
+        }
+      }
+    },
+    {
+      "test_id": "vague_007",
+      "category": "ambiguity_detection",
+      "question": "more info",
+      "expected_keywords": [
+        "clarify",
+        "what",
+        "which"
+      ],
+      "expected_answer": "Should request clarification - more info about what?",
+      "is_impossible": false,
+      "expected_doc_type": null,
+      "min_sources": 0,
+      "grounded_expected": false,
+      "difficulty": "easy",
+      "notes": "Generic request for information without topic",
+      "expected_behavior": {
+        "should_detect_ambiguity": true,
+        "min_ambiguity_score": 0.8,
+        "expected_response": {
+          "should_ask_clarification": true,
+          "max_sources": 0
         }
       }
     }

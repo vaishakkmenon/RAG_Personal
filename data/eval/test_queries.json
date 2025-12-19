@@ -959,6 +959,138 @@
         "Magna"
       ],
       "difficulty": "easy"
+    },
+    {
+      "id": "ambiguity-001",
+      "query": "Projects?",
+      "expected_facts": [
+        "clarify",
+        "which",
+        "specific"
+      ],
+      "must_not_contain": [
+        "RAG",
+        "GPT",
+        "Music Genre"
+      ],
+      "difficulty": "easy",
+      "notes": "KEY PHASE 1 TEST - Should request clarification, not answer"
+    },
+    {
+      "id": "ambiguity-002",
+      "query": "tell me more",
+      "expected_facts": [
+        "clarify",
+        "what",
+        "which"
+      ],
+      "must_not_contain": [],
+      "difficulty": "easy",
+      "notes": "Generic follow-up without context should trigger clarification"
+    },
+    {
+      "id": "ambiguity-003",
+      "query": "summary",
+      "expected_facts": [
+        "clarify",
+        "which",
+        "what"
+      ],
+      "must_not_contain": [],
+      "difficulty": "easy",
+      "notes": "Single word 'summary' should request clarification"
+    },
+    {
+      "id": "ambiguity-004",
+      "query": "details",
+      "expected_facts": [
+        "clarify",
+        "which"
+      ],
+      "must_not_contain": [],
+      "difficulty": "easy",
+      "notes": "Single word 'details' should request clarification"
+    },
+    {
+      "id": "ambiguity-005",
+      "query": "history",
+      "expected_facts": [
+        "clarify",
+        "which",
+        "type"
+      ],
+      "must_not_contain": [],
+      "difficulty": "easy",
+      "notes": "Single word 'history' should request clarification"
+    },
+    {
+      "id": "ambiguity-006",
+      "query": "Certifications?",
+      "expected_facts": [
+        "clarify",
+        "which"
+      ],
+      "must_not_contain": [
+        "CKA",
+        "AWS"
+      ],
+      "difficulty": "easy",
+      "notes": "Single word with question mark should request clarification"
+    },
+    {
+      "id": "ambiguity-007",
+      "query": "more info",
+      "expected_facts": [
+        "clarify",
+        "what",
+        "which"
+      ],
+      "must_not_contain": [],
+      "difficulty": "easy",
+      "notes": "Generic request without topic should request clarification"
+    },
+    {
+      "id": "control-ambiguity-001",
+      "query": "What personal projects have I built?",
+      "expected_facts": [
+        "RAG",
+        "GPT",
+        "projects"
+      ],
+      "must_not_contain": [
+        "clarify",
+        "which aspect"
+      ],
+      "difficulty": "easy",
+      "notes": "CONTROL - Full question should NOT trigger ambiguity"
+    },
+    {
+      "id": "control-ambiguity-002",
+      "query": "Give me a summary of my academic performance including GPA and honors",
+      "expected_facts": [
+        "GPA",
+        "Summa Cum Laude"
+      ],
+      "must_not_contain": [
+        "clarify",
+        "which"
+      ],
+      "difficulty": "medium",
+      "notes": "CONTROL - Detailed request should NOT trigger ambiguity"
+    },
+    {
+      "id": "control-ambiguity-003",
+      "query": "List all the AWS certifications I have with their expiration dates",
+      "expected_facts": [
+        "AWS",
+        "2028"
+      ],
+      "must_not_contain": [
+        "clarify",
+        "which certifications"
+      ],
+      "difficulty": "medium",
+      "notes": "CONTROL - Specific multi-part query should NOT trigger ambiguity"
     }
   ]
 }

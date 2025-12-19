@@ -199,6 +199,9 @@ def search(
         else:
             results = _semantic_search(query, retrieval_k, max_dist, metadata_filter)
 
+        # Boost summary chunks for aggregation queries
+        results = _boost_summary_chunks(query, results)
+
         # Cache successful retrieval results for fallback
         if results:
             try:
@@ -247,6 +250,149 @@ def search(
             results = results[:final_k]
 
     return results[:final_k]
+
+
+def _boost_summary_chunks(query: str, chunks: List[dict]) -> List[dict]:
+    """Boost chunks from summary/statistics sections for aggregation queries.
+
+    Also intelligently boosts document types based on query intent:
+    - Academic/credit queries → boost transcript_analysis docs
+    - Certification queries → boost certificate docs
+    - Work/experience queries → boost resume docs
+
+    Args:
+        query: The search query
+        chunks: Retrieved chunks
+
+    Returns:
+        Chunks with adjusted distances (boosted chunks)
+    """
+    query_lower = query.lower()
+
+    # Step 1: Detect query intent and boost appropriate document types
+    academic_keywords = [
+        "credit",
+        "credits",
+        "gpa",
+        "grade",
+        "course",
+        "courses",
+        "semester",
+        "term",
+        "degree",
+        "undergraduate",
+        "graduate",
+        "transcript",
+        "academic",
+        "university",
+        "college",
+    ]
+
+    cert_keywords = ["certification", "certified", "certificate", "cka", "aws"]
+
+    work_keywords = [
+        "work",
+        "job",
+        "experience",
+        "company",
+        "role",
+        "position",
+        "employment",
+    ]
+
+    is_academic_query = any(keyword in query_lower for keyword in academic_keywords)
+    is_cert_query = any(keyword in query_lower for keyword in cert_keywords)
+    is_work_query = any(keyword in query_lower for keyword in work_keywords)
+
+    # Boost transcript_analysis docs for academic queries
+    if is_academic_query:
+        for chunk in chunks:
+            metadata = chunk.get("metadata", {})
+            doc_type = metadata.get("doc_type", "")
+            original_distance = chunk.get("distance")
+
+            if doc_type == "transcript_analysis" and original_distance is not None:
+                # Strong boost (50% distance reduction) for transcript docs on academic queries
+                chunk["distance"] = original_distance * 0.5
+                logger.info(
+                    f"Boosted transcript_analysis chunk (academic query detected) "
+                    f"(distance: {original_distance:.3f} → {chunk['distance']:.3f})"
+                )
+
+    # Boost certificate docs for certification queries
+    elif is_cert_query:
+        for chunk in chunks:
+            metadata = chunk.get("metadata", {})
+            doc_type = metadata.get("doc_type", "")
+            original_distance = chunk.get("distance")
+
+            if doc_type == "certificate" and original_distance is not None:
+                chunk["distance"] = original_distance * 0.6
+                logger.debug(
+                    f"Boosted certificate chunk "
+                    f"(distance: {original_distance:.3f} → {chunk['distance']:.3f})"
+                )
+
+    # Boost resume docs for work experience queries
+    elif is_work_query:
+        for chunk in chunks:
+            metadata = chunk.get("metadata", {})
+            doc_type = metadata.get("doc_type", "")
+            original_distance = chunk.get("distance")
+
+            if doc_type == "resume" and original_distance is not None:
+                chunk["distance"] = original_distance * 0.7
+                logger.debug(
+                    f"Boosted resume chunk "
+                    f"(distance: {original_distance:.3f} → {chunk['distance']:.3f})"
+                )
+
+    # Step 2: Detect aggregation queries that need summary sections
+    aggregation_keywords = [
+        "total",
+        "overall",
+        "how many",
+        "all of",
+        "summary",
+        "statistics",
+        "combined",
+    ]
+
+    needs_summary = any(keyword in query_lower for keyword in aggregation_keywords)
+
+    if needs_summary:
+        # Boost chunks with summary/statistics in section_name
+        summary_keywords = [
+            "summary",
+            "statistics",
+            "overall",
+            "gpa",
+            "total",
+            "performance",
+        ]
+
+        for chunk in chunks:
+            metadata = chunk.get("metadata", {})
+            section_name = (metadata.get("section_name") or "").lower()
+
+            # Check if section name contains summary keywords
+            if any(keyword in section_name for keyword in summary_keywords):
+                # Additional boost for summary sections (multiplicative with doc-type boost)
+                original_distance = chunk.get("distance")
+                if original_distance is not None:
+                    chunk["distance"] = original_distance * 0.8
+                    logger.debug(
+                        f"Boosted summary section '{section_name}' "
+                        f"(distance: {original_distance:.3f} → {chunk['distance']:.3f})"
+                    )
+
+    # Re-sort chunks by distance after all boosting
+    # Handle None distances from BM25-only results (treat as lowest priority)
+    chunks.sort(
+        key=lambda x: x.get("distance") if x.get("distance") is not None else 999.0
+    )
+
+    return chunks
 
 
 def _semantic_search(
