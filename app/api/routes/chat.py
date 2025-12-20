@@ -3,9 +3,11 @@ Chat endpoint for Personal RAG system.
 """
 
 import time
+import logging
 from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import StreamingResponse
 
 from app.models import ChatRequest, ChatResponse, ChatSource
 from app.api.dependencies import check_api_key, get_chat_service
@@ -15,7 +17,6 @@ from app.services.llm import generate_with_llm
 from app.services.prompt_guard import get_prompt_guard
 from app.prompting import create_default_prompt_builder
 from app.settings import settings
-import logging
 from app.exceptions import LLMException, RetrievalException, RAGException
 
 router = APIRouter()
@@ -33,6 +34,71 @@ try:
 except ImportError:
     METRICS_ENABLED = False
     logger.debug("End-to-end metrics not available")
+
+
+@router.post(
+    "/chat/stream",
+    response_class=StreamingResponse,
+    summary="Stream a question about Vaishak's background",
+    description="""
+    Stream the answer and receive an AI-generated answer based on Vaishak's documents.
+    Returns Server-Sent Events (SSE).
+
+    **Events:**
+    - `event: metadata`: JSON with sources, session_id, grounded flag, etc. (First event)
+    - `event: token`: JSON string of the text chunk (Multiple events)
+    - `event: error`: JSON with error details
+    - `event: done`: Signal that stream is complete
+
+    **Example Usage:**
+    ```bash
+    curl -N -X POST http://localhost:8000/chat/stream \\
+      -H "Content-Type: application/json" \\
+      -H "X-API-Key: $API_KEY" \\
+      -d '{"question": "Tell me about yourself"}'
+    ```
+    """,
+)
+async def chat_stream(
+    request: ChatRequest,
+    # Optional parameters consistent with other endpoints
+    grounded_only: Optional[bool] = None,
+    null_threshold: Optional[float] = None,
+    max_distance: Optional[float] = None,
+    top_k: Optional[int] = None,
+    temperature: Optional[float] = None,
+    max_tokens: Optional[int] = None,
+    rerank: Optional[bool] = None,
+    rerank_lex_weight: Optional[float] = None,
+    doc_type: Optional[str] = None,
+    term_id: Optional[str] = None,
+    level: Optional[str] = None,
+    model: Optional[str] = None,
+    # Dependencies
+    api_key: str = Depends(check_api_key),
+    chat_service: ChatService = Depends(get_chat_service),
+):
+    """
+    Streaming endpoint for RAG chat.
+    """
+    # Create the generator
+    stream_generator = chat_service.handle_chat_stream(
+        request=request,
+        grounded_only=grounded_only,
+        null_threshold=null_threshold,
+        max_distance=max_distance,
+        top_k=top_k,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        rerank=rerank,
+        rerank_lex_weight=rerank_lex_weight,
+        doc_type=doc_type,
+        term_id=term_id,
+        level=level,
+        model=model,
+    )
+
+    return StreamingResponse(stream_generator, media_type="text/event-stream")
 
 
 @router.post(

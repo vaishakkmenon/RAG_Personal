@@ -7,7 +7,7 @@ Includes rate limiting for Groq to stay within free tier limits.
 
 import logging
 import time
-from typing import Optional
+from typing import Optional, AsyncIterator
 import asyncio
 from functools import wraps
 
@@ -409,6 +409,135 @@ class GroqLLMService:
 
             raise
 
+    async def async_generate_stream(
+        self,
+        prompt: str,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        model: Optional[str] = None,
+    ) -> AsyncIterator[str]:
+        """Generate text stream asynchronously using Groq API.
+
+        Args:
+            prompt: The input prompt
+            temperature: Sampling temperature (None uses default from settings)
+            max_tokens: Maximum number of tokens to generate (None uses default)
+            model: Optional override for the model name
+
+        Yields:
+            Generated text chunks
+        """
+        # Use settings defaults if not provided
+        temperature = (
+            temperature if temperature is not None else self.llm_settings.temperature
+        )
+        max_tokens = (
+            max_tokens if max_tokens is not None else self.llm_settings.max_tokens
+        )
+
+        logger.debug("Generating with Groq (async stream)")
+        async for chunk in self._generate_with_groq_async_stream(
+            prompt, temperature, max_tokens, model
+        ):
+            yield chunk
+
+    async def _generate_with_groq_async_stream(
+        self,
+        prompt: str,
+        temperature: float,
+        max_tokens: int,
+        model: Optional[str] = None,
+    ) -> AsyncIterator[str]:
+        """Generate text stream asynchronously using Groq API with rate limiting.
+
+        Args:
+            prompt: The input prompt
+            temperature: Sampling temperature
+            max_tokens: Maximum tokens to generate
+            model: Optional model override
+
+        Yields:
+            Generated text chunks
+        """
+        model_name = model or self.model
+
+        # Wait for rate limiter (blocks if at limit)
+        if self.rate_limiter:
+            logger.debug("Waiting for rate limiter...")
+            # Run synchronous rate limiter in executor to not block
+            loop = asyncio.get_event_loop()
+            acquired = await loop.run_in_executor(
+                None, lambda: self.rate_limiter.acquire(timeout=60)
+            )
+            if not acquired:
+                raise Exception(
+                    "Rate limiter timeout - Groq request quota exceeded. Please try again later."
+                )
+
+            # Log rate limit status
+            stats = self.rate_limiter.get_stats()
+            if stats["minute_utilization"] > 0.8 or stats["day_utilization"] > 0.8:
+                logger.warning(
+                    f"High rate limit usage: "
+                    f"{stats['requests_last_minute']}/{stats['requests_per_minute_limit']} req/min, "
+                    f"{stats['requests_last_day']}/{stats['requests_per_day_limit']} req/day"
+                )
+
+        start = time.time()
+        try:
+            logger.debug(f"Calling Groq API async stream with model: {model_name}")
+
+            stream = await self.async_groq_client.chat.completions.create(
+                model=model_name,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=True,
+            )
+
+            # Metrics (start)
+            if METRICS_ENABLED:
+                rag_llm_request_total.labels(
+                    status="success", model=f"groq:{model_name}"
+                ).inc()
+
+            async for chunk in stream:
+                content = chunk.choices[0].delta.content
+                if content:
+                    yield content
+
+            duration = time.time() - start
+            logger.info(f"Groq async stream finished in {duration:.2f}s")
+
+            if METRICS_ENABLED:
+                rag_llm_latency_seconds.labels(
+                    status="success", model=f"groq:{model_name}"
+                ).observe(duration)
+
+        except Exception as e:
+            duration = time.time() - start
+
+            if METRICS_ENABLED:
+                rag_llm_request_total.labels(
+                    status="error", model=f"groq:{model_name}"
+                ).inc()
+                rag_llm_latency_seconds.labels(
+                    status="error", model=f"groq:{model_name}"
+                ).observe(duration)
+
+            # Check for specific error types
+            error_msg = str(e)
+            if "rate_limit" in error_msg.lower():
+                logger.warning(f"Groq rate limit exceeded: {e}")
+            elif (
+                "api_key" in error_msg.lower() or "authentication" in error_msg.lower()
+            ):
+                logger.error(f"Groq authentication error: {e}")
+            else:
+                logger.error(f"Groq API error: {e}")
+
+            raise
+
 
 # Global service instance (lazy initialization)
 _service: GroqLLMService = None
@@ -477,9 +606,37 @@ async def async_generate_with_llm(
     )
 
 
+async def async_generate_stream_with_llm(
+    prompt: str,
+    temperature: Optional[float] = None,
+    max_tokens: Optional[int] = None,
+    model: Optional[str] = None,
+) -> AsyncIterator[str]:
+    """Async convenience function for streaming text with Groq LLM.
+
+    Args:
+        prompt: The input prompt to generate text from
+        temperature: Sampling temperature
+        max_tokens: Maximum number of tokens to generate
+        model: Optional model override
+
+    Yields:
+        Generated text chunks
+    """
+    service = get_llm_service()
+    async for chunk in service.async_generate_stream(
+        prompt=prompt,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        model=model,
+    ):
+        yield chunk
+
+
 __all__ = [
     "GroqLLMService",
     "get_llm_service",
     "generate_with_llm",
     "async_generate_with_llm",
+    "async_generate_stream_with_llm",
 ]
