@@ -6,9 +6,11 @@ prompt building, and LLM generation.
 """
 
 import logging
+import re
+import time
 from typing import Any, Dict, List, Optional
 
-from fastapi import HTTPException, status
+from fastapi import BackgroundTasks, HTTPException, status
 
 from app.models import (
     ChatRequest,
@@ -23,6 +25,7 @@ from app.monitoring.pattern_suggester import get_pattern_suggester
 from app.prompting import build_clarification_message, create_default_prompt_builder
 from app.retrieval import search
 from app.services.llm import generate_with_ollama
+from app.services.prompt_guard import get_prompt_guard
 from app.services.reranker import rerank_chunks
 from app.services.response_cache import get_response_cache
 from app.settings import settings
@@ -39,12 +42,39 @@ try:
         rag_grounding_total,
         rag_ambiguity_checks_total,
         rag_clarification_requests_total,
+        rag_llm_token_usage_total,
+        rag_llm_cost_total,
     )
 
     METRICS_ENABLED = True
 except ImportError:
     METRICS_ENABLED = False
     logger.debug("Metrics not available for chat service")
+
+
+# PII patterns to redact from LLM responses
+PII_PATTERNS = [
+    (r"\b\d{3}-\d{2}-\d{4}\b", "[REDACTED SSN]"),  # SSN format XXX-XX-XXXX
+    (r"\b\d{16}\b", "[REDACTED CARD]"),  # 16-digit credit card
+    (
+        r"\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b",
+        "[REDACTED CARD]",
+    ),  # Credit card with spaces/dashes
+]
+
+
+def _filter_pii(text: str) -> str:
+    """Redact potential PII from LLM responses.
+
+    Args:
+        text: The text to filter
+
+    Returns:
+        Text with PII patterns redacted
+    """
+    for pattern, replacement in PII_PATTERNS:
+        text = re.sub(pattern, replacement, text)
+    return text
 
 
 def _is_chitchat(question: str) -> tuple[bool, str]:
@@ -301,6 +331,17 @@ class ChatService:
         return sources
 
     @time_execution_info
+    def _normalize_query(self, query: str) -> str:
+        """
+        Normalize query for consistent caching.
+
+        - Lowercase
+        - Strip whitespace
+        - Remove trailing punctuation
+        """
+        normalized = query.lower().strip()
+        return normalized.rstrip("?!.")
+
     def handle_chat(
         self,
         request: ChatRequest,
@@ -317,8 +358,12 @@ class ChatService:
         level: Optional[str] = None,
         model: Optional[str] = None,
         skip_route_cache: bool = False,
+        api_key: Optional[str] = None,
+        background_tasks: Optional[BackgroundTasks] = None,
+        request_id: Optional[str] = None,
     ) -> ChatResponse:
-        """Handle a chat request with RAG.
+        """
+        Handle a chat request with RAG.
 
         Args:
             request: Chat request with question
@@ -334,10 +379,20 @@ class ChatService:
             term_id: Term ID filter
             level: Level filter
             model: LLM model override
+            skip_route_cache: whether to skip the route cache
+            api_key: Optional API key
+            background_tasks: Optional background tasks
+            request_id: Optional request ID
 
         Returns:
             ChatResponse with answer and metadata
         """
+        time.time()
+
+        # MEANINGFUL CHANGE: Normalize query to improve cache hit rates
+        # "What is RAG?" and "what is rag" should be treated identical for caching & logic
+        request.question = self._normalize_query(request.question)
+
         # Apply defaults from settings if not provided
         temperature = (
             temperature if temperature is not None else settings.llm.temperature
@@ -413,6 +468,36 @@ class ChatService:
         logger.info(f"Conversation history: {len(conversation_history)} messages")
 
         logger.info(f"Question: {request.question}")
+
+        # ===== PROMPT GUARD =====
+        if settings.prompt_guard.enabled:
+            guard = get_prompt_guard()
+            # Check input with context
+            history_dicts = [
+                {"role": t.get("role"), "content": t.get("content")}
+                for t in conversation_history
+            ]
+
+            guard_result = guard.check_input(
+                user_input=request.question, conversation_history=history_dicts
+            )
+
+            if guard_result["blocked"]:
+                logger.warning(
+                    f"PromptGuard blocked request: {guard_result.get('label', 'BLOCKED')} "
+                    f"(reason: {guard_result.get('reason', 'Unknown')})"
+                )
+                # Return refused response immediately
+                return ChatResponse(
+                    answer="I cannot answer this request as it triggers safety guardrails.",
+                    sources=[],
+                    grounded=False,
+                    session_id=session.session_id,
+                    rewrite_metadata=None,
+                    ambiguity=AmbiguityMetadata(
+                        is_ambiguous=False, score=0.0, clarification_requested=False
+                    ),
+                )
 
         # ===== RESPONSE CACHING =====
         # Try to get cached response before doing expensive retrieval/generation
@@ -753,6 +838,85 @@ class ChatService:
         Returns:
             ChatResponse
         """
+        # ===== TOKEN LIMIT ENFORCEMENT =====
+        # prevent silent failures from context overflow
+        MODEL_CONTEXT_LIMIT = 7000  # Safe buffer for 8k models
+        RESPONSE_BUFFER = params.get("max_tokens", 1000) or 1000
+        SYSTEM_TOKENS = 1500  # Estimate for system prompt + robust guidelines
+
+        def estimate_tokens(text: str) -> int:
+            return len(text) // 3  # Conservative estimate (3 chars/token)
+
+        # 1. Calculate History Tokens
+        history_text = ""
+        if conversation_history:
+            history_text = "\n".join(
+                [f"{t.get('role')}: {t.get('content')}" for t in conversation_history]
+            )
+
+        history_tokens = estimate_tokens(history_text)
+        question_tokens = estimate_tokens(question)
+
+        available_tokens = (
+            MODEL_CONTEXT_LIMIT - RESPONSE_BUFFER - SYSTEM_TOKENS - question_tokens
+        )
+
+        # 2. Truncate History if too large (keep recent, discard old)
+        if history_tokens > available_tokens * 0.25:  # Cap history at 25% of available
+            max_history_tokens = int(available_tokens * 0.25)
+            logger.info(
+                f"Truncating conversation history (current: {history_tokens}, max: {max_history_tokens})"
+            )
+
+            # Keep popping pairs until fit or only 1 pair left
+            while conversation_history and len(conversation_history) > 2:
+                # Remove oldest pair if possible, or just oldest messages
+                # Try to preserve user/assistant content structure if possible
+                conversation_history.pop(0)
+                if conversation_history:
+                    conversation_history.pop(0)
+
+                # Re-estimate
+                temp_text = "\n".join(
+                    [
+                        f"{t.get('role')}: {t.get('content')}"
+                        for t in conversation_history
+                    ]
+                )
+                if estimate_tokens(temp_text) <= max_history_tokens:
+                    break
+
+            # Recalculate usage
+            history_text = "\n".join(
+                [f"{t.get('role')}: {t.get('content')}" for t in conversation_history]
+            )
+            history_tokens = estimate_tokens(history_text)
+
+        # 3. Truncate Chunks (Core Context)
+        available_for_context = available_tokens - history_tokens
+
+        # Ensure we have at least SOME space for context
+        available_for_context = max(available_for_context, 500)
+
+        current_context_tokens = 0
+        final_chunks = []
+
+        for chunk in chunks:
+            text = chunk.get("text", "")
+            chunk_tokens = estimate_tokens(text) + 50  # +50 for metadata overhead
+
+            if current_context_tokens + chunk_tokens > available_for_context:
+                logger.warning(
+                    f"Token limit reached, dropping remaining chunks (Used: {current_context_tokens}, Available: {available_for_context})"
+                )
+                break
+
+            current_context_tokens += chunk_tokens
+            final_chunks.append(chunk)
+
+        chunks = final_chunks
+        # ===== END TOKEN LIMIT ENFORCEMENT =====
+
         # Prepare context for prompt builder
         formatted_chunks = self._format_sources(chunks)
 
@@ -799,18 +963,81 @@ class ChatService:
             )
 
         # Generate response using the validated prompt
-        response_text = generate_with_ollama(
-            prompt=prompt_result.prompt,
-            temperature=params.get("temperature", 0.1),
-            max_tokens=params.get("max_tokens", 1000),
-            model=params.get("model"),
-        )
+        try:
+            response_text = generate_with_ollama(
+                prompt=prompt_result.prompt,
+                temperature=params.get("temperature", 0.1),
+                max_tokens=params.get("max_tokens", 1000),
+                model=params.get("model"),
+            )
+        except Exception as e:
+            logger.error(f"LLM generation failed: {e}")
+            return ChatResponse(
+                answer="I'm temporarily unable to generate a complete answer. "
+                "However, I found relevant information in the following sources.",
+                sources=self._build_chat_sources(chunks),
+                grounded=True,
+                session_id=session.session_id,
+                rewrite_metadata=rewrite_metadata,
+                ambiguity=AmbiguityMetadata(
+                    is_ambiguous=params.get("is_ambiguous", False),
+                    score=params.get("ambiguity_score", 0.0),
+                    clarification_requested=False,
+                ),
+            )
 
         # Use natural language response directly
-        answer = response_text.strip()
+        answer = (response_text or "").strip()
+
+        # ===== METRICS: Token Usage & Cost =====
+        if METRICS_ENABLED:
+            model_used = params.get("model", "unknown")
+            input_tokens = len(prompt_result.prompt) // 3
+            output_tokens = len(answer) // 3
+
+            rag_llm_token_usage_total.labels(type="input", model=model_used).inc(
+                input_tokens
+            )
+            rag_llm_token_usage_total.labels(type="output", model=model_used).inc(
+                output_tokens
+            )
+
+            # Estimate cost (very rough approximation)
+            # Groq Llama 3 8B: ~$0.05 / 1M input, ~$0.08 / 1M output
+            # Ollama: $0
+            cost = 0.0
+            if "groq" in settings.llm.provider:
+                # avg $0.10 per million tokens (conservative estimate)
+                cost = (input_tokens + output_tokens) / 1_000_000 * 0.10
+
+            rag_llm_cost_total.labels(model=model_used).inc(cost)
+        # ===== END METRICS =====
+
+        # Validate answer has meaningful content
+        MIN_ANSWER_LENGTH = 10
+        if not answer or len(answer) < MIN_ANSWER_LENGTH:
+            logger.warning(
+                f"LLM returned empty or minimal response (len={len(answer)})"
+            )
+            return ChatResponse(
+                answer="I was unable to generate a complete answer. "
+                "Please try rephrasing your question.",
+                sources=self._build_chat_sources(chunks),
+                grounded=False,
+                session_id=session.session_id,
+                rewrite_metadata=rewrite_metadata,
+                ambiguity=AmbiguityMetadata(
+                    is_ambiguous=False,
+                    score=0.0,
+                    clarification_requested=False,
+                ),
+            )
 
         # Clean answer to fix common formatting issues
         answer = _clean_answer(answer, question)
+
+        # Filter potential PII from response
+        answer = _filter_pii(answer)
         logger.info(f"Generated answer: {answer[:100]}...")
 
         # Check for refusal

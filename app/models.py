@@ -34,7 +34,7 @@ class ChatRequest(BaseModel):
     """Request to answer a question using RAG."""
 
     question: str = Field(
-        min_length=1,
+        min_length=3,
         max_length=2000,
         description="The user's question to be answered using the ingested documents.",
         json_schema_extra={"example": "What was my graduate GPA?"},
@@ -56,8 +56,12 @@ class ChatRequest(BaseModel):
         if not v:
             raise ValueError("Question cannot be empty or whitespace only")
 
-        # Check for extremely repetitive patterns (potential abuse)
+        # Enforce word count limit to prevent DoS and context overflow
         words = v.split()
+        if len(words) > 300:
+            raise ValueError("Question too long (max 300 words)")
+
+        # Check for extremely repetitive patterns (potential abuse)
         if len(words) > 10 and len(set(words)) < len(words) / 10:  # >90% repeated words
             raise ValueError("Query contains excessive repetition")
 

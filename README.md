@@ -7,7 +7,7 @@ A production-ready Retrieval-Augmented Generation (RAG) system for querying pers
 ### System Overview
 ```
 ┌─────────────────────────────────────────────────┐
-│                FastAPI Server                    │
+│                FastAPI Server                   │
 │              (app/main.py - 67 lines)           │
 └─────────────────────────────────────────────────┘
                       │

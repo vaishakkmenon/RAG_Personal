@@ -435,12 +435,45 @@ def _semantic_search(
 
     # Query ChromaDB
     try:
-        results = _collection.query(
-            query_texts=[query_text],
-            n_results=k,
-            where=where_clause,
-            include=["documents", "metadatas", "distances"],
-        )
+        # Optimization: Use Embedding Cache
+        # Instead of passing query_texts (which forces Chroma to re-compute embeddings),
+        # we check our cache first, then compute if missing, then cache it.
+        from app.services.embedding_cache import get_embedding_cache
+
+        embed_cache = get_embedding_cache()
+        embedding = embed_cache.get_embedding(query_text, EMBED_MODEL)
+
+        if not embedding:
+            # Cache miss - compute embedding using the global embedding function
+            # _embed is a SentenceTransformerEmbeddingFunction, it requires a list
+            # and returns a list of embeddings.
+            embeddings = _embed([query_text])
+            if embeddings:
+                embedding = embeddings[0]
+                # Cache the result (convert to list for JSON serialization if needed, though cache handles it)
+                # It's usually a numpy array or list of floats
+                if hasattr(embedding, "tolist"):
+                    embedding = embedding.tolist()
+                embed_cache.set_embedding(query_text, embedding, EMBED_MODEL)
+
+        if embedding:
+            logger.debug("Using cached/computed embedding for search")
+            results = _collection.query(
+                query_embeddings=[embedding],
+                n_results=k,
+                where=where_clause,
+                include=["documents", "metadatas", "distances"],
+            )
+        else:
+            # Fallback (shouldn't happen if _embed works)
+            logger.warning("Embedding generation failed, falling back to text query")
+            results = _collection.query(
+                query_texts=[query_text],
+                n_results=k,
+                where=where_clause,
+                include=["documents", "metadatas", "distances"],
+            )
+
     except Exception as e:
         logger.error(f"ChromaDB query failed: {e}")
         raise

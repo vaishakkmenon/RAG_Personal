@@ -125,8 +125,9 @@ class TestChatAPIValidation:
         """Test that short questions get a response."""
         response = client.post("/chat", json={"question": "hi"}, headers=auth_headers)
 
-        # Should return 200 (either answer or clarification)
-        assert response.status_code == 200
+        # Should return 422 (validation error) because min_length is 3
+        # "hi" is only 2 chars
+        assert response.status_code == 422
 
     def test_chat_rejects_invalid_payload(self, client, auth_headers):
         """Test that invalid payloads are rejected."""

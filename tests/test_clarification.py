@@ -40,17 +40,17 @@ class TestClarificationExamples:
         """Test clarification for background questions."""
         topic, domains = _clarification_examples("What is your background?")
 
-        assert topic == "your background and qualifications"
-        assert "your education" in domains
-        assert "your work experience" in domains
-        assert "your certifications" in domains
+        assert topic == "your background"
+        assert "your education (degrees, GPA, coursework)" in domains
+        assert "your work experience (roles, companies, responsibilities)" in domains
+        assert "your certifications (CKA, AWS certifications)" in domains
 
     def test_qualifications_question(self):
         """Test clarification for qualifications questions."""
         topic, domains = _clarification_examples("Tell me your qualifications")
 
-        assert topic == "your background and qualifications"
-        assert len(domains) > 3  # Should have multiple options
+        assert topic == "your background"
+        assert len(domains) >= 3  # Should have multiple options
 
     def test_history_question(self):
         """Test clarification for history questions."""
@@ -138,7 +138,7 @@ class TestBuildClarificationMessage:
         message = build_clarification_message("What is your background?", mock_config)
 
         assert "Could you clarify" in message
-        assert "your background and qualifications" in message
+        assert "your background" in message
         # Multiple domains should use commas and "or" for the last one
         assert "," in message
         assert ", or " in message

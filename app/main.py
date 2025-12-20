@@ -15,6 +15,7 @@ from app.api import create_api_router
 from app.middleware.api_key import APIKeyMiddleware
 from app.middleware.logging import LoggingMiddleware
 from app.middleware.max_size import MaxSizeMiddleware
+from app.middleware.tracing import RequestTracingMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.settings import settings
 from app.config_validator import validate_config
@@ -79,8 +80,9 @@ app.add_middleware(
     max_age=600,  # Cache preflight requests for 10 minutes
 )
 
-# Custom middleware: API key validation, request size limiting, structured logging
-# Custom middleware: API key validation, request size limiting, structured logging, security headers
+# Custom middleware: API key validation, request size limiting, structured logging, security headers, tracing
+
+app.add_middleware(RequestTracingMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(APIKeyMiddleware)
 app.add_middleware(MaxSizeMiddleware, max_bytes=settings.max_bytes)

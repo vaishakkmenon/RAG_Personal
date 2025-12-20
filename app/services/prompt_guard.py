@@ -12,6 +12,7 @@ Model options:
 import logging
 import time
 import hashlib
+import re
 from typing import Optional, Dict, Any
 
 logger = logging.getLogger(__name__)
@@ -68,6 +69,7 @@ class PromptGuard:
             max_retries: Maximum retry attempts
             cache_ttl_seconds: Cache TTL in seconds
             cache_max_size: Maximum cache entries
+            blocklist_patterns: List of regex patterns or strings to block deterministically
         """
         self.model = model
         self.enabled = enabled and GROQ_AVAILABLE
@@ -76,10 +78,20 @@ class PromptGuard:
         self.max_retries = max_retries
         self.cache_ttl_seconds = cache_ttl_seconds
         self._client = None
+        self.blocklist_patterns = [
+            "system prompt",
+            "system instruction",
+            "prompt instructions",
+            "ignore previous instructions",
+        ]
 
         # Simple in-memory cache: {hash: (result, timestamp)}
         self._cache: Dict[str, tuple[Dict[str, Any], float]] = {}
         self._cache_max_size = cache_max_size
+
+        from app.settings import settings
+
+        self.blocklist_patterns = settings.prompt_guard.blocked_patterns
 
         if self.enabled and api_key:
             try:
@@ -174,6 +186,25 @@ class PromptGuard:
         # Track context size
         if METRICS_ENABLED:
             prompt_guard_context_size_chars.observe(len(input_to_check))
+
+        # 0. Deterministic Regex Blocklist Check
+        # Reload latest patterns from settings to support hot-swapping
+        from app.settings import settings
+
+        for pattern_str in settings.prompt_guard.blocked_patterns:
+            if re.search(pattern_str, input_to_check):
+                logger.warning(f"PromptGuard: BLOCKED by regex '{pattern_str}'")
+
+                if METRICS_ENABLED:
+                    prompt_guard_checks_total.labels(result="blocked").inc()
+                    prompt_guard_blocked_total.labels(label="REGEX_BLOCK").inc()
+
+                return {
+                    "safe": False,
+                    "label": "REGEX_BLOCK",
+                    "blocked": True,
+                    "reason": "Matched blocked pattern",
+                }
 
         # Check cache first (using the full context as cache key)
         cache_key = self._get_cache_key(input_to_check)

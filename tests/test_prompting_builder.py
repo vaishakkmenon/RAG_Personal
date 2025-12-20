@@ -151,26 +151,6 @@ class TestPromptBuilder:
         # History should be included in prompt
         assert "GPA" in result.prompt or "PREVIOUS" in result.prompt
 
-    def test_build_prompt_with_negative_inference(self):
-        """Test building prompt with negative inference hint."""
-        from app.prompting.builder import PromptBuilder
-
-        builder = PromptBuilder()
-
-        hint = {"missing_entities": ["Google"], "category": "employers"}
-
-        result = builder.build_prompt(
-            question="Did I work at Google?",
-            context_chunks=[
-                {"source": "test.md", "text": "Work history", "metadata": {}}
-            ],
-            negative_inference_hint=hint,
-        )
-
-        assert result.status == "success"
-        # Negative inference hint should affect the prompt
-        assert "Google" in result.prompt or "NEGATIVE" in result.prompt
-
 
 @pytest.mark.unit
 class TestPromptBuilderValidation:

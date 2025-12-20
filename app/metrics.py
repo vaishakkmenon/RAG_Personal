@@ -98,6 +98,18 @@ rag_llm_latency_seconds = Histogram(
     buckets=(0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 30, 60),
 )
 
+rag_llm_token_usage_total = Counter(
+    "rag_llm_token_usage_total",
+    "Total tokens used by LLM",
+    ["type", "model"],  # type: "input", "output"
+)
+
+rag_llm_cost_total = Counter(
+    "rag_llm_cost_total",
+    "Estimated cost of LLM usage in USD",
+    ["model"],
+)
+
 # ============================================================================
 # PROMPT GUARD METRICS (Security)
 # ============================================================================
@@ -274,6 +286,8 @@ __all__ = [
     # LLM
     "rag_llm_request_total",
     "rag_llm_latency_seconds",
+    "rag_llm_token_usage_total",
+    "rag_llm_cost_total",
     # Prompt Guard
     "prompt_guard_checks_total",
     "prompt_guard_blocked_total",

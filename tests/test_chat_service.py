@@ -283,14 +283,18 @@ class TestChatServiceErrorHandling:
     @patch("app.core.chat_service.get_response_cache")
     @patch("app.core.chat_service.search")
     @patch("app.core.chat_service.generate_with_ollama")
-    def test_llm_failure_raises_error(
+    @patch("app.core.chat_service.create_default_prompt_builder")
+    def test_llm_failure_graceful_degradation(
         self,
+        mock_prompt_builder,
         mock_generate,
         mock_search,
         mock_cache,
         sample_chunks,
     ):
-        """Test that LLM failures are properly handled."""
+        """Test that LLM failures are handled gracefully with degraded response."""
+        from app.prompting.config import PromptResult
+
         # Mock cache (miss)
         mock_cache_instance = MagicMock()
         mock_cache_instance.get.return_value = None
@@ -302,12 +306,24 @@ class TestChatServiceErrorHandling:
         # Mock LLM failure
         mock_generate.side_effect = Exception("Groq API timeout")
 
+        # Mock prompt builder
+        mock_builder = MagicMock()
+        mock_builder.build_prompt.return_value = PromptResult(
+            status="success", prompt="Test prompt", message="", context=""
+        )
+        mock_builder.is_refusal.return_value = False
+        mock_prompt_builder.return_value = mock_builder
+
         service = ChatService()
         request = ChatRequest(question="Test question")
 
-        # Should raise the exception
-        with pytest.raises(Exception, match="Groq API timeout"):
-            service.handle_chat(request=request, skip_route_cache=True)
+        # Should NOT raise - should return graceful degradation
+        response = service.handle_chat(request=request, skip_route_cache=True)
+
+        # Verify graceful degradation response
+        assert "temporarily unable" in response.answer.lower()
+        assert response.grounded is True  # Still grounded with sources
+        assert len(response.sources) == len(sample_chunks)
 
     @patch("app.core.chat_service.get_response_cache")
     @patch("app.core.chat_service.search")

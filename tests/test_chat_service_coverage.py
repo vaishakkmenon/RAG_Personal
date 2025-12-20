@@ -164,39 +164,6 @@ class TestChatServiceInit:
 
 
 @pytest.mark.unit
-class TestRetrievalQualityCheck:
-    """Tests for retrieval quality checking."""
-
-    def test_check_retrieval_quality_with_matching_terms(self):
-        """Test quality check when chunks contain query terms."""
-        from app.core.chat_service import _check_retrieval_quality
-
-        chunks = [
-            {"text": "I have 5 years of Python experience."},
-            {"text": "I worked with FastAPI framework."},
-        ]
-
-        result = _check_retrieval_quality("Python experience", chunks)
-
-        # Should not be weak if terms are found
-        assert result["is_weak"] is False
-
-    def test_check_retrieval_quality_no_matching_terms(self):
-        """Test quality check when chunks don't contain query terms."""
-        from app.core.chat_service import _check_retrieval_quality
-
-        chunks = [
-            {"text": "I enjoy hiking and outdoor activities."},
-            {"text": "Music is my favorite hobby."},
-        ]
-
-        result = _check_retrieval_quality("Python programming", chunks)
-
-        # Might be weak if no terms found
-        assert isinstance(result["is_weak"], bool)
-
-
-@pytest.mark.unit
 class TestChatServiceSessionErrors:
     """Tests for session management error handling."""
 

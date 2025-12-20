@@ -354,6 +354,23 @@ class PromptGuardSettings(BaseModel):
         description="Maximum number of entries in LRU cache",
     )
 
+    blocked_patterns: List[str] = Field(
+        default_factory=lambda: [
+            # System Leakage
+            r"(?i)\b(system\s+prompt|system\s+instruction|prompt\s+instructions)\b",
+            r"(?i)\b(ignore\s+previous\s+instructions|reveal\s+your\s+instructions)\b",
+            # PII & Financial
+            r"(?i)\b(ssn|social\s+security\s+num(ber)?)\b",
+            r"(?i)\b(credit\s+card|cc\s+num(ber)?|cvv|cvc)\b",
+            r"(?i)\b(api\s+key|private\s+key|secret\s+key)\b",
+            r"(?i)\b(passport\s+num(ber)?|driver'?s\s+license)\b",
+            # Jailbreaks
+            r"(?i)\b(dan\s+mode|do\s+anything\s+now|jailbreak)\b",
+            r"(?i)\b(act\s+as\s+an\s+unrestricted)\b",
+        ],
+        description="Regex patterns to block (case-insensitive, includes PII and leakage)",
+    )
+
 
 class MetadataInjectionSettings(BaseModel):
     """Configuration for metadata injection into LLM context."""

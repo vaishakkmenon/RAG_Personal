@@ -1,15 +1,15 @@
 {
   "_total": {
-    "total_queries": 752
+    "total_queries": 782
   },
   "_no_match": {
-    "total_queries": 638
+    "total_queries": 664
   },
   "negative_inference": {
-    "total_matches": 82,
-    "grounded_responses": 82,
+    "total_matches": 86,
+    "grounded_responses": 86,
     "failed_responses": 0,
-    "total_latency_ms": 709.3732357025146,
+    "total_latency_ms": 710.1058959960938,
     "distances": [
       0.3656504154205322,
       0.17680388689041138,
@@ -92,9 +92,13 @@
       0.1768038272857666,
       0.1768038272857666,
       0.16241025924682617,
-      0.19154092669487
+      0.19154092669487,
+      0.1768038272857666,
+      0.16241025924682617,
+      0.19154092669487,
+      0.138925302028656
     ],
-    "last_updated": "2025-12-19T21:44:55.825354"
+    "last_updated": "2025-12-19T23:18:19.395580"
   },
   "abbreviation_expansion": {
     "total_matches": 2,
