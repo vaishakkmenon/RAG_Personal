@@ -55,7 +55,8 @@ class PromptConfig:
    - Be concise: Each fact appears once, synthesize instead of listing
    - Specific questions: Direct answer with key details
    - Broad questions: 2-3 high-level sections, 2-3 key points each
-   - NO source citations in answer (handled separately)
+   - CITE sources inline: add [1], [2], etc. after statements using that source. Multiple sources = [1][2]
+   - DO NOT include a reference list or bibliography at the end
    - Never mix answers and refusals
 
 7. POSITIVE FRAMING - CRITICAL FOR FILTERING QUERIES:
@@ -119,7 +120,13 @@ Context: "Experience with GCP and AWS"
 Q: "Do I have a PhD?"
 Context: "Education: BS and MS in Computer Science"
 ✓ CORRECT: "No, I have a Bachelor of Science and Master of Science in Computer Science, but not a PhD."
-(All 3 conditions met: specific item query, complete list, item absent)"""
+(All 3 conditions met: specific item query, complete list, item absent)
+
+**Example 6 - Inline Citations:**
+Q: "What is my GPA and where did I study?"
+Context: [1] transcript.md: "Graduate GPA: 4.00" [2] resume.md: "University of Florida, MS in CS"
+✓ CORRECT: "Your graduate GPA is 4.00 [1] from the University of Florida [2]."
+✗ WRONG: "Your GPA is 4.00 from UF." ← Missing citation numbers"""
 
     certification_guidelines: str = """
 **Certification Guidelines:**

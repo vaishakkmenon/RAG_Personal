@@ -299,9 +299,11 @@ class ChatService:
         """
         return [
             {
+                "id": c.get("id", ""),
                 "source": c.get("source", "unknown"),
                 "text": c.get("text", ""),
                 "metadata": c.get("metadata", {}),
+                "distance": c.get("distance", 1.0),
             }
             for c in chunks
             if c.get("text", "").strip()
@@ -311,10 +313,11 @@ class ChatService:
         """Create output source metadata for chatbot responses.
 
         Args:
-            chunks: List of retrieved chunks with text, source, and metadata
+            chunks: List of retrieved chunks with text, source, and metadata.
+                    Each chunk should have a 'citation_index' from _format_context.
 
         Returns:
-            List of ChatSource objects
+            List of ChatSource objects with citation indices
         """
         sources: List[ChatSource] = []
         for chunk in chunks:
@@ -326,6 +329,7 @@ class ChatService:
                     source=chunk.get("source", ""),
                     text=truncated,
                     distance=chunk.get("distance", 1.0),
+                    citation_index=chunk.get("citation_index"),
                 )
             )
         return sources
@@ -975,7 +979,7 @@ class ChatService:
             return ChatResponse(
                 answer="I'm temporarily unable to generate a complete answer. "
                 "However, I found relevant information in the following sources.",
-                sources=self._build_chat_sources(chunks),
+                sources=self._build_chat_sources(formatted_chunks),
                 grounded=True,
                 session_id=session.session_id,
                 rewrite_metadata=rewrite_metadata,
@@ -1022,7 +1026,7 @@ class ChatService:
             return ChatResponse(
                 answer="I was unable to generate a complete answer. "
                 "Please try rephrasing your question.",
-                sources=self._build_chat_sources(chunks),
+                sources=self._build_chat_sources(formatted_chunks),
                 grounded=False,
                 session_id=session.session_id,
                 rewrite_metadata=rewrite_metadata,
@@ -1113,7 +1117,7 @@ class ChatService:
         # Build successful grounded response
         response = ChatResponse(
             answer=answer,
-            sources=self._build_chat_sources(chunks),
+            sources=self._build_chat_sources(formatted_chunks),
             grounded=True,
             session_id=session.session_id,
             rewrite_metadata=rewrite_metadata,

@@ -92,6 +92,12 @@ class ChatSource(BaseModel):
         json_schema_extra={"example": 0.23},
     )
 
+    citation_index: Optional[int] = Field(
+        default=None,
+        description="Citation index [1], [2], etc. used in the answer for inline references",
+        json_schema_extra={"example": 1},
+    )
+
 
 class AmbiguityMetadata(BaseModel):
     """Metadata describing ambiguity detection for a query."""

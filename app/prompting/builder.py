@@ -15,16 +15,20 @@ logger = logging.getLogger(__name__)
 
 
 def _format_context(chunks: List[Dict[str, Any]]) -> str:
-    """Format chunks into context string with metadata injection.
+    """Format chunks into context string with numbered citations.
 
     Args:
-        chunks: List of chunks with 'source', 'text', and 'metadata' keys
+        chunks: List of chunks with 'source', 'text', and 'metadata' keys.
+                Each chunk will be assigned a citation index [1], [2], etc.
 
     Returns:
-        Formatted context string with metadata injected
+        Formatted context string with numbered source citations
     """
+    import os
 
     parts: List[str] = []
+    citation_index = 1
+
     for chunk in chunks:
         source = chunk.get("source", "unknown")
         text = (chunk.get("text") or "").strip()
@@ -34,8 +38,14 @@ def _format_context(chunks: List[Dict[str, Any]]) -> str:
         if not text:
             continue
 
-        # Start building chunk parts
-        chunk_parts = [f"[Source: {source}]"]
+        # Store citation index in chunk for later use by chat_service
+        chunk["citation_index"] = citation_index
+
+        # Use basename for cleaner citation labels
+        source_basename = os.path.basename(source)
+
+        # Start building chunk parts with numbered citation
+        chunk_parts = [f"[{citation_index}] {source_basename}"]
 
         # Add metadata if enabled
         if settings.metadata_injection.enabled:
@@ -61,6 +71,7 @@ def _format_context(chunks: List[Dict[str, Any]]) -> str:
 
         # Add to final parts
         parts.append("\n".join(chunk_parts))
+        citation_index += 1
 
     return "\n\n".join(parts)
 
@@ -150,9 +161,12 @@ class PromptBuilder:
                 system_prompt.strip(),
                 cert_guidelines.strip() if cert_guidelines else None,
                 history_text,
+                "### CONTEXT (DO NOT OUTPUT) ###",
                 context,
+                "### END CONTEXT ###",
                 "QUESTION:",
                 question_section,
+                "IMPORTANT: Answer using inline citations [1], [2]. Do NOT output the source text or a reference list.",
                 "ANSWER:",
             ]
 
