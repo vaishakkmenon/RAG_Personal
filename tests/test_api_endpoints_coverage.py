@@ -25,7 +25,7 @@ class TestChatAPIBasicFunctionality:
         assert response.status_code == 401
 
     def test_chat_endpoint_accepts_valid_request(
-        self, client, auth_headers, mock_ollama, mock_chromadb, mock_rate_limit
+        self, client, auth_headers, mock_llm, mock_chromadb, mock_rate_limit
     ):
         """Test that chat endpoint accepts valid requests."""
         # Set up mock to return some results
@@ -47,7 +47,7 @@ class TestChatAPIBasicFunctionality:
         assert "answer" in response.json()
 
     def test_simple_chat_endpoint_accepts_valid_request(
-        self, client, auth_headers, mock_ollama, mock_chromadb, mock_rate_limit
+        self, client, auth_headers, mock_llm, mock_chromadb, mock_rate_limit
     ):
         """Test that simple chat endpoint accepts valid requests."""
         mock_chromadb.query.return_value = {
@@ -70,7 +70,7 @@ class TestChatAPIErrorHandling:
     """Tests for error handling in chat endpoints."""
 
     def test_chat_returns_response_with_no_results(
-        self, client, auth_headers, mock_ollama, mock_chromadb, mock_rate_limit
+        self, client, auth_headers, mock_llm, mock_chromadb, mock_rate_limit
     ):
         """Test that chat endpoint handles empty retrieval gracefully."""
         mock_chromadb.query.return_value = {
@@ -89,7 +89,7 @@ class TestChatAPIErrorHandling:
         # Should return a response (grounded=false or clarification)
         assert response.status_code == 200
 
-    @patch("app.api.routes.chat.generate_with_ollama")
+    @patch("app.api.routes.chat.generate_with_llm")
     @patch("app.api.routes.chat.search")
     def test_simple_chat_llm_exception(
         self, mock_search, mock_generate, client, auth_headers, mock_rate_limit
@@ -120,7 +120,7 @@ class TestChatAPIValidation:
     """Tests for request validation."""
 
     def test_chat_handles_short_question(
-        self, client, auth_headers, mock_ollama, mock_chromadb, mock_rate_limit
+        self, client, auth_headers, mock_llm, mock_chromadb, mock_rate_limit
     ):
         """Test that short questions get a response."""
         response = client.post("/chat", json={"question": "hi"}, headers=auth_headers)
@@ -186,7 +186,7 @@ class TestChatAPIPromptGuard:
     """Tests for prompt guard integration."""
 
     def test_prompt_guard_integration(
-        self, client, auth_headers, mock_rate_limit, mock_chromadb, mock_ollama
+        self, client, auth_headers, mock_rate_limit, mock_chromadb, mock_llm
     ):
         """Test that prompt guard is invoked on requests."""
         # Setup mock chromadb
@@ -237,7 +237,7 @@ class TestSimpleChatAPIExceptions:
     """Tests for exception handling in simple_chat endpoint."""
 
     @patch("app.api.routes.chat.search")
-    @patch("app.api.routes.chat.generate_with_ollama")
+    @patch("app.api.routes.chat.generate_with_llm")
     def test_simple_chat_rag_exception_reraises(
         self, mock_generate, mock_search, client, auth_headers, mock_rate_limit
     ):
@@ -263,7 +263,7 @@ class TestSimpleChatAPIExceptions:
         assert response.status_code >= 400
 
     @patch("app.api.routes.chat.search")
-    @patch("app.api.routes.chat.generate_with_ollama")
+    @patch("app.api.routes.chat.generate_with_llm")
     def test_simple_chat_unexpected_exception(
         self, mock_generate, mock_search, client, auth_headers, mock_rate_limit
     ):

@@ -11,7 +11,7 @@ from app.models import ChatRequest, ChatResponse, ChatSource
 from app.api.dependencies import check_api_key, get_chat_service
 from app.core import ChatService
 from app.retrieval import search
-from app.services.llm import generate_with_ollama
+from app.services.llm import generate_with_llm
 from app.services.prompt_guard import get_prompt_guard
 from app.prompting import create_default_prompt_builder
 from app.settings import settings
@@ -158,7 +158,7 @@ def simple_chat(
 
         # Step 3: Generate answer (use prompt from PromptResult)
         try:
-            answer = generate_with_ollama(
+            answer = generate_with_llm(
                 prompt=prompt_result.prompt,  # Fixed: use prompt_result.prompt not just prompt
                 temperature=temperature,
                 max_tokens=max_tokens,
@@ -402,13 +402,7 @@ def chat(
             "temperature": temperature
             if temperature is not None
             else settings.llm.temperature,
-            "model": model
-            if model is not None
-            else (
-                settings.llm.groq_model
-                if settings.llm.provider == "groq"
-                else settings.llm.ollama_model
-            ),
+            "model": model if model is not None else settings.llm.groq_model,
             "doc_type": doc_type,
         }
 

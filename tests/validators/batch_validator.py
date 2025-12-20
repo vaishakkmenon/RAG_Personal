@@ -6,7 +6,7 @@ Phase 1: Collect all RAG answers using 1B model (fast)
 Phase 2: Validate all answers at once using 3B model (one model load)
 
 This avoids model swapping overhead while getting accurate validation.
-Supports both Ollama (local) and Groq (cloud) providers.
+Supports Groq (cloud) provider for validation.
 """
 
 import json
@@ -21,7 +21,7 @@ class BatchValidator:
 
     def __init__(
         self,
-        provider: str = "ollama",
+        provider: str = "groq",
         validation_model: str = None,
         groq_api_key: str = None,
         delay: float = 4.0,
@@ -29,9 +29,9 @@ class BatchValidator:
         """Initialize batch validator
 
         Args:
-            provider: "ollama" or "groq"
+            provider: "groq" (default and recommended)
             validation_model: Model to use for batch validation (defaults based on provider)
-            groq_api_key: Groq API key (required if provider='groq')
+            groq_api_key: Groq API key (required for groq provider)
             delay: Delay in seconds between validation requests (for rate limiting)
         """
         self.provider = provider
@@ -40,7 +40,6 @@ class BatchValidator:
             provider=provider,
             model=validation_model,
             groq_api_key=groq_api_key,
-            keep_alive="30m",  # Keep model loaded for batch processing
         )
         self.validation_model = self.validator.model
 
@@ -102,10 +101,10 @@ class BatchValidator:
 
             validated_results.append(result)
 
-            # Add delay between validation requests (for Groq rate limiting only)
+            # Add delay between validation requests (for rate limiting)
             if self.provider == "groq" and i < len(
                 results
-            ):  # Don't delay for Ollama or after last validation
+            ):  # Don't delay after last validation
                 time.sleep(self.delay)
 
         # Create report
@@ -382,8 +381,8 @@ def main():
     )
     parser.add_argument(
         "--provider",
-        choices=["ollama", "groq"],
-        default="ollama",
+        choices=["groq"],
+        default="groq",
         help="LLM provider for validation",
     )
     parser.add_argument(

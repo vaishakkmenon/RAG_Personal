@@ -24,7 +24,7 @@ from app.monitoring.pattern_analytics import get_pattern_analytics
 from app.monitoring.pattern_suggester import get_pattern_suggester
 from app.prompting import build_clarification_message, create_default_prompt_builder
 from app.retrieval import search
-from app.services.llm import generate_with_ollama
+from app.services.llm import generate_with_llm
 from app.services.prompt_guard import get_prompt_guard
 from app.services.reranker import rerank_chunks
 from app.services.response_cache import get_response_cache
@@ -964,7 +964,7 @@ class ChatService:
 
         # Generate response using the validated prompt
         try:
-            response_text = generate_with_ollama(
+            response_text = generate_with_llm(
                 prompt=prompt_result.prompt,
                 temperature=params.get("temperature", 0.1),
                 max_tokens=params.get("max_tokens", 1000),

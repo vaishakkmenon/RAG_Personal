@@ -19,7 +19,7 @@ class APISettings(BaseModel):
 
     title: str = Field(default="RAGChatBot (Local $0)", description="API title")
     description: str = Field(
-        default="Self-hosted RAG chatbot using Ollama, SentenceTransformers, and ChromaDB.",
+        default="Self-hosted RAG chatbot using Groq, SentenceTransformers, and ChromaDB.",
         description="API description",
     )
     version: str = Field(default="0.3.0", description="API version")
@@ -409,18 +409,18 @@ class MetadataInjectionSettings(BaseModel):
 
 
 class LLMSettings(BaseModel):
-    """LLM provider configuration (Groq or Ollama)."""
+    """LLM provider configuration (Groq only)."""
 
-    # Provider selection
+    # Provider selection (Groq only)
     provider: str = Field(
-        default=os.getenv("LLM_PROVIDER", "ollama"),
-        description="LLM provider: 'ollama' or 'groq'",
+        default=os.getenv("LLM_PROVIDER", "groq"),
+        description="LLM provider: must be 'groq'",
     )
 
     # Groq settings
     groq_api_key: str = Field(
         default=os.getenv("LLM_GROQ_API_KEY", ""),
-        description="Groq API key (required if provider='groq')",
+        description="Groq API key (required)",
     )
     groq_model: str = Field(
         default=os.getenv("LLM_GROQ_MODEL", "llama-3.1-8b-instant"),
@@ -439,24 +439,6 @@ class LLMSettings(BaseModel):
         description="Rate limit: requests per day (based on Groq tier)",
     )
 
-    # Ollama settings
-    ollama_host: str = Field(
-        default=os.getenv(
-            "LLM_OLLAMA_HOST", os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
-        ),
-        description="URL for the Ollama API server",
-    )
-    ollama_model: str = Field(
-        default=os.getenv(
-            "LLM_OLLAMA_MODEL", os.getenv("OLLAMA_MODEL", "llama3.2:3b-instruct-q4_K_M")
-        ),
-        description="Ollama model name (with quantization tag)",
-    )
-    ollama_timeout: int = Field(
-        default=int(os.getenv("LLM_OLLAMA_TIMEOUT", os.getenv("OLLAMA_TIMEOUT", "60"))),
-        description="Maximum seconds to wait for Ollama responses",
-    )
-
     # Shared generation settings
     temperature: float = Field(
         default=float(os.getenv("LLM_TEMPERATURE", "0.1")),
@@ -467,18 +449,19 @@ class LLMSettings(BaseModel):
         description="Maximum number of tokens to generate",
     )
     num_ctx: int = Field(
-        default=int(os.getenv("LLM_NUM_CTX", os.getenv("NUM_CTX", "2048"))),
-        description="Context window size for Ollama model (tokens)",
+        default=int(os.getenv("LLM_NUM_CTX", "2048")),
+        description="Context window size (tokens)",
         ge=512,
         le=16384,
     )
 
     # Validation
-    # Validation
     @field_validator("provider")
     def validate_provider(cls, v):
-        if v not in ["ollama", "groq"]:
-            raise ValueError("Provider must be 'ollama' or 'groq'")
+        if v != "groq":
+            raise ValueError(
+                "Provider must be 'groq' - Ollama is no longer supported in production"
+            )
         return v
 
     @field_validator("temperature")
@@ -502,7 +485,7 @@ class Settings(BaseModel):
     2. Defaults specified below
 
     Categories:
-    - LLM: LLM provider settings (Groq or Ollama)
+    - LLM: LLM provider settings (Groq only)
     - Embeddings: Sentence transformer model
     - Storage: ChromaDB and document paths
     - Retrieval: Search and chunking parameters

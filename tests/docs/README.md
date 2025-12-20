@@ -199,11 +199,11 @@ python tests/runners/run_tests.py --test-id my_test_001
 
 ### LLM Provider
 
-Tests support both Ollama (local) and Groq (cloud):
+Tests support both Groq (local) and Groq (cloud):
 
 ```bash
-# Use Ollama (default)
-python tests/runners/run_tests.py --provider ollama
+# Use Groq (default)
+python tests/runners/run_tests.py --provider groq
 
 # Use Groq
 python tests/runners/run_tests.py --provider groq --groq-key YOUR_API_KEY

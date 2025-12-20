@@ -2,7 +2,7 @@
 # Production Docker Compose - Optimized for Groq-Only Deployment with Caddy
 # ============================================================================
 # Changes from development:
-#   ✓ Removed Ollama service (using Groq exclusively)
+#   ✓ Using Groq exclusively for LLM inference
 #   ✓ Removed test service (testing done in CI/CD)
 #   ✓ Removed hot-reload volume mounts (code baked into image)
 #   ✓ Removed eval/analytics directories (production doesn't need these)
@@ -96,9 +96,6 @@ services:
       - LLM_GROQ_MODEL=${LLM_GROQ_MODEL:-llama-3.1-8b-instant}
       - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.1}
       - LLM_MAX_TOKENS=${LLM_MAX_TOKENS:-1000}
-
-      # Note: No Ollama fallback in production
-      # If Groq fails, requests will error
 
       # ============ Session Management (Redis) ============
       - SESSION_STORAGE_BACKEND=redis
@@ -476,8 +473,8 @@ networks:
 #   - Total: ~3-5GB RAM, 2-3 CPU cores
 #
 # Image size (estimated):
-#   - Development: ~4GB (with Ollama models)
-#   - Production: ~2GB (no Ollama, no dev tools)
+#   - Development: ~3GB
+#   - Production: ~2GB (no dev tools)
 #
 # Important:
 #   - API service is NOT exposed on port 8000 externally

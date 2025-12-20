@@ -163,7 +163,7 @@ class TestRedisCacheDegradation:
 
     @patch("app.services.response_cache.get_response_cache")
     @patch("app.api.routes.chat.search")
-    @patch("app.api.routes.chat.generate_with_ollama")
+    @patch("app.api.routes.chat.generate_with_llm")
     @patch("app.api.routes.chat.get_prompt_guard")
     def test_chat_endpoint_works_without_cache(
         self,

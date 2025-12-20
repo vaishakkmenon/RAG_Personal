@@ -25,7 +25,8 @@ from fastapi.testclient import TestClient
 def setup_test_environment():
     """Set up test environment variables before any tests run."""
     os.environ["API_KEY"] = "test-api-key"
-    os.environ["LLM_PROVIDER"] = "ollama"
+    os.environ["LLM_PROVIDER"] = "groq"
+    os.environ["LLM_GROQ_API_KEY"] = "test-groq-key"
     os.environ["SESSION_STORAGE_BACKEND"] = "memory"
     os.environ["RESPONSE_CACHE_ENABLED"] = "false"
     os.environ["QUERY_REWRITER_ENABLED"] = "false"
@@ -120,28 +121,6 @@ def mock_rate_limit():
 
 
 @pytest.fixture
-def mock_ollama():
-    """Mock Ollama LLM for generation tests."""
-    mock_response = {
-        "model": "llama3.1:8b",
-        "created_at": "2024-01-01T00:00:00Z",
-        "response": "This is a test response from the LLM.",
-        "done": True,
-        "context": [],
-        "total_duration": 1000000000,
-        "load_duration": 100000000,
-        "prompt_eval_count": 50,
-        "eval_count": 20,
-    }
-
-    with patch(
-        "app.services.llm.generate_with_ollama",
-        return_value="This is a test response from the LLM.",
-    ):
-        yield mock_response
-
-
-@pytest.fixture
 def mock_prompt_guard():
     """Mock Prompt Guard API for injection detection tests."""
     mock_result = {
@@ -154,6 +133,14 @@ def mock_prompt_guard():
         "app.services.prompt_guard.PromptGuard.check_input", return_value=mock_result
     ):
         yield mock_result
+
+
+@pytest.fixture
+def mock_llm():
+    """Mock LLM generation for API endpoint tests."""
+    with patch("app.api.routes.chat.generate_with_llm") as mock_generate:
+        mock_generate.return_value = "This is a test response from the LLM."
+        yield mock_generate
 
 
 # ============================================================================

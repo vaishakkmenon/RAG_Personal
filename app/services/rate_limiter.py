@@ -116,7 +116,7 @@ class RateLimiter:
 
 
 class NoOpRateLimiter:
-    """No-op rate limiter that always allows requests (for Ollama)"""
+    """No-op rate limiter that always allows requests (for testing or fallback)"""
 
     def acquire(self, timeout: Optional[float] = None) -> bool:
         return True

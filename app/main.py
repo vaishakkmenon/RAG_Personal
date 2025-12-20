@@ -109,5 +109,3 @@ if settings.llm.provider == "groq":
     logger.info(
         f"Groq API Key: {'✓ Set' if settings.llm.groq_api_key else '✗ Not Set'}"
     )
-logger.info(f"Ollama Fallback: {settings.llm.ollama_host}")
-logger.info(f"Ollama Model: {settings.llm.ollama_model}")

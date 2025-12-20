@@ -1,6 +1,6 @@
 # Personal RAG System
 
-A production-ready Retrieval-Augmented Generation (RAG) system for querying personal documents including resumes, transcripts, certifications, and project documentation. Built with FastAPI, ChromaDB, Ollama, and SentenceTransformers.
+A production-ready Retrieval-Augmented Generation (RAG) system for querying personal documents including resumes, transcripts, certifications, and project documentation. Built with FastAPI, ChromaDB, Groq, and SentenceTransformers.
 
 ## 🏗️ Architecture
 
@@ -73,9 +73,8 @@ A production-ready Retrieval-Augmented Generation (RAG) system for querying pers
 ### Prerequisites
 
 - **Python 3.11+** (tested with 3.13.1)
-- **Ollama** for local LLM hosting
+- **Groq API Key** (free tier available at https://console.groq.com)
 - **Docker & Docker Compose** (optional, for containerized deployment)
-- **CUDA-capable GPU** (optional, for faster inference)
 
 ### Local Development Setup
 
@@ -103,20 +102,15 @@ A production-ready Retrieval-Augmented Generation (RAG) system for querying pers
    Key settings in `.env`:
    ```bash
    API_KEY=your-secure-api-key-here
-   OLLAMA_HOST=http://127.0.0.1:11434
-   OLLAMA_MODEL=llama3.2:3b-instruct-q4_K_M
+   LLM_PROVIDER=groq
+   LLM_GROQ_API_KEY=your-groq-api-key-here
+   LLM_GROQ_MODEL=llama-3.1-8b-instant
    EMBED_MODEL=BAAI/bge-small-en-v1.5
    CHROMA_DIR=./data/chroma
    DOCS_DIR=./data/mds
    ```
 
-5. **Start Ollama and pull model**
-   ```bash
-   ollama serve
-   ollama pull llama3.2:3b-instruct-q4_K_M
-   ```
-
-6. **Prepare your documents**
+5. **Prepare your documents**
    - Place markdown files in `./data/mds/`
    - Use YAML front-matter for metadata:
      ```yaml
@@ -127,18 +121,18 @@ A production-ready Retrieval-Augmented Generation (RAG) system for querying pers
      # Your content here
      ```
 
-7. **Start the server**
+6. **Start the server**
    ```bash
    uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
    ```
 
-8. **Ingest documents** (first time only)
+7. **Ingest documents** (first time only)
    ```bash
    curl -X POST http://localhost:8000/ingest \
      -H "X-API-Key: your-secure-api-key-here"
    ```
 
-9. **Test the system**
+8. **Test the system**
    ```bash
    curl -X POST http://localhost:8000/chat \
      -H "Content-Type: application/json" \
@@ -218,8 +212,9 @@ All settings can be configured via `.env` file or environment variables:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `API_KEY` | `change-me` | API authentication key |
-| `OLLAMA_HOST` | `http://127.0.0.1:11434` | Ollama API endpoint |
-| `OLLAMA_MODEL` | `llama3.2:3b-instruct-q4_K_M` | LLM model name |
+| `LLM_PROVIDER` | `groq` | LLM provider (must be groq) |
+| `LLM_GROQ_API_KEY` | - | Groq API key (required) |
+| `LLM_GROQ_MODEL` | `llama-3.1-8b-instant` | Groq model name |
 | `EMBED_MODEL` | `BAAI/bge-small-en-v1.5` | Embedding model |
 | `CHROMA_DIR` | `./data/chroma` | Vector database path |
 | `DOCS_DIR` | `./data/mds` | Document directory |
@@ -318,7 +313,7 @@ Headers: X-API-Key: your-api-key
 - ✅ **Security Checks** - Path traversal prevention
 
 ### LLM Integration
-- ✅ **Multi-Provider Support** - Groq (fast inference) and Ollama (local)
+- ✅ **Groq LLM Integration** - Fast cloud-based inference with Groq API
 - ✅ **Model Flexibility** - Swap models via config
 - ✅ **Streaming Support** - For real-time responses (if needed)
 - ✅ **Timeout Handling** - Graceful degradation
@@ -366,7 +361,7 @@ docker-compose run test python run_tests.py --api-url http://api:8000
 - ✅ Modular design (Clear separation of `api`, `core`, `retrieval`, `services`).
 - ✅ Consolidated configuration via Pydantic (`app/settings.py`).
 - ✅ Hybrid Search (Vector + BM25-style Lexical Reranking).
-- ✅ Multi-Provider LLM Support (Groq for speed, Ollama for local privacy).
+- ✅ Groq LLM Integration for fast cloud-based inference.
 
 **Known Issues**:
 - ⚠️ **Ambiguity Detection**: Currently uses a lightweight rule-based approach to minimize latency and cost. Extremely vague queries may receive generic answers instead of clarification requests.
@@ -406,7 +401,7 @@ Private project - not licensed for public use.
 
 - **FastAPI**: https://fastapi.tiangolo.com/
 - **ChromaDB**: https://docs.trychroma.com/
-- **Ollama**: https://ollama.ai/
+- **Groq**: https://console.groq.com/
 - **SentenceTransformers**: https://www.sbert.net/
 - **BGE Embeddings**: https://huggingface.co/BAAI/bge-small-en-v1.5
 

@@ -1,11 +1,7 @@
 """
 LLM service for Personal RAG system.
 
-Handles LLM client interactions with support for multiple providers:
-- Groq API (cloud, fast, free tier)
-- Ollama (local, self-hosted)
-
-Automatically falls back to Ollama if Groq fails.
+Handles LLM client interactions with Groq API (cloud, fast, free tier).
 Includes rate limiting for Groq to stay within free tier limits.
 """
 
@@ -15,19 +11,11 @@ from typing import Optional
 import asyncio
 from functools import wraps
 
-# Conditional import for Ollama (not available in production Groq-only builds)
-try:
-    import ollama
-
-    OLLAMA_AVAILABLE = True
-except ImportError:
-    ollama = None
-    OLLAMA_AVAILABLE = False
 from groq import Groq, AsyncGroq
 from groq.types.chat import ChatCompletion
 
 from app.settings import settings
-from app.services.rate_limiter import RateLimiter, NoOpRateLimiter
+from app.services.rate_limiter import RateLimiter
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +24,6 @@ try:
     from app.metrics import (
         rag_llm_request_total,
         rag_llm_latency_seconds,
-        rag_fallback_operations_total,
     )
 
     METRICS_ENABLED = True
@@ -97,96 +84,64 @@ def async_retry_with_exponential_backoff(
     return decorator
 
 
-class OllamaService:
-    """Service for interacting with LLM providers (Groq or Ollama)."""
+class GroqLLMService:
+    """Service for interacting with Groq LLM API."""
 
     def __init__(
         self,
-        host: Optional[str] = None,
+        api_key: Optional[str] = None,
         model: Optional[str] = None,
-        timeout: Optional[int] = None,
-        num_ctx: Optional[int] = None,
     ):
-        """Initialize LLM service with provider support.
+        """Initialize Groq LLM service.
 
         Args:
-            host: Ollama API host URL (defaults to settings)
+            api_key: Groq API key (defaults to settings)
             model: Default model name (defaults to settings)
-            timeout: Request timeout in seconds (defaults to settings)
-            num_ctx: Context window size (defaults to settings)
         """
         # LLM settings
         self.llm_settings = settings.llm
 
-        # Ollama settings (with backward compatibility)
-        self.host = host or self.llm_settings.ollama_host
-        self.ollama_model = model or self.llm_settings.ollama_model
-        self.timeout = timeout or self.llm_settings.ollama_timeout
-        self.num_ctx = num_ctx or self.llm_settings.num_ctx
-
-        # For backward compatibility, set self.model based on provider
-        if self.llm_settings.provider == "groq":
-            self.model = self.llm_settings.groq_model
-        else:
-            self.model = self.ollama_model
-
-        # Initialize Ollama client if available (fallback option)
-        self.ollama_client = None
-        if OLLAMA_AVAILABLE:
-            self.ollama_client = ollama.Client(host=self.host, timeout=self.timeout)
-        elif self.llm_settings.provider != "groq":
-            logger.warning(
-                "Ollama not available and provider is not groq - LLM calls will fail"
+        # Validate that provider is groq
+        if self.llm_settings.provider != "groq":
+            raise ValueError(
+                f"GroqLLMService only supports provider='groq', got '{self.llm_settings.provider}'"
             )
 
-        # Initialize Groq client and rate limiter if configured
-        self.groq_client = None
-        self.async_groq_client = None
-        self.rate_limiter = None
-        if self.llm_settings.provider == "groq" and self.llm_settings.groq_api_key:
-            try:
-                self.groq_client = Groq(api_key=self.llm_settings.groq_api_key)
-                self.async_groq_client = AsyncGroq(
-                    api_key=self.llm_settings.groq_api_key
-                )
+        # Groq settings
+        self.api_key = api_key or self.llm_settings.groq_api_key
+        self.model = model or self.llm_settings.groq_model
 
-                # Initialize rate limiter based on configured Groq tier
-                # Tier limits (from settings):
-                # - Free: 30 rpm, 14,400 rpd (8B) or 1,000 rpd (70B)
-                # - Developer: 300-1000 rpm, 50,000-500,000 rpd
-                # - Enterprise: Custom limits
-                self.rate_limiter = RateLimiter(
-                    requests_per_minute=self.llm_settings.groq_requests_per_minute,
-                    requests_per_day=self.llm_settings.groq_requests_per_day,
-                )
+        if not self.api_key:
+            raise ValueError(
+                "Groq API key is required. Set LLM_GROQ_API_KEY environment variable."
+            )
 
-                logger.info(
-                    f"Initialized Groq client with model: {self.llm_settings.groq_model} "
-                    f"(tier: {self.llm_settings.groq_tier})"
-                )
-                logger.info(
-                    f"Rate limiter: {self.llm_settings.groq_requests_per_minute} req/min, "
-                    f"{self.llm_settings.groq_requests_per_day} req/day"
-                )
-            except Exception as e:
-                logger.warning(f"Failed to initialize Groq client: {e}")
-                logger.info("Will use Ollama as fallback")
-        else:
-            # No rate limiting for Ollama
-            self.rate_limiter = NoOpRateLimiter()
+        # Initialize Groq clients
+        try:
+            self.groq_client = Groq(api_key=self.api_key)
+            self.async_groq_client = AsyncGroq(api_key=self.api_key)
 
-        # Log initialization
-        if self.llm_settings.provider == "groq":
+            # Initialize rate limiter based on configured Groq tier
+            # Tier limits (from settings):
+            # - Free: 30 rpm, 14,400 rpd (8B) or 1,000 rpd (70B)
+            # - Developer: 300-1000 rpm, 50,000-500,000 rpd
+            # - Enterprise: Custom limits
+            self.rate_limiter = RateLimiter(
+                requests_per_minute=self.llm_settings.groq_requests_per_minute,
+                requests_per_day=self.llm_settings.groq_requests_per_day,
+            )
+
             logger.info(
-                f"LLM Service initialized - Provider: groq, "
-                f"Model: {self.llm_settings.groq_model}, "
-                f"Fallback: {self.host} ({self.ollama_model})"
+                f"Initialized Groq client with model: {self.model} "
+                f"(tier: {self.llm_settings.groq_tier})"
             )
-        else:
             logger.info(
-                f"LLM Service initialized - Provider: ollama, "
-                f"Host: {self.host}, Model: {self.ollama_model}"
+                f"Rate limiter: {self.llm_settings.groq_requests_per_minute} req/min, "
+                f"{self.llm_settings.groq_requests_per_day} req/day"
             )
+        except Exception as e:
+            logger.error(f"Failed to initialize Groq client: {e}")
+            raise
 
     def generate(
         self,
@@ -195,7 +150,7 @@ class OllamaService:
         max_tokens: Optional[int] = None,
         model: Optional[str] = None,
     ) -> str:
-        """Generate text using configured LLM provider with automatic fallback.
+        """Generate text using Groq API.
 
         Args:
             prompt: The input prompt to generate text from
@@ -207,7 +162,7 @@ class OllamaService:
             Generated text response
 
         Raises:
-            Exception: If both providers fail
+            Exception: If Groq API call fails
         """
         # Use settings defaults if not provided
         temperature = (
@@ -217,56 +172,8 @@ class OllamaService:
             max_tokens if max_tokens is not None else self.llm_settings.max_tokens
         )
 
-        # Try primary provider
-        try:
-            if self.llm_settings.provider == "groq" and self.groq_client:
-                logger.debug("Attempting generation with Groq")
-                return self._generate_with_groq(prompt, temperature, max_tokens, model)
-            else:
-                if not self.ollama_client:
-                    raise RuntimeError(
-                        "No LLM provider available - Groq not configured and Ollama not installed"
-                    )
-                logger.debug("Generating with Ollama")
-                return self._generate_with_ollama(
-                    prompt, temperature, max_tokens, model
-                )
-        except Exception as e:
-            # Log the error
-            logger.error(
-                f"LLM generation failed with {self.llm_settings.provider}: {e}"
-            )
-
-            # Fallback to Ollama if we were trying Groq and Ollama is available
-            if (
-                self.llm_settings.provider == "groq"
-                and OLLAMA_AVAILABLE
-                and self.ollama_client
-            ):
-                logger.warning("Falling back to Ollama due to Groq failure")
-
-                # Track fallback operation
-                if METRICS_ENABLED:
-                    rag_fallback_operations_total.labels(
-                        from_service="groq", to_service="ollama"
-                    ).inc()
-
-                try:
-                    return self._generate_with_ollama(
-                        prompt, temperature, max_tokens, model
-                    )
-                except Exception as fallback_error:
-                    logger.error(f"Ollama fallback also failed: {fallback_error}")
-                    raise fallback_error
-            elif self.llm_settings.provider == "groq" and not OLLAMA_AVAILABLE:
-                # Production: Groq-only, no fallback available
-                logger.error(
-                    "Groq failed and Ollama is not available (production mode)"
-                )
-                raise
-            else:
-                # Already using Ollama, can't fallback further
-                raise
+        logger.debug("Generating with Groq")
+        return self._generate_with_groq(prompt, temperature, max_tokens, model)
 
     @retry_with_exponential_backoff(max_retries=2)
     def _generate_with_groq(
@@ -290,18 +197,16 @@ class OllamaService:
         Raises:
             Exception: If Groq API call fails
         """
-        if not self.groq_client:
-            raise ValueError("Groq client not initialized")
-
-        model_name = model or self.llm_settings.groq_model
+        model_name = model or self.model
 
         # Wait for rate limiter (blocks if at limit)
         if self.rate_limiter:
             logger.debug("Waiting for rate limiter...")
             acquired = self.rate_limiter.acquire(timeout=60)
             if not acquired:
-                logger.warning("Rate limiter timeout - falling back to Ollama")
-                raise Exception("Rate limiter timeout")
+                raise Exception(
+                    "Rate limiter timeout - Groq request quota exceeded. Please try again later."
+                )
 
             # Log rate limit status
             stats = self.rate_limiter.get_stats()
@@ -367,76 +272,6 @@ class OllamaService:
 
             raise
 
-    def _generate_with_ollama(
-        self,
-        prompt: str,
-        temperature: float,
-        max_tokens: int,
-        model: Optional[str] = None,
-    ) -> str:
-        """Generate text using Ollama (local LLM).
-
-        Args:
-            prompt: The input prompt
-            temperature: Sampling temperature
-            max_tokens: Maximum tokens to generate
-            model: Optional model override
-
-        Returns:
-            Generated text
-
-        Raises:
-            Exception: If Ollama generation fails
-        """
-        model_name = model or self.ollama_model
-
-        start = time.time()
-        try:
-            logger.debug(f"Calling Ollama with model: {model_name}")
-
-            response = self.ollama_client.generate(
-                model=model_name,
-                prompt=prompt,
-                options={
-                    "temperature": temperature,
-                    "num_predict": max_tokens,
-                    "num_ctx": self.num_ctx,
-                },
-            )
-
-            generated_text = response["response"]
-
-            if METRICS_ENABLED:
-                rag_llm_request_total.labels(
-                    status="success", model=f"ollama:{model_name}"
-                ).inc()
-
-            duration = time.time() - start
-            logger.info(
-                f"Ollama generation successful: {len(generated_text)} chars in {duration:.2f}s"
-            )
-
-            if METRICS_ENABLED:
-                rag_llm_latency_seconds.labels(
-                    status="success", model=f"ollama:{model_name}"
-                ).observe(duration)
-
-            return generated_text
-
-        except Exception as e:
-            duration = time.time() - start
-
-            if METRICS_ENABLED:
-                rag_llm_request_total.labels(
-                    status="error", model=f"ollama:{model_name}"
-                ).inc()
-                rag_llm_latency_seconds.labels(
-                    status="error", model=f"ollama:{model_name}"
-                ).observe(duration)
-
-            logger.error(f"Ollama generation failed: {e}")
-            raise
-
     async def async_generate(
         self,
         prompt: str,
@@ -444,7 +279,7 @@ class OllamaService:
         max_tokens: Optional[int] = None,
         model: Optional[str] = None,
     ) -> str:
-        """Generate text asynchronously using configured LLM provider with automatic fallback.
+        """Generate text asynchronously using Groq API.
 
         Args:
             prompt: The input prompt to generate text from
@@ -456,7 +291,7 @@ class OllamaService:
             Generated text response
 
         Raises:
-            Exception: If both providers fail
+            Exception: If Groq API call fails
         """
         # Use settings defaults if not provided
         temperature = (
@@ -466,58 +301,10 @@ class OllamaService:
             max_tokens if max_tokens is not None else self.llm_settings.max_tokens
         )
 
-        # Try primary provider
-        try:
-            if self.llm_settings.provider == "groq" and self.async_groq_client:
-                logger.debug("Attempting async generation with Groq")
-                return await self._generate_with_groq_async(
-                    prompt, temperature, max_tokens, model
-                )
-            else:
-                if not self.ollama_client:
-                    raise RuntimeError(
-                        "No LLM provider available - Groq not configured and Ollama not installed"
-                    )
-                logger.debug("Generating with Ollama (async wrapper)")
-                return await self._generate_with_ollama_async(
-                    prompt, temperature, max_tokens, model
-                )
-        except Exception as e:
-            # Log the error
-            logger.error(
-                f"Async LLM generation failed with {self.llm_settings.provider}: {e}"
-            )
-
-            # Fallback to Ollama if we were trying Groq and Ollama is available
-            if (
-                self.llm_settings.provider == "groq"
-                and OLLAMA_AVAILABLE
-                and self.ollama_client
-            ):
-                logger.warning("Falling back to Ollama due to Groq failure")
-
-                # Track fallback operation
-                if METRICS_ENABLED:
-                    rag_fallback_operations_total.labels(
-                        from_service="groq", to_service="ollama"
-                    ).inc()
-
-                try:
-                    return await self._generate_with_ollama_async(
-                        prompt, temperature, max_tokens, model
-                    )
-                except Exception as fallback_error:
-                    logger.error(f"Ollama fallback also failed: {fallback_error}")
-                    raise fallback_error
-            elif self.llm_settings.provider == "groq" and not OLLAMA_AVAILABLE:
-                # Production: Groq-only, no fallback available
-                logger.error(
-                    "Groq failed and Ollama is not available (production mode)"
-                )
-                raise
-            else:
-                # Already using Ollama, can't fallback further
-                raise
+        logger.debug("Generating with Groq (async)")
+        return await self._generate_with_groq_async(
+            prompt, temperature, max_tokens, model
+        )
 
     @async_retry_with_exponential_backoff(max_retries=2)
     async def _generate_with_groq_async(
@@ -541,10 +328,7 @@ class OllamaService:
         Raises:
             Exception: If Groq API call fails
         """
-        if not self.async_groq_client:
-            raise ValueError("Async Groq client not initialized")
-
-        model_name = model or self.llm_settings.groq_model
+        model_name = model or self.model
 
         # Wait for rate limiter (blocks if at limit)
         if self.rate_limiter:
@@ -555,8 +339,9 @@ class OllamaService:
                 None, lambda: self.rate_limiter.acquire(timeout=60)
             )
             if not acquired:
-                logger.warning("Rate limiter timeout - falling back to Ollama")
-                raise Exception("Rate limiter timeout")
+                raise Exception(
+                    "Rate limiter timeout - Groq request quota exceeded. Please try again later."
+                )
 
             # Log rate limit status
             stats = self.rate_limiter.get_stats()
@@ -624,56 +409,29 @@ class OllamaService:
 
             raise
 
-    async def _generate_with_ollama_async(
-        self,
-        prompt: str,
-        temperature: float,
-        max_tokens: int,
-        model: Optional[str] = None,
-    ) -> str:
-        """Generate text asynchronously using Ollama (wraps sync client in executor).
 
-        Args:
-            prompt: The input prompt
-            temperature: Sampling temperature
-            max_tokens: Maximum tokens to generate
-            model: Optional model override
+# Global service instance (lazy initialization)
+_service: GroqLLMService = None
 
-        Returns:
-            Generated text
 
-        Raises:
-            Exception: If Ollama generation fails
-        """
-        # Ollama client doesn't have async support yet, so wrap in executor
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(
-            None,
-            lambda: self._generate_with_ollama(prompt, temperature, max_tokens, model),
+def get_llm_service() -> GroqLLMService:
+    """Get the global LLM service instance (lazy initialization)."""
+    global _service
+    if _service is None:
+        _service = GroqLLMService()
+        logger.info(
+            f"Initialized global LLM service - Provider: {_service.llm_settings.provider}, Model: {_service.model}"
         )
-
-
-# Initialize global service instance at module level for better performance
-_service: OllamaService = OllamaService()
-logger.info(
-    f"Initialized global LLM service - Provider: {_service.llm_settings.provider}"
-)
-
-
-def get_ollama_service() -> OllamaService:
-    """Get the global LLM service instance."""
     return _service
 
 
-def generate_with_ollama(
+def generate_with_llm(
     prompt: str,
     temperature: Optional[float] = None,
     max_tokens: Optional[int] = None,
     model: Optional[str] = None,
 ) -> str:
-    """Convenience function for generating text with configured LLM provider.
-
-    This function maintains backward compatibility while supporting multiple providers.
+    """Convenience function for generating text with Groq LLM.
 
     Args:
         prompt: The input prompt to generate text from
@@ -684,7 +442,7 @@ def generate_with_ollama(
     Returns:
         Generated text response
     """
-    service = get_ollama_service()
+    service = get_llm_service()
     return service.generate(
         prompt=prompt,
         temperature=temperature,
@@ -693,13 +451,13 @@ def generate_with_ollama(
     )
 
 
-async def async_generate_with_ollama(
+async def async_generate_with_llm(
     prompt: str,
     temperature: Optional[float] = None,
     max_tokens: Optional[int] = None,
     model: Optional[str] = None,
 ) -> str:
-    """Async convenience function for generating text with configured LLM provider.
+    """Async convenience function for generating text with Groq LLM.
 
     Args:
         prompt: The input prompt to generate text from
@@ -710,7 +468,7 @@ async def async_generate_with_ollama(
     Returns:
         Generated text response
     """
-    service = get_ollama_service()
+    service = get_llm_service()
     return await service.async_generate(
         prompt=prompt,
         temperature=temperature,
@@ -720,8 +478,8 @@ async def async_generate_with_ollama(
 
 
 __all__ = [
-    "OllamaService",
-    "get_ollama_service",
-    "generate_with_ollama",
-    "async_generate_with_ollama",
+    "GroqLLMService",
+    "get_llm_service",
+    "generate_with_llm",
+    "async_generate_with_llm",
 ]

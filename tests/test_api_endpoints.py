@@ -58,7 +58,7 @@ class TestChatSimpleEndpoint:
         )  # Actual implementation returns 401 UNAUTHORIZED
 
     @patch("app.api.routes.chat.search")
-    @patch("app.api.routes.chat.generate_with_ollama")
+    @patch("app.api.routes.chat.generate_with_llm")
     @patch("app.api.routes.chat.get_prompt_guard")
     def test_chat_simple_success(
         self,
@@ -136,7 +136,7 @@ class TestChatSimpleEndpoint:
         assert "could not be processed" in response.json()["detail"]
 
     @patch("app.api.routes.chat.search")
-    @patch("app.api.routes.chat.generate_with_ollama")
+    @patch("app.api.routes.chat.generate_with_llm")
     @patch("app.api.routes.chat.get_prompt_guard")
     def test_chat_simple_no_results(
         self,
@@ -179,7 +179,7 @@ class TestChatEndpoint:
 
     @patch("app.services.response_cache.get_response_cache")
     @patch("app.storage.get_session_store")
-    @patch("app.services.llm.generate_with_ollama")
+    @patch("app.services.llm.generate_with_llm")
     @patch("app.api.routes.chat.get_prompt_guard")
     def test_chat_with_session(
         self,

@@ -9,7 +9,6 @@ httpx==0.28.1
 # --- RAG stack ---
 chromadb==1.0.20
 sentence-transformers==5.1.0
-ollama==0.5.3
 groq>=0.4.0
 redis==5.2.0
 rank-bm25==0.2.2  # BM25 keyword search for hybrid retrieval

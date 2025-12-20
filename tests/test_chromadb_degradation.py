@@ -171,7 +171,7 @@ class TestChromaDBGracefulDegradation:
             _semantic_search(query="test", k=5, max_dist=1.0)
 
     @patch("app.api.routes.chat.search")
-    @patch("app.api.routes.chat.generate_with_ollama")
+    @patch("app.api.routes.chat.generate_with_llm")
     @patch("app.api.routes.chat.get_prompt_guard")
     def test_chat_with_no_retrieval_results(
         self,

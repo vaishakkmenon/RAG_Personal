@@ -68,12 +68,9 @@ See .env.example for detailed descriptions and recommended values.
 - REDIS_PASSWORD: Password for Redis authentication
 
 ## LLM Configuration
-- LLM_PROVIDER: LLM provider (groq or ollama)
-- LLM_GROQ_API_KEY: Groq API key (required if provider=groq)
+- LLM_PROVIDER: LLM provider (must be 'groq')
+- LLM_GROQ_API_KEY: Groq API key (required)
 - LLM_GROQ_MODEL: Groq model name
-- LLM_OLLAMA_HOST: Ollama server URL
-- LLM_OLLAMA_MODEL: Ollama model name
-- LLM_OLLAMA_TIMEOUT: Ollama request timeout
 - LLM_TEMPERATURE: Generation temperature
 - LLM_MAX_TOKENS: Maximum tokens to generate
 - LLM_NUM_CTX: Context window size
@@ -202,14 +199,18 @@ def validate_config() -> None:
                     insecure_vars.append((var, val))
 
     # 2. Check provider-specific variables
-    provider = os.getenv("LLM_PROVIDER", "ollama")
-    if provider == "groq":
-        for var in GROQ_VARS:
-            val = os.getenv(var)
-            if not val:
-                missing_vars.append(f"{var} (required for LLM_PROVIDER=groq)")
-            elif val in ["your-groq-api-key-here", "change-me"]:
-                insecure_vars.append((var, val))
+    provider = os.getenv("LLM_PROVIDER", "groq")
+    if provider != "groq":
+        missing_vars.append(
+            "LLM_PROVIDER must be set to 'groq' (Ollama is no longer supported)"
+        )
+
+    # Always require Groq API key
+    val = os.getenv("LLM_GROQ_API_KEY")
+    if not val:
+        missing_vars.append("LLM_GROQ_API_KEY (required for Groq provider)")
+    elif val in ["your-groq-api-key-here", "change-me"]:
+        insecure_vars.append(("LLM_GROQ_API_KEY", val))
 
     # 3. Check Grafana password (warn if default)
     grafana_pass = os.getenv("GRAFANA_ADMIN_PASSWORD", "")

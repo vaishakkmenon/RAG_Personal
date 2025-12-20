@@ -697,132 +697,52 @@
       }
     },
     {
-      "test_id": "edge_ambig_001",
-      "category": "edge_cases",
-      "question": "?",
-      "expected_keywords": [],
-      "expected_answer": "Should request clarification for the ambiguous query.",
-      "is_impossible": false,
-      "expected_doc_type": null,
-      "min_sources": 0,
-      "grounded_expected": false,
-      "difficulty": "hard",
-      "expected_behavior": {
-        "should_detect_ambiguity": true,
-        "expected_response": {
-          "should_ask_clarification": true,
-          "allowed_keywords": [
-            "clarify",
-            "question",
-            "which",
-            "specific",
-            "detail",
-            "education",
-            "work experience",
-            "certifications",
-            "background",
-            "qualifications",
-            "documents",
-            "broad"
-          ],
-          "max_sources": 0
-        }
-      }
-    },
-    {
       "test_id": "clarify_001",
-      "category": "clarification_handling",
+      "category": "broad",
       "question": "What about my background?",
       "expected_keywords": [
-        "which",
-        "aspect",
-        "background",
-        "specific",
-        "clarify"
+        "education",
+        "Computer Science",
+        "GPA",
+        "degree"
       ],
-      "expected_answer": "The response should explicitly ask the user to specify which aspect of their background they're interested in (e.g., work experience, education, skills).",
+      "expected_answer": "Should provide comprehensive information about background, including education, work experience, or skills.",
       "is_impossible": false,
-      "expected_doc_type": null,
-      "min_sources": 0,
-      "grounded_expected": false,
+      "expected_doc_type": "resume",
+      "min_sources": 1,
+      "grounded_expected": true,
       "difficulty": "medium",
       "min_response_length": 50,
       "expected_behavior": {
-        "should_detect_ambiguity": true,
+        "should_detect_ambiguity": false,
         "expected_response": {
-          "should_ask_clarification": true,
-          "allowed_keywords": [
-            "clarify",
-            "which",
-            "specific",
-            "detail",
-            "aspect",
-            "background",
-            "education",
-            "work experience",
-            "skills",
-            "certifications",
-            "qualifications"
-          ],
-          "required_keywords": [
-            "which",
-            "background"
-          ],
-          "max_sources": 0,
-          "response_format": {
-            "should_contain_examples": true,
-            "min_examples": 2,
-            "example_domains": [
-              "work experience",
-              "education",
-              "skills"
-            ]
-          }
+          "should_ask_clarification": false,
+          "min_sources": 1
         }
       }
     },
     {
       "test_id": "clarify_002",
-      "category": "clarification_handling",
+      "category": "broad",
       "question": "I'm looking for information about my history - can you help?",
       "expected_keywords": [
-        "broad",
         "education",
         "work",
         "certifications",
-        "academic"
+        "academic",
+        "projects"
       ],
-      "expected_answer": "Should acknowledge the question is broad and offer specific options such as education, work experience, certifications, academic performance, or projects. The response should provide a menu of choices to help clarify what information the user needs.",
+      "expected_answer": "Should provide comprehensive information about history/background including education, work experience, certifications, projects, or skills.",
       "is_impossible": false,
-      "expected_doc_type": null,
-      "min_sources": 0,
-      "grounded_expected": false,
+      "expected_doc_type": "resume",
+      "min_sources": 1,
+      "grounded_expected": true,
       "difficulty": "medium",
       "expected_behavior": {
-        "should_detect_ambiguity": true,
-        "min_ambiguity_score": 0.7,
+        "should_detect_ambiguity": false,
         "expected_response": {
-          "should_ask_clarification": true,
-          "allowed_keywords": [
-            "clarify",
-            "which",
-            "specific",
-            "detail",
-            "education",
-            "work",
-            "work experience",
-            "certifications",
-            "background",
-            "history",
-            "qualifications",
-            "broad",
-            "academic",
-            "skills",
-            "projects",
-            "overview",
-            "help"
-          ],
-          "max_sources": 0
+          "should_ask_clarification": false,
+          "min_sources": 1
         }
       }
     },

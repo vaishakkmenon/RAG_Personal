@@ -168,7 +168,7 @@ class TestChatServiceSessionErrors:
     """Tests for session management error handling."""
 
     @patch("app.core.chat_service.search")
-    @patch("app.core.chat_service.generate_with_ollama")
+    @patch("app.core.chat_service.generate_with_llm")
     def test_session_http_exception_reraises(self, mock_generate, mock_search):
         """Test that HTTPException from session is re-raised."""
         from app.core.chat_service import ChatService
@@ -189,7 +189,7 @@ class TestChatServiceSessionErrors:
         assert exc_info.value.status_code == 429
 
     @patch("app.core.chat_service.search")
-    @patch("app.core.chat_service.generate_with_ollama")
+    @patch("app.core.chat_service.generate_with_llm")
     def test_session_unexpected_error_creates_temp_session(
         self, mock_generate, mock_search
     ):

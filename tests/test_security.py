@@ -298,7 +298,7 @@ class TestErrorHandling:
         """Test handling of malformed JSON."""
         response = client.post(
             "/chat",
-            data="not valid json",
+            content="not valid json",
             headers={"X-API-Key": settings.api_key, "Content-Type": "application/json"},
         )
 

@@ -21,9 +21,6 @@ json_logger.setLevel(
 )
 json_logger.propagate = False
 
-OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:8b-instruct-q4_K_M")
-
 
 class LoggingMiddleware(BaseHTTPMiddleware):
     """
@@ -60,8 +57,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                         "path": request.url.path,
                         "status": status_code,
                         "elapsed_ms": elapsed_ms,
-                        "ollama_host": OLLAMA_HOST,
-                        "ollama_model": OLLAMA_MODEL,
                         "client_ip": getattr(request.client, "host", None),
                         "content_length": request.headers.get("content-length"),
                     },
@@ -79,8 +74,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                     "path": request.url.path,
                     "status": status_code,
                     "elapsed_ms": elapsed_ms,
-                    "ollama_host": OLLAMA_HOST,
-                    "ollama_model": OLLAMA_MODEL,
                     "client_ip": getattr(request.client, "host", None),
                     "content_length": request.headers.get("content-length"),
                 },

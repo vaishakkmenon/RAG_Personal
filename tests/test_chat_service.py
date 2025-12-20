@@ -21,7 +21,7 @@ class TestChatServiceFullPipeline:
 
     @patch("app.core.chat_service.get_response_cache")
     @patch("app.core.chat_service.search")
-    @patch("app.core.chat_service.generate_with_ollama")
+    @patch("app.core.chat_service.generate_with_llm")
     @patch("app.core.chat_service.create_default_prompt_builder")
     def test_successful_chat_pipeline(
         self,
@@ -107,7 +107,7 @@ class TestChatServiceFullPipeline:
 
     @patch("app.core.chat_service.get_response_cache")
     @patch("app.core.chat_service.search")
-    @patch("app.core.chat_service.generate_with_ollama")
+    @patch("app.core.chat_service.generate_with_llm")
     def test_no_results_not_grounded(
         self,
         mock_generate,
@@ -141,7 +141,7 @@ class TestChatServiceFullPipeline:
 
     @patch("app.core.chat_service.get_response_cache")
     @patch("app.core.chat_service.search")
-    @patch("app.core.chat_service.generate_with_ollama")
+    @patch("app.core.chat_service.generate_with_llm")
     def test_grounding_threshold_check(
         self,
         mock_generate,
@@ -188,7 +188,7 @@ class TestChatServiceConversationHistory:
 
     @patch("app.core.chat_service.get_response_cache")
     @patch("app.core.chat_service.search")
-    @patch("app.core.chat_service.generate_with_ollama")
+    @patch("app.core.chat_service.generate_with_llm")
     def test_conversation_history_included(
         self,
         mock_generate,
@@ -282,7 +282,7 @@ class TestChatServiceErrorHandling:
 
     @patch("app.core.chat_service.get_response_cache")
     @patch("app.core.chat_service.search")
-    @patch("app.core.chat_service.generate_with_ollama")
+    @patch("app.core.chat_service.generate_with_llm")
     @patch("app.core.chat_service.create_default_prompt_builder")
     def test_llm_failure_graceful_degradation(
         self,
@@ -360,7 +360,7 @@ class TestChatServiceMetadataFiltering:
 
     @patch("app.core.chat_service.get_response_cache")
     @patch("app.core.chat_service.search")
-    @patch("app.core.chat_service.generate_with_ollama")
+    @patch("app.core.chat_service.generate_with_llm")
     def test_doc_type_filter_applied(
         self,
         mock_generate,
@@ -402,7 +402,7 @@ class TestChatServiceReranking:
     @patch("app.core.chat_service.get_response_cache")
     @patch("app.core.chat_service.rerank_chunks")
     @patch("app.core.chat_service.search")
-    @patch("app.core.chat_service.generate_with_ollama")
+    @patch("app.core.chat_service.generate_with_llm")
     def test_reranking_enabled(
         self,
         mock_generate,
@@ -454,7 +454,7 @@ class TestChatServiceReranking:
     @patch("app.core.chat_service.get_response_cache")
     @patch("app.core.chat_service.rerank_chunks")
     @patch("app.core.chat_service.search")
-    @patch("app.core.chat_service.generate_with_ollama")
+    @patch("app.core.chat_service.generate_with_llm")
     def test_reranking_disabled(
         self,
         mock_generate,

@@ -4,7 +4,6 @@
 # Services:
 #   - api:    FastAPI backend with ChromaDB
 #   - redis:  Session storage and caching
-#   - ollama: Local LLM inference (fallback)
 #   - test:   Testing environment
 # ============================================================================
 
@@ -40,11 +39,6 @@ services:
       - LLM_PROVIDER=${LLM_PROVIDER:-groq}
       - LLM_GROQ_API_KEY=${LLM_GROQ_API_KEY:-}
       - LLM_GROQ_MODEL=${LLM_GROQ_MODEL:-llama-3.1-70b-versatile}
-
-      # Fallback: Ollama (local inference)
-      - LLM_FALLBACK_PROVIDER=ollama
-      - LLM_OLLAMA_HOST=http://ollama:11434
-      - LLM_OLLAMA_MODEL=${LLM_OLLAMA_MODEL:-llama3.1:8b}
 
       # LLM generation parameters
       - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.1}
@@ -101,8 +95,6 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-      ollama:
-        condition: service_started
 
     # Security hardening
     security_opt:
@@ -239,121 +231,6 @@ services:
         labels: "service=redis"
 
   # ==========================================================================
-  # Ollama Service - Local LLM inference (fallback provider)
-  # ==========================================================================
-  ollama:
-    image: ollama/ollama:latest
-    container_name: rag_ollama
-    hostname: ollama
-
-    # GPU support (ENABLED for faster testing)
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-
-    environment:
-      # Ollama server configuration
-      - OLLAMA_HOST=0.0.0.0:11434
-      - OLLAMA_ORIGINS=*
-
-      # Performance tuning
-      - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL:-2}      # Concurrent requests
-      - OLLAMA_MAX_LOADED_MODELS=1                          # Only load one model
-      - OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE:-24h}        # Keep model in memory
-
-      # GPU settings (ENABLED)
-      - OLLAMA_LLM_LIBRARY=cublas                          # Use CUDA
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-
-    ports:
-      - "${OLLAMA_PORT:-11434}:11434"
-
-    volumes:
-      - ollama_models:/root/.ollama
-
-    # Startup script to pull model
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        set -e
-        echo "Starting Ollama server..."
-        /bin/ollama serve &
-        OLLAMA_PID=$$!
-
-        echo "Waiting for Ollama server to be ready..."
-        echo "Timeout: 300 seconds (5 minutes)"
-        START_TIME=$$(date +%s)
-
-        for i in $$(seq 1 300); do
-          # Use 'ollama list' instead of curl (curl not available in container)
-          if ollama list >/dev/null 2>&1; then
-            ELAPSED=$$(($$(date +%s) - $$START_TIME))
-            echo "Ollama server is ready"
-            echo "Time to start: $$ELAPSED seconds"
-            break
-          fi
-          if [ $$i -eq 300 ]; then
-            ELAPSED=$$(($$(date +%s) - $$START_TIME))
-            echo "ERROR: Ollama server failed to start within 300 seconds"
-            echo "Elapsed time: $$ELAPSED seconds"
-            exit 1
-          fi
-          # Progress indicator every 10 seconds
-          if [ $$(($$i % 10)) -eq 0 ]; then
-            echo "Still waiting... $$i seconds elapsed"
-          fi
-          sleep 1
-        done
-
-        echo "Pulling model: $${LLM_OLLAMA_MODEL:-llama3.1:8b}..."
-        MODEL_START=$$(date +%s)
-        if ollama pull "$${LLM_OLLAMA_MODEL:-llama3.1:8b}"; then
-          MODEL_TIME=$$(($$(date +%s) - $$MODEL_START))
-          echo "Model pulled successfully"
-          echo "Time to pull model: $$MODEL_TIME seconds"
-        else
-          echo "WARNING: Failed to pull model, will retry on first request"
-        fi
-
-        echo "Ollama ready to serve requests"
-        wait $$OLLAMA_PID
-
-    # Health check - monitors Ollama continuously
-    healthcheck:
-      test: ["CMD", "ollama", "list"]
-      interval: 30s          # Check every 30 seconds
-      timeout: 10s           # Fail if takes >10s
-      retries: 3             # Mark unhealthy after 3 failures
-      start_period: 300s     # 5 minute grace period on startup
-
-    # Restart policy
-    restart: unless-stopped
-
-    # Resource limits (adjust based on model size)
-    # For llama3.1:8b, recommend at least 8GB RAM
-    # deploy:
-    #   resources:
-    #     limits:
-    #       cpus: '4.0'
-    #       memory: 12G
-    #     reservations:
-    #       cpus: '2.0'
-    #       memory: 8G
-
-    # Logging configuration
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-        labels: "service=ollama"
-
-  # ==========================================================================
   # Prometheus Service - Metrics collection and alerting
   # ==========================================================================
   prometheus:
@@ -487,7 +364,6 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - API_URL=http://api:8000
-      - OLLAMA_HOST=http://ollama:11434
       - LOG_LEVEL=DEBUG
 
     env_file:
@@ -507,8 +383,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      ollama:
-        condition: service_started
 
     # Security hardening
     security_opt:
@@ -545,11 +419,6 @@ volumes:
     driver: local
     name: rag_redis_data
 
-  # Ollama model storage (large files ~5-10GB)
-  ollama_models:
-    driver: local
-    name: rag_ollama_models
-
   # Prometheus time-series data
   prometheus_data:
     driver: local
@@ -581,7 +450,6 @@ volumes:
 #   docker-compose logs -f
 #   docker-compose logs -f api
 #   docker-compose logs -f redis
-#   docker-compose logs -f ollama
 #
 # Check health:
 #   docker-compose ps

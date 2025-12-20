@@ -63,28 +63,6 @@ class TestConfigValidator:
         assert exc_info.value.code == 1
         assert "LLM_GROQ_API_KEY" in caplog.text
 
-    def test_groq_api_key_not_required_for_ollama(self, monkeypatch, caplog):
-        """Test that Groq API key is NOT required when using Ollama."""
-        import logging
-
-        caplog.set_level(logging.INFO)
-
-        # Set required vars
-        monkeypatch.setenv("API_KEY", "test-api-key-12345")
-        monkeypatch.setenv("REDIS_PASSWORD", "test-redis-password")
-
-        # Set provider to ollama (should not require Groq key)
-        monkeypatch.setenv("LLM_PROVIDER", "ollama")
-        monkeypatch.delenv("LLM_GROQ_API_KEY", raising=False)
-
-        # Avoid Grafana password warning from .env
-        monkeypatch.setenv("GRAFANA_ADMIN_PASSWORD", "secure-grafana-password-xyz123")
-
-        # Should not raise
-        validate_config()
-
-        assert "Environment configuration validated successfully" in caplog.text
-
     def test_insecure_api_key_default(self, monkeypatch, caplog):
         """Test that insecure default API_KEY triggers warning."""
         # Set required vars with an insecure default
@@ -139,7 +117,8 @@ class TestConfigValidator:
             "d5160646e4199a5d88ea3626a3795e4139eef33adb29a56568b4b52bcbe703d5",
         )
         monkeypatch.setenv("REDIS_PASSWORD", "very-secure-redis-password-12345")
-        monkeypatch.setenv("LLM_PROVIDER", "ollama")
+        monkeypatch.setenv("LLM_PROVIDER", "groq")
+        monkeypatch.setenv("LLM_GROQ_API_KEY", "test-groq-key")
 
         # Set secure Grafana password (to avoid warning from .env default)
         monkeypatch.setenv("GRAFANA_ADMIN_PASSWORD", "secure-grafana-password-xyz123")
@@ -328,7 +307,8 @@ class TestConfigValidatorIntegration:
         # Set all required vars
         monkeypatch.setenv("API_KEY", "secure-api-key-12345")
         monkeypatch.setenv("REDIS_PASSWORD", "secure-redis-password")
-        monkeypatch.setenv("LLM_PROVIDER", "ollama")
+        monkeypatch.setenv("LLM_PROVIDER", "groq")
+        monkeypatch.setenv("LLM_GROQ_API_KEY", "test-groq-key")
 
         # Should not raise
         from app.config_validator import validate_config

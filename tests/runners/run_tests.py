@@ -154,8 +154,8 @@ class TwoPhaseTestRunner:
 
         # Apply delay for all providers to prevent resource contention
         effective_delay = delay
-        if self.provider == "ollama":
-            delay_reason = "(Ollama local - delay helps prevent GPU/CPU overload)"
+        if self.provider == "groq":
+            delay_reason = "(Groq local - delay helps prevent GPU/CPU overload)"
         elif self.provider == "groq":
             delay_reason = "(Groq cloud - delay for rate limiting)"
         else:
@@ -220,7 +220,7 @@ class TwoPhaseTestRunner:
 
             results.append(result)
 
-            # Delay between requests to avoid rate limits (skip for Ollama)
+            # Delay between requests to avoid rate limits (skip for Groq)
             if (
                 i < len(test_cases) and effective_delay > 0
             ):  # Don't delay after last test
@@ -332,9 +332,9 @@ def main():
     )
     parser.add_argument(
         "--validation-provider",
-        choices=["ollama", "groq"],
-        default="ollama",
-        help="LLM provider for validation (default: ollama to save Groq quota)",
+        choices=["groq", "groq"],
+        default="groq",
+        help="LLM provider for validation (default: groq to save Groq quota)",
     )
     parser.add_argument(
         "--validation-model",

@@ -21,7 +21,7 @@ services:
     container_name: rag_api
     hostname: api
 
-    # Only expose API port (Redis and Ollama are internal only)
+    # Only expose API port (Redis is internal only)
     ports:
       - "8000:8000"
 
@@ -35,11 +35,6 @@ services:
       - LLM_PROVIDER=${LLM_PROVIDER:-groq}
       - LLM_GROQ_API_KEY=${LLM_GROQ_API_KEY:?ERROR: LLM_GROQ_API_KEY is required}
       - LLM_GROQ_MODEL=${LLM_GROQ_MODEL:-llama-3.1-70b-versatile}
-
-      # Fallback: Ollama (local CPU inference on ARM)
-      - LLM_FALLBACK_PROVIDER=ollama
-      - LLM_OLLAMA_HOST=http://ollama:11434
-      - LLM_OLLAMA_MODEL=${LLM_OLLAMA_MODEL:-llama3.1:8b}
 
       # LLM generation parameters
       - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.1}
@@ -80,8 +75,6 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-      ollama:
-        condition: service_started
 
     # Security hardening
     security_opt:
@@ -208,110 +201,6 @@ services:
         max-file: "2"
         labels: "service=redis"
 
-  # ==========================================================================
-  # Ollama Service - ARM64 CPU-only optimized
-  # ==========================================================================
-  ollama:
-    image: ollama/ollama:latest
-    platform: linux/arm64/v8  # Explicit ARM64
-    container_name: rag_ollama
-    hostname: ollama
-
-    environment:
-      # Ollama server configuration
-      - OLLAMA_HOST=0.0.0.0:11434
-      - OLLAMA_ORIGINS=*
-
-      # CPU optimization for ARM (no GPU)
-      - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL:-1}  # Conservative on ARM
-      - OLLAMA_MAX_LOADED_MODELS=1
-      - OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE:-24h}
-
-      # ARM-specific optimizations
-      - OLLAMA_NUM_THREAD=4           # Use all 4 OCPUs
-      - OLLAMA_RUNNERS_DIR=/tmp/runners  # Use tmpfs for speed
-
-    # ⚠️ DO NOT EXPOSE Ollama publicly on Oracle Cloud
-    # ports:
-    #   - "11434:11434"  # COMMENTED OUT - internal only
-    expose:
-      - "11434"  # Internal network only
-
-    volumes:
-      # In production: mount to block volume (models are 5-10GB)
-      # -v /mnt/block_storage/ollama:/root/.ollama
-      - ollama_models:/root/.ollama
-
-    # Optimized startup for ARM with better error handling
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        set -e
-
-        echo "🚀 Starting Ollama on ARM64 (CPU-only)..."
-        /bin/ollama serve &
-        OLLAMA_PID=$!
-
-        echo "⏳ Waiting for Ollama to be ready (may take 30-60s on first start)..."
-        for i in $(seq 1 60); do
-          if curl -s http://localhost:11434/api/version > /dev/null 2>&1; then
-            echo "✅ Ollama server ready on ARM64"
-            break
-          fi
-          if [ $i -eq 60 ]; then
-            echo "❌ ERROR: Ollama failed to start within 60 seconds"
-            echo "Check disk space: df -h"
-            exit 1
-          fi
-          sleep 1
-        done
-
-        echo "📥 Pulling model: ${LLM_OLLAMA_MODEL:-llama3.1:8b} (this may take 10-20 minutes on first run)..."
-        if ollama pull "${LLM_OLLAMA_MODEL:-llama3.1:8b}"; then
-          echo "✅ Model ready for CPU inference on ARM"
-        else
-          echo "⚠️  WARNING: Failed to pull model"
-          echo "Disk usage: $(df -h /root/.ollama | tail -1)"
-          echo "Will retry on first request"
-        fi
-
-        echo "✅ Ollama ready (ARM64 CPU mode)"
-        wait $OLLAMA_PID
-
-    healthcheck:
-      test:
-        - CMD-SHELL
-        - "curl -f http://localhost:11434/api/version || exit 1"
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 180s  # Longer for ARM model loading
-
-    restart: always
-
-    # Resource limits for Ollama on ARM
-    # Allocation: 2 OCPUs, 10 GB RAM (for 8B model)
-    # Note: 8B model needs ~8GB RAM on ARM
-    deploy:
-      resources:
-        limits:
-          cpus: '2.5'
-          memory: 12G
-        reservations:
-          cpus: '1.5'
-          memory: 8G
-
-    # Tmpfs for faster model execution
-    tmpfs:
-      - /tmp/runners:size=2g,mode=1777
-
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "5m"
-        max-file: "2"
-        labels: "service=ollama"
-
 # ============================================================================
 # Named Volumes - Oracle Cloud storage optimization
 # ============================================================================
@@ -325,16 +214,6 @@ volumes:
     #   type: none
     #   o: bind
     #   device: /mnt/block_storage/redis
-
-  # Ollama models (large, 5-10GB per model)
-  ollama_models:
-    driver: local
-    name: rag_ollama_models
-    # In production, MUST mount to block volume:
-    # driver_opts:
-    #   type: none
-    #   o: bind
-    #   device: /mnt/block_storage/ollama
 
   # HuggingFace cache (moderate, 1-2GB)
   hf_cache:
@@ -354,7 +233,7 @@ volumes:
 # 1. FIREWALL CONFIGURATION
 #    - Security List: Allow inbound 8000/tcp (API only)
 #    - iptables: sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 8000 -j ACCEPT
-#    - DO NOT expose Redis (6379) or Ollama (11434) publicly
+#    - DO NOT expose Redis (6379) publicly
 #
 # 2. STORAGE CONFIGURATION
 #    - Boot volume: 50GB (limited)
@@ -364,15 +243,13 @@ volumes:
 #
 # 3. RESOURCE ALLOCATION
 #    - Total: 4 OCPUs, 24 GB RAM
-#    - API: 1.5 OCPUs, 4 GB
-#    - Redis: 0.3 OCPUs, 512 MB
-#    - Ollama: 2 OCPUs, 12 GB
-#    - System overhead: 0.2 OCPUs, 7.5 GB
+#    - API: 2 OCPUs, 8 GB
+#    - Redis: 0.5 OCPUs, 1 GB
+#    - System overhead: 1.5 OCPUs, 15 GB
 #
 # 4. ARM CONSIDERATIONS
 #    - All images must support ARM64
-#    - Ollama uses CPU-only (no GPU on Always Free)
-#    - Expect slower inference (3-8s vs 1-3s with GPU)
+#    - Using Groq for LLM inference (cloud API)
 #
 # 5. MONITORING
 #    - Check disk: df -h (models are large!)
