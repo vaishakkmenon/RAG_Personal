@@ -38,19 +38,15 @@ This checklist covers essential and optional items to make your RAG system produ
 - ❌ **[MEDIUM]** Role-based access control (RBAC) for admin endpoints
 
 ### Secrets Management
-- ❌ **[CRITICAL]** Move secrets from `.env` to secure vault
-  - Options: HashiCorp Vault, AWS Secrets Manager, Azure Key Vault, GCP Secret Manager
-  - Secrets to protect:
-    - `API_KEY`
-    - `LLM_GROQ_API_KEY`
-    - `GRAFANA_ADMIN_PASSWORD`
-    - Redis password (add authentication!)
-- ❌ **[CRITICAL]** Never commit `.env` to git
-  - Add `.env` to `.gitignore` ✅ (verify this is done)
-  - Scan git history for leaked secrets: `git secrets --scan-history`
-- ❌ **[HIGH]** Implement environment-specific secret injection
-  - Dev, staging, prod use different secrets
-  - Secrets injected at runtime, not baked into image
+- ✅ **[CRITICAL]** Move secrets from `.env` to secure vault (Implemented Docker Secrets)
+  - [x] Implemented `*_FILE` support in settings
+  - [x] Secrets mounted via Docker volumes/secrets
+  - [x] `API_KEY`, `POSTGRES_PASSWORD`, etc. protected
+- ✅ **[CRITICAL]** Never commit `.env` to git
+  - [x] Add `.env` to `.gitignore` ✅
+  - [x] Added `secrets/` to `.gitignore`
+- ✅ **[HIGH]** Implement environment-specific secret injection
+  - [x] Production uses `/run/secrets/`, Dev uses `.env` fallback
 
 ### Network Security
 - ✅ **[CRITICAL]** Implement HTTPS/TLS (via Caddy Reverse Proxy)

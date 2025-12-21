@@ -38,3 +38,4 @@ archive/
 # Ignore AI/Agent Folders
 .claude/
 .agent/
+secrets/

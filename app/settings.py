@@ -14,6 +14,24 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def read_secret(env_var_name: str, default: str) -> str:
+    """Read secret from file (Docker Secrets) or env var (Development).
+
+    Priority:
+    1. *_FILE env var -> content of that file
+    2. Env var directly
+    3. Default value
+    """
+    file_path = os.getenv(f"{env_var_name}_FILE")
+    if file_path and os.path.exists(file_path):
+        try:
+            with open(file_path, "r") as f:
+                return f.read().strip()
+        except IOError:
+            pass
+    return os.getenv(env_var_name, default)
+
+
 class APISettings(BaseModel):
     """API and server settings."""
 
@@ -332,7 +350,7 @@ class PostgresSettings(BaseModel):
         description="Database user",
     )
     password: str = Field(
-        default=os.getenv("POSTGRES_PASSWORD", "rag_password"),
+        default_factory=lambda: read_secret("POSTGRES_PASSWORD", "rag_password"),
         description="Database password",
     )
     db_name: str = Field(
@@ -444,7 +462,7 @@ class LLMSettings(BaseModel):
 
     # Groq settings
     groq_api_key: str = Field(
-        default=os.getenv("LLM_GROQ_API_KEY", ""),
+        default_factory=lambda: read_secret("LLM_GROQ_API_KEY", ""),
         description="Groq API key (required)",
     )
     groq_model: str = Field(
@@ -570,12 +588,12 @@ class Settings(BaseModel):
 
     # Security
     api_key: str = Field(
-        default=os.getenv("API_KEY", "change-me"),
+        default_factory=lambda: read_secret("API_KEY", "change-me"),
         description="Primary API key for authentication (legacy support)",
     )
     api_keys: List[str] = Field(
         default_factory=lambda: [
-            k.strip() for k in os.getenv("API_KEYS", "").split(",") if k.strip()
+            k.strip() for k in read_secret("API_KEYS", "").split(",") if k.strip()
         ],
         description="List of valid API keys for rotation (comma-separated)",
     )

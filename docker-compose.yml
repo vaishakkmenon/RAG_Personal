@@ -19,6 +19,12 @@ services:
       target: runtime
       args:
         - BUILDKIT_INLINE_CACHE=1
+
+    secrets:
+      - api_keys
+      - groq_api_key
+      - postgres_password
+      - redis_password
     image: personal-rag-system:latest
     container_name: rag_api
     hostname: api
@@ -37,6 +43,12 @@ services:
       # ============ LLM Provider Configuration ============
       # Primary: Groq (cloud API)
       - LLM_PROVIDER=${LLM_PROVIDER:-groq}
+      # Secrets Injection
+      - API_KEYS_FILE=/run/secrets/api_keys
+      - LLM_GROQ_API_KEY_FILE=/run/secrets/groq_api_key
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+      - REDIS_PASSWORD_FILE=/run/secrets/redis_password
+      # Fallbacks (for simple dev setups)
       - LLM_GROQ_API_KEY=${LLM_GROQ_API_KEY:-}
       - LLM_GROQ_MODEL=${LLM_GROQ_MODEL:-llama-3.1-70b-versatile}
 
@@ -204,8 +216,11 @@ services:
 
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-rag_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rag_password}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
       POSTGRES_DB: ${POSTGRES_DB:-rag_db}
+
+    secrets:
+      - postgres_password
 
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
@@ -524,6 +539,19 @@ volumes:
 #     ipam:
 #       config:
 #         - subnet: 172.28.0.0/16
+
+# ============================================================================
+# Secrets - Secure credential injection
+# ============================================================================
+secrets:
+  api_keys:
+    file: ./secrets/api_keys
+  groq_api_key:
+    file: ./secrets/groq_api_key
+  postgres_password:
+    file: ./secrets/postgres_password
+  redis_password:
+    file: ./secrets/redis_password
 
 # ============================================================================
 # Usage Instructions
