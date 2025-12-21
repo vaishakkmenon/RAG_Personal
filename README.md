@@ -18,18 +18,18 @@ A production-ready Retrieval-Augmented Generation (RAG) system for querying pers
     │        │   │        │   │          │
     └────────┘   └────────┘   └──────────┘
                                     │
-                      ┌─────────────┴─────────────┐
-                      ▼                           ▼
-            ┌─────────────────┐
-            │   ChatService   │
-            │   (Core Logic)  │
-            └─────────────────┘
-                      │
-        ┌─────────────┼─────────────┬─────────────┐
-        ▼             ▼             ▼             ▼
-   │Negative│   │ Retrieval│   │  LLM   │   │Prompt   │
-   │Inferenc│   │ (Chroma) │   │ (Groq) │   │Builder  │
-   └────────┘   └──────────┘   └────────┘   └─────────┘
+                                    ▼
+                            ┌─────────────────┐
+                            │   ChatService   │
+                            │   (Core Logic)  │
+                            └─────────────────┘
+                                     │
+           ┌─────────────┬───────────┴────────────┬─────────────┐
+           ▼             ▼                        ▼             ▼
+      ┌────────┐   ┌──────────┐              ┌────────┐   ┌─────────┐
+      │Negative│   │ Retrieval│              │  LLM   │   │Prompt   │
+      │Inferenc│   │ (Chroma) │              │ (Groq) │   │Builder  │
+      └────────┘   └──────────┘              └────────┘   └─────────┘
 ```
 
 ### Core Components
