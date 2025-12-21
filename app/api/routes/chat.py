@@ -11,7 +11,7 @@ from fastapi.responses import StreamingResponse
 
 from app.models import ChatRequest, ChatResponse, ChatSource
 from app.api.dependencies import check_api_key, get_chat_service
-from app.core import ChatService
+from app.core.chat_service import ChatService, ChatOptions
 from app.retrieval import search
 from app.services.llm import generate_with_llm
 from app.services.prompt_guard import get_prompt_guard
@@ -81,9 +81,8 @@ async def chat_stream(
     """
     Streaming endpoint for RAG chat.
     """
-    # Create the generator
-    stream_generator = chat_service.handle_chat_stream(
-        request=request,
+    # Construct options from query parameters
+    options = ChatOptions(
         grounded_only=grounded_only,
         null_threshold=null_threshold,
         max_distance=max_distance,
@@ -96,7 +95,11 @@ async def chat_stream(
         term_id=term_id,
         level=level,
         model=model,
+        api_key=api_key,
     )
+
+    # Create the generator
+    stream_generator = chat_service.handle_chat_stream(request=request, options=options)
 
     return StreamingResponse(stream_generator, media_type="text/event-stream")
 
@@ -514,9 +517,8 @@ def chat(
                 detail="Your request could not be processed. Please rephrase your question.",
             )
 
-        # Pass skip_route_cache=True to avoid double-checking cache in handle_chat
-        response = chat_service.handle_chat(
-            request=request,
+        # Construct options and pass skip_route_cache=True to avoid double-checking cache
+        options = ChatOptions(
             grounded_only=grounded_only,
             null_threshold=null_threshold,
             max_distance=max_distance,
@@ -530,7 +532,10 @@ def chat(
             level=level,
             model=model,
             skip_route_cache=True,
+            api_key=api_key,
         )
+
+        response = chat_service.handle_chat(request=request, options=options)
 
         # Track success metrics
         if METRICS_ENABLED:
