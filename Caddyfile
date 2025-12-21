@@ -1,0 +1,35 @@
+{
+    # Enable automatic HTTPS for localhost
+    # Use internal CA for local development to avoid browser warnings (requires installing root CA)
+    # or just accept self-signed warnings for now.
+    local_certs
+}
+
+localhost {
+    # Reverse proxy to the API service
+    reverse_proxy api:8000
+
+    # formatting logs
+    log {
+        output stdout
+        format json
+    }
+
+    # Security Headers
+    header {
+        # HSTS (Strict-Transport-Security) - 1 year
+        Strict-Transport-Security "max-age=31536000;"
+
+        # Prevent MIME type sniffing
+        X-Content-Type-Options "nosniff"
+
+        # Prevent clickjacking
+        X-Frame-Options "DENY"
+
+        # XSS Protection (Legacy but good practice)
+        X-XSS-Protection "1; mode=block"
+
+        # Referrer Policy
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+}

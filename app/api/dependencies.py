@@ -31,9 +31,9 @@ def check_api_key(x_api_key: str = Header(...)) -> str:
     Raises:
         HTTPException: If API key is missing or invalid
     """
-    expected_key = settings.api_key  # From .env file
+    valid_keys = settings.valid_api_keys
 
-    if x_api_key != expected_key:
+    if x_api_key not in valid_keys:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key"
         )

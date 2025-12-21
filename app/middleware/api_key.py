@@ -53,12 +53,12 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
                 )
 
         # Validate API key (secondary defense)
-        api_key = getattr(settings, "api_key", None)
-        if api_key:
+        valid_keys = settings.valid_api_keys
+        if valid_keys:
             provided = request.headers.get("x-api-key")
-            if provided != api_key:
+            if not provided or provided not in valid_keys:
                 log.error(
-                    f"API Key mismatch! Expected: {api_key[:4]}***, Received: {provided[:4] if provided else 'None'}***"
+                    f"API Key authentication failed. Received: {provided[:4] if provided else 'None'}***"
                 )
                 return JSONResponse(
                     status_code=401, content={"detail": "Invalid or missing API key"}

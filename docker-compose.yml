@@ -24,8 +24,8 @@ services:
     hostname: api
 
     # Port mapping: host:container
-    ports:
-      - "${API_PORT:-8000}:8000"
+    # ports:
+    #   - "${API_PORT:-8000}:8000"  # Disabled: Access via Caddy on 80/443 only
 
     # Environment variables (with sensible defaults)
     environment:
@@ -54,12 +54,14 @@ services:
       - SESSION_MAX_HISTORY_TOKENS=${SESSION_MAX_HISTORY_TOKENS:-250}
       - SESSION_MAX_HISTORY_TURNS=${SESSION_MAX_HISTORY_TURNS:-5}
 
+      # ============ Security ============
+      - SESSION_REQUIRE_HTTPS=true  # Now handled by Caddy
+
       # ============ Query Rewriting (Disabled - causes regressions) ============
       - QUERY_REWRITER_ENABLED=${QUERY_REWRITER_ENABLED:-false}
 
       # ============ HuggingFace Cache (redirect to writable /tmp) ============
       - HF_HOME=/tmp/huggingface
-
       - HUGGINGFACE_HUB_CACHE=/tmp/huggingface
 
       # ============ Uvicorn Server Config ============
@@ -130,6 +132,10 @@ services:
       - "${UVICORN_WORKERS:-2}"
       - --log-level
       - "${LOG_LEVEL:-info}"
+      # Trust proxy headers (X-Forwarded-Proto) from Caddy
+      - --proxy-headers
+      - --forwarded-allow-ips
+      - "*"
 
     # Health check (critical for depends_on conditions)
     healthcheck:
@@ -163,6 +169,30 @@ services:
         max-size: "10m"
         max-file: "3"
         labels: "service=api"
+
+  # ==========================================================================
+  # Caddy Service - URL/HTTPS Reverse Proxy
+  # ==========================================================================
+  caddy:
+    image: caddy:2-alpine
+    container_name: rag_caddy
+    hostname: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # ==========================================================================
   # PostgreSQL Service - Feedback and structured data
@@ -473,6 +503,16 @@ volumes:
   postgres_data:
     driver: local
     name: rag_postgres_data
+
+  # Caddy data persistence (Certificates)
+  caddy_data:
+    driver: local
+    name: rag_caddy_data
+
+  # Caddy configuration
+  caddy_config:
+    driver: local
+    name: rag_caddy_config
 
 # ============================================================================
 # Networks (optional - Docker Compose creates default network)

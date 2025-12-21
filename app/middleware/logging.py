@@ -57,7 +57,8 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                         "path": request.url.path,
                         "status": status_code,
                         "elapsed_ms": elapsed_ms,
-                        "client_ip": getattr(request.client, "host", None),
+                        "client_ip": request.headers.get("x-forwarded-for")
+                        or getattr(request.client, "host", None),
                         "content_length": request.headers.get("content-length"),
                     },
                     separators=(",", ":"),
@@ -74,7 +75,8 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                     "path": request.url.path,
                     "status": status_code,
                     "elapsed_ms": elapsed_ms,
-                    "client_ip": getattr(request.client, "host", None),
+                    "client_ip": request.headers.get("x-forwarded-for")
+                    or getattr(request.client, "host", None),
                     "content_length": request.headers.get("content-length"),
                 },
                 separators=(",", ":"),

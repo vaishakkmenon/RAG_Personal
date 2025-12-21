@@ -571,8 +571,23 @@ class Settings(BaseModel):
     # Security
     api_key: str = Field(
         default=os.getenv("API_KEY", "change-me"),
-        description="API key for authentication (change in production!)",
+        description="Primary API key for authentication (legacy support)",
     )
+    api_keys: List[str] = Field(
+        default_factory=lambda: [
+            k.strip() for k in os.getenv("API_KEYS", "").split(",") if k.strip()
+        ],
+        description="List of valid API keys for rotation (comma-separated)",
+    )
+
+    @property
+    def valid_api_keys(self) -> Set[str]:
+        """Returns a set of all valid API keys (primary + rotated)."""
+        keys = set(self.api_keys)
+        if self.api_key:
+            keys.add(self.api_key)
+        return keys
+
     max_bytes: int = Field(
         default=int(os.getenv("MAX_BYTES", "32768")),
         description="Maximum HTTP request body size in bytes",
