@@ -316,6 +316,31 @@ class BM25Settings(BaseModel):
     )
 
 
+class PostgresSettings(BaseModel):
+    """PostgreSQL database configuration."""
+
+    host: str = Field(
+        default=os.getenv("POSTGRES_HOST", "postgres"),
+        description="Database host",
+    )
+    port: int = Field(
+        default=int(os.getenv("POSTGRES_PORT", "5432")),
+        description="Database port",
+    )
+    user: str = Field(
+        default=os.getenv("POSTGRES_USER", "rag_user"),
+        description="Database user",
+    )
+    password: str = Field(
+        default=os.getenv("POSTGRES_PASSWORD", "rag_password"),
+        description="Database password",
+    )
+    db_name: str = Field(
+        default=os.getenv("POSTGRES_DB", "rag_db"),
+        description="Database name",
+    )
+
+
 class PromptGuardSettings(BaseModel):
     """Prompt injection guardrail configuration using Llama Prompt Guard 2."""
 
@@ -596,6 +621,11 @@ class Settings(BaseModel):
     prompt_guard: PromptGuardSettings = Field(
         default_factory=PromptGuardSettings,
         description="Prompt injection guardrail configuration",
+    )
+
+    postgres: PostgresSettings = Field(
+        default_factory=PostgresSettings,
+        description="PostgreSQL configuration",
     )
 
     model_config = ConfigDict(

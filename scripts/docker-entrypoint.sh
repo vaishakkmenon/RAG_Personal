@@ -25,7 +25,7 @@ export NLTK_DATA=/home/nonroot/nltk_data
 # Verify NLTK Data
 # ============================================================================
 echo ""
-echo "[1/3] Verifying NLTK data..."
+echo "[1/4] Verifying NLTK data..."
 if python -c "import nltk; nltk.data.find('corpora/stopwords')" >/dev/null 2>&1; then
     echo "✓ NLTK stopwords found"
 else
@@ -42,7 +42,7 @@ fi
 # Check/Build BM25 Index
 # ============================================================================
 echo ""
-echo "[2/3] Checking BM25 index..."
+echo "[2/4] Checking BM25 index..."
 
 BM25_INDEX_PATH="${CHROMA_DIR:-./data/chroma}/bm25_index.pkl"
 CHROMA_DB_PATH="${CHROMA_DIR:-./data/chroma}"
@@ -79,10 +79,23 @@ else
 fi
 
 # ============================================================================
+# Initialize Database
+# ============================================================================
+echo ""
+echo "[3/4] Initializing Database..."
+if python -m app.init_db; then
+    echo "✓ Database tables initialized"
+else
+    echo "⚠ Database initialization failed - check connection settings"
+    # We don't exit here to allow app to start in degraded mode if DB is down,
+    # but for production you might want to exit 1
+fi
+
+# ============================================================================
 # Configuration Summary
 # ============================================================================
 echo ""
-echo "[3/3] Configuration Summary"
+echo "[4/4] Configuration Summary"
 echo "-------------------------------------------"
 echo "LLM Provider:        ${LLM_PROVIDER:-groq}"
 echo "Embedding Model:     ${EMBED_MODEL:-BAAI/bge-small-en-v1.5}"

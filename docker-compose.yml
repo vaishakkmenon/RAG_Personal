@@ -95,6 +95,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
 
     # Security hardening
     security_opt:
@@ -161,6 +163,44 @@ services:
         max-size: "10m"
         max-file: "3"
         labels: "service=api"
+
+  # ==========================================================================
+  # PostgreSQL Service - Feedback and structured data
+  # ==========================================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: rag_postgres
+    hostname: postgres
+
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-rag_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rag_password}
+      POSTGRES_DB: ${POSTGRES_DB:-rag_db}
+
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rag_user} -d ${POSTGRES_DB:-rag_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    restart: unless-stopped
+
+    security_opt:
+      - no-new-privileges:true
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=postgres"
 
   # ==========================================================================
   # Redis Service - Session storage and caching
@@ -428,6 +468,11 @@ volumes:
   grafana_data:
     driver: local
     name: rag_grafana_data
+
+  # PostgreSQL data
+  postgres_data:
+    driver: local
+    name: rag_postgres_data
 
 # ============================================================================
 # Networks (optional - Docker Compose creates default network)

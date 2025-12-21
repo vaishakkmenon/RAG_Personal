@@ -39,5 +39,9 @@ prometheus-fastapi-instrumentator==7.1.0
 pandas==2.3.2
 matplotlib==3.10.6
 
+# --- Database ---
+sqlalchemy==2.0.25
+psycopg2-binary==2.9.9
+
 # --- Testing (needed for async tests) ---
 pytest-asyncio>=0.23.0

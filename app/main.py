@@ -41,6 +41,7 @@ async def lifespan(app: FastAPI):
     """Handle application startup and shutdown events."""
     # Startup: Validate environment configuration
     validate_config()
+
     yield
     # Shutdown: Add cleanup logic here if needed in the future
 

@@ -5,6 +5,7 @@ Defines request/response schemas for:
 - Document ingestion
 - Chat/Q&A endpoints
 - Error responses
+- Feedback
 """
 
 from typing import Optional, List, Dict, Any
@@ -227,13 +228,19 @@ class ErrorResponse(BaseModel):
     )
 
 
-# Export all models
-__all__ = [
-    "IngestRequest",
-    "IngestResponse",
-    "ChatRequest",
-    "ChatSource",
-    "AmbiguityMetadata",
-    "ChatResponse",
-    "ErrorResponse",
-]
+class FeedbackRequest(BaseModel):
+    """Request to submit feedback for a chat response."""
+
+    session_id: str = Field(description="Session ID of the chat")
+    message_id: str = Field(description="Message ID or simple identifier")
+    thumbs_up: bool = Field(
+        description="True for positive feedback, False for negative"
+    )
+    comment: Optional[str] = Field(default=None, description="Optional text comment")
+
+
+class FeedbackResponse(BaseModel):
+    """Response after submitting feedback."""
+
+    id: str = Field(description="Unique identifier for the feedback record")
+    status: str = Field(default="received", description="Status of the submission")

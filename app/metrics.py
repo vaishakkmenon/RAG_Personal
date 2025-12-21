@@ -247,6 +247,16 @@ rag_fallback_operations_total = Counter(
 )
 
 # ============================================================================
+# FEEDBACK METRICS
+# ============================================================================
+
+rag_feedback_total = Counter(
+    "rag_feedback_total",
+    "Total user feedback received",
+    ["thumbs_up"],  # "true", "false"
+)
+
+# ============================================================================
 # END-TO-END REQUEST METRICS
 # ============================================================================
 
@@ -316,4 +326,5 @@ __all__ = [
     # End-to-end
     "rag_request_total",
     "rag_request_latency_seconds",
+    "rag_feedback_total",
 ]

@@ -107,6 +107,20 @@ async def detailed_health_check() -> Dict[str, Any]:
         health_status["dependencies"]["chromadb"] = "degraded"
         health_status["status"] = "degraded"
 
+    # Check Postgres
+    try:
+        from app.database import check_db_connectivity
+
+        if check_db_connectivity():
+            health_status["dependencies"]["postgres"] = "healthy"
+        else:
+            health_status["dependencies"]["postgres"] = "unhealthy"
+            health_status["status"] = "degraded"
+    except Exception as e:
+        logger.warning(f"Postgres health check failed: {e}")
+        health_status["dependencies"]["postgres"] = "unknown"
+        health_status["status"] = "degraded"
+
     # Check LLM (optional - skipped to avoid cost/latency)
     health_status["dependencies"]["llm"] = "not_checked"
 
