@@ -33,18 +33,13 @@ async def ingest(req: IngestRequest):
         try:
             logger.info(f"Ingested {added} chunks, rebuilding BM25 index...")
             from app.retrieval.bm25_search import BM25Index
-            from app.retrieval.store import _collection
+            from app.retrieval.vector_store import get_vector_store
 
-            # Fetch all documents from ChromaDB
-            result = _collection.get(include=["documents", "metadatas"])
+            # Fetch all documents from VectorStore
+            vector_store = get_vector_store()
+            documents = vector_store.get_all_documents()
 
-            if result and result["ids"]:
-                documents = []
-                for i, doc_id in enumerate(result["ids"]):
-                    text = result["documents"][i] if result["documents"] else ""
-                    metadata = result["metadatas"][i] if result["metadatas"] else {}
-                    documents.append({"id": doc_id, "text": text, "metadata": metadata})
-
+            if documents:
                 # Rebuild BM25 index
                 bm25_index = BM25Index(
                     index_path="data/chroma/bm25_index.pkl",
@@ -58,7 +53,9 @@ async def ingest(req: IngestRequest):
                     f"BM25 index rebuilt successfully with {len(documents)} documents"
                 )
             else:
-                logger.warning("No documents found in ChromaDB, skipping BM25 rebuild")
+                logger.warning(
+                    "No documents found in VectorStore, skipping BM25 rebuild"
+                )
 
         except Exception as e:
             logger.error(f"Failed to rebuild BM25 index: {e}")

@@ -20,7 +20,7 @@ class TestChatServiceFullPipeline:
     """Tests for the complete RAG pipeline."""
 
     @patch("app.core.chat_service.get_response_cache")
-    @patch("app.core.retrieval_orchestrator.search")
+    @patch("app.retrieval.search_engine.SearchEngine.search")
     @patch("app.core.chat_service.generate_with_llm")
     @patch("app.core.chat_service.create_default_prompt_builder")
     def test_successful_chat_pipeline(
@@ -31,7 +31,7 @@ class TestChatServiceFullPipeline:
         mock_cache,
         sample_chunks,
     ):
-        """Test full pipeline: retrieve → rerank → generate → return."""
+        """Test full pipeline: retrieve -> rerank -> generate -> return."""
         from app.prompting.config import PromptResult
 
         # Mock cache (miss)
@@ -91,7 +91,7 @@ class TestChatServiceFullPipeline:
         service = ChatService()
         request = ChatRequest(question="What is my Python experience?")
 
-        with patch("app.core.retrieval_orchestrator.search") as mock_search:
+        with patch("app.retrieval.search_engine.SearchEngine.search") as mock_search:
             response = service.handle_chat(request=request, options=ChatOptions())
 
             # Verify cache was checked
@@ -104,7 +104,7 @@ class TestChatServiceFullPipeline:
             assert response.answer == "Cached answer"
 
     @patch("app.core.chat_service.get_response_cache")
-    @patch("app.core.retrieval_orchestrator.search")
+    @patch("app.retrieval.search_engine.SearchEngine.search")
     @patch("app.core.chat_service.generate_with_llm")
     def test_no_results_not_grounded(
         self,
@@ -139,7 +139,7 @@ class TestChatServiceFullPipeline:
         assert "sufficiently relevant information" in response.answer.lower()
 
     @patch("app.core.chat_service.get_response_cache")
-    @patch("app.core.retrieval_orchestrator.search")
+    @patch("app.retrieval.search_engine.SearchEngine.search")
     @patch("app.core.chat_service.generate_with_llm")
     def test_grounding_threshold_check(
         self,
@@ -175,9 +175,6 @@ class TestChatServiceFullPipeline:
         response = service.handle_chat(request=request, options=options)
 
         # The LM should refuse based on prompt instructions ("I don't know" or similar)
-        # The grounded flag is set based on LLM response analysis, not pre-filtering
-        # Since we mocked the LLM to return "I don't have specific information",
-        # the response should be detected as a refusal
         assert (
             "don't have" in response.answer.lower()
             or "don't know" in response.answer.lower()
@@ -189,7 +186,7 @@ class TestChatServiceConversationHistory:
     """Tests for multi-turn conversation handling."""
 
     @patch("app.core.chat_service.get_response_cache")
-    @patch("app.core.retrieval_orchestrator.search")
+    @patch("app.retrieval.search_engine.SearchEngine.search")
     @patch("app.core.chat_service.generate_with_llm")
     def test_conversation_history_included(
         self,
@@ -284,7 +281,7 @@ class TestChatServiceErrorHandling:
     """Tests for error handling in chat service."""
 
     @patch("app.core.chat_service.get_response_cache")
-    @patch("app.core.retrieval_orchestrator.search")
+    @patch("app.retrieval.search_engine.SearchEngine.search")
     @patch("app.core.chat_service.generate_with_llm")
     @patch("app.core.chat_service.create_default_prompt_builder")
     def test_llm_failure_graceful_degradation(
@@ -330,7 +327,7 @@ class TestChatServiceErrorHandling:
         assert len(response.sources) == len(sample_chunks)
 
     @patch("app.core.chat_service.get_response_cache")
-    @patch("app.core.retrieval_orchestrator.search")
+    @patch("app.retrieval.search_engine.SearchEngine.search")
     def test_search_failure_raises_error(
         self,
         mock_search,
@@ -364,7 +361,7 @@ class TestChatServiceMetadataFiltering:
     """Tests for metadata filtering."""
 
     @patch("app.core.chat_service.get_response_cache")
-    @patch("app.core.retrieval_orchestrator.search")
+    @patch("app.retrieval.search_engine.SearchEngine.search")
     @patch("app.core.chat_service.generate_with_llm")
     def test_doc_type_filter_applied(
         self,
@@ -402,8 +399,8 @@ class TestChatServiceReranking:
     """Tests for reranking functionality."""
 
     @patch("app.core.chat_service.get_response_cache")
-    @patch("app.core.retrieval_orchestrator.rerank_chunks")
-    @patch("app.core.retrieval_orchestrator.search")
+    @patch("app.retrieval.search_engine.SearchEngine.rerank")
+    @patch("app.retrieval.search_engine.SearchEngine.search")
     @patch("app.core.chat_service.generate_with_llm")
     def test_reranking_enabled(
         self,
@@ -451,8 +448,8 @@ class TestChatServiceReranking:
             mock_rerank.assert_called_once()
 
     @patch("app.core.chat_service.get_response_cache")
-    @patch("app.core.retrieval_orchestrator.rerank_chunks")
-    @patch("app.core.retrieval_orchestrator.search")
+    @patch("app.retrieval.search_engine.SearchEngine.rerank")
+    @patch("app.retrieval.search_engine.SearchEngine.search")
     @patch("app.core.chat_service.generate_with_llm")
     def test_reranking_disabled(
         self,

@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-12-21T03:47:06.731001",
+  "timestamp": "2025-12-21T05:30:26.685373",
   "phase": "collection",
   "total_tests": 52,
   "successful_tests": 52,
@@ -12,7 +12,7 @@
       "answer": "Your graduate GPA is 4.00 [1][2].",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 6.655271768569946,
+      "response_time": 7.448420763015747,
       "expected_keywords": [
         "4.0"
       ],
@@ -20,17 +20,17 @@
       "is_impossible": false,
       "sources": [
         {
-          "id": "transcript-analysis@2025-09-23#graduate-summary:5",
-          "source": "/workspace/data/mds/complete_transcript_analysis.md",
-          "text": "## Graduate Summary\n\nIn my graduate program, I earned 30.00 credits with 30.00 GPA credits and 120.00 quality points, achieving a cumulative GPA of 4.00. My academic standing included Presidential Hon...",
-          "distance": 0.09657356142997742,
-          "citation_index": 1
-        },
-        {
           "id": "transcript-analysis@2025-09-23#overall-academic-performance:1",
           "source": "/workspace/data/mds/complete_transcript_analysis.md",
           "text": "## Overall Academic Performance\n\nI earned a total of 169 credits, consisting of 139 undergraduate credits and 30 graduate credits. My undergraduate GPA was 3.97, and my graduate GPA was 4.00. I demons...",
           "distance": 0.09788551926612854,
+          "citation_index": 1
+        },
+        {
+          "id": "transcript-analysis@2025-09-23#graduate-summary:5",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "## Graduate Summary\n\nIn my graduate program, I earned 30.00 credits with 30.00 GPA credits and 120.00 quality points, achieving a cumulative GPA of 4.00. My academic standing included Presidential Hon...",
+          "distance": 0.09657356142997742,
           "citation_index": 2
         },
         {
@@ -49,7 +49,7 @@
       "answer": "My undergraduate GPA was 3.97 out of 4.00 [1].",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.279484748840332,
+      "response_time": 2.5530781745910645,
       "expected_keywords": [
         "3.97"
       ],
@@ -71,10 +71,10 @@
           "citation_index": 2
         },
         {
-          "id": "transcript-analysis@2025-09-23#grade-distribution:2",
+          "id": "transcript-analysis@2025-09-23#gpa-statistics:3",
           "source": "/workspace/data/mds/complete_transcript_analysis.md",
-          "text": "### Grade Distribution\n\nI took a total of 45 courses across my undergraduate and graduate programs. My grade distribution was:\n\n- **A grades:** 44 courses (98%) - All courses except one received an A\n...",
-          "distance": 0.13540112972259521,
+          "text": "### GPA Statistics\n\n- **Undergraduate GPA:** 3.97 out of 4.00 (139 credits)\n- **Graduate GPA:** 4.00 out of 4.00 (30 credits) - Perfect\n- **Lowest Term GPA:** 3.80 in Spring Term 2022 (due to the CS 3...",
+          "distance": 0.11552077531814575,
           "citation_index": 3
         }
       ]
@@ -83,10 +83,10 @@
       "test_id": "transcript_003",
       "category": "transcript",
       "question": "How many total credits did I earn?",
-      "answer": "I have a total of 169 credits, consisting of 139 undergraduate credits and 30 graduate credits [1].",
+      "answer": "I have earned a total of 169 credits, consisting of 139 undergraduate credits and 30 graduate credits [1][2].",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.2684109210968018,
+      "response_time": 0.9892628192901611,
       "expected_keywords": [
         "169",
         "credits"
@@ -95,24 +95,24 @@
       "is_impossible": false,
       "sources": [
         {
-          "id": "transcript-analysis@2025-09-23#overall-academic-performance:1",
-          "source": "/workspace/data/mds/complete_transcript_analysis.md",
-          "text": "## Overall Academic Performance\n\nI earned a total of 169 credits, consisting of 139 undergraduate credits and 30 graduate credits. My undergraduate GPA was 3.97, and my graduate GPA was 4.00. I demons...",
-          "distance": 0.0923637866973877,
-          "citation_index": 1
-        },
-        {
           "id": "transcript-analysis@2025-09-23#undergraduate-summary:11",
           "source": "/workspace/data/mds/complete_transcript_analysis.md",
           "text": "## Undergraduate Summary\n\nIn my undergraduate program, I earned 139.00 total credits, consisting of 121.00 institutional credits and 18.00 transfer credits. I completed 121.00 GPA credits with 481.00 ...",
           "distance": 0.10573906898498536,
+          "citation_index": 1
+        },
+        {
+          "id": "transcript-analysis@2025-09-23#overall-academic-performance:1",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "## Overall Academic Performance\n\nI earned a total of 169 credits, consisting of 139 undergraduate credits and 30 graduate credits. My undergraduate GPA was 3.97, and my graduate GPA was 4.00. I demons...",
+          "distance": 0.0923637866973877,
           "citation_index": 2
         },
         {
-          "id": "transcript-analysis@2025-09-23#graduate-summary:5",
+          "id": "transcript-analysis@2025-09-23#fall-term-2020:13",
           "source": "/workspace/data/mds/complete_transcript_analysis.md",
-          "text": "## Graduate Summary\n\nIn my graduate program, I earned 30.00 credits with 30.00 GPA credits and 120.00 quality points, achieving a cumulative GPA of 4.00. My academic standing included Presidential Hon...",
-          "distance": 0.11122605800628663,
+          "text": "### Fall Term 2020\n\nDuring Fall Term 2020, I completed 16.00 credits with a 4.00 GPA, earning 64.00 quality points. I took the following 5 courses:\n\nI took CAS 112 (Success in College) and received a ...",
+          "distance": 0.1661645770072937,
           "citation_index": 3
         }
       ]
@@ -121,10 +121,10 @@
       "test_id": "transcript_004",
       "category": "transcript",
       "question": "What courses did I take in Fall 2022?",
-      "answer": "I took the following 5 courses in Fall Term 2022: CMST 101 (Public Speaking), CS 410 (Database App Dev), CS 420 (Software Engineering), CS 436 (Computer Security), and EE 233 (Engineering Programming Method) [1].",
-      "grounded": true,
-      "num_sources": 5,
-      "response_time": 1.3228065967559814,
+      "answer": "I don't know. It isn't mentioned in the provided documents.",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 0.8064064979553223,
       "expected_keywords": [
         "CS 410",
         "CMST 101",
@@ -134,29 +134,7 @@
       ],
       "expected_answer": "Should include all classes: 410, 101, 420, 436, 233",
       "is_impossible": false,
-      "sources": [
-        {
-          "id": "transcript-analysis@2025-09-23#fall-term-2022:18",
-          "source": "/workspace/data/mds/complete_transcript_analysis.md",
-          "text": "### Fall Term 2022\n\nDuring Fall Term 2022, I completed 15.00 credits with a 4.00 GPA, earning 48.00 quality points. I took the following 5 courses:\n\nI took CMST 101 (Public Speaking) and received a gr...",
-          "distance": 0.12189286947250366,
-          "citation_index": 1
-        },
-        {
-          "id": "transcript-analysis@2025-09-23#fall-term-2023-dual-enrollment-graduate-courses:21",
-          "source": "/workspace/data/mds/complete_transcript_analysis.md",
-          "text": "### Fall Term 2023 (Dual Enrollment - Graduate Courses)\n\nDuring Fall Term 2023 (Dual Enrollment - Graduate Courses), I completed 12.00 credits with a 4.00 GPA, earning 48.00 quality points. I took the...",
-          "distance": 0.1288796067237854,
-          "citation_index": 2
-        },
-        {
-          "id": "transcript-analysis@2025-09-23#fall-2023:6",
-          "source": "/workspace/data/mds/complete_transcript_analysis.md",
-          "text": "### Fall 2023\n\nDuring Fall 2023, I completed 6.00 credits with a 4.00 GPA, earning 24.00 quality points. I took the following 2 courses:\n\nI took CS 660 (Artificial Intelligence) and received a grade o...",
-          "distance": 0.13508468866348267,
-          "citation_index": 3
-        }
-      ]
+      "sources": []
     },
     {
       "test_id": "transcript_005",
@@ -165,7 +143,7 @@
       "answer": "Yes, I took CS 410 (Database App Dev) and received a grade of A, earning 3.00 credits and 12.00 quality points [1].",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.0932564735412598,
+      "response_time": 0.8554873466491699,
       "expected_keywords": [
         "CS 410",
         "Fall 2022"
@@ -188,10 +166,10 @@
           "citation_index": 2
         },
         {
-          "id": "transcript-analysis@2025-09-23#spring-term-2023:19",
+          "id": "transcript-analysis@2025-09-23#spring-term-2024-final-undergraduate-term:22",
           "source": "/workspace/data/mds/complete_transcript_analysis.md",
-          "text": "### Spring Term 2023\n\nDuring Spring Term 2023, I completed 13.00 credits with a 4.00 GPA, earning 52.00 quality points. I took the following 4 courses:\n\nI took CS 355 (Probability & Statistics in CS) ...",
-          "distance": 0.3448083996772766,
+          "text": "### Spring Term 2024 (Final Undergraduate Term)\n\nDuring Spring Term 2024 (Final Undergraduate Term), I completed 12.00 credits with a 4.00 GPA, earning 48.00 quality points. I took the following 4 cou...",
+          "distance": 0.3355708718299866,
           "citation_index": 3
         }
       ]
@@ -200,10 +178,10 @@
       "test_id": "transcript_006",
       "category": "transcript",
       "question": "What degrees did I earn?",
-      "answer": "I earned a Bachelor of Science degree in Computer Science on April 27, 2024 [1], and a Master of Science degree in Computer Science on May 1, 2025 [2].",
+      "answer": "I earned two degrees from the University of Alabama at Birmingham. I earned a Bachelor of Science degree in Computer Science, graduating on April 27, 2024 with an undergraduate GPA of 3.97 and Summa Cum Laude honors [1][2]. I earned a Master of Science degree in Computer Science, graduating on May 1, 2025 with a graduate GPA of 4.00 [1][2].",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.2112212181091309,
+      "response_time": 0.9526536464691162,
       "expected_keywords": [
         "Bachelor",
         "Master",
@@ -213,24 +191,24 @@
       "is_impossible": false,
       "sources": [
         {
-          "id": "transcript-analysis@2025-09-23#degrees-earned:0",
-          "source": "/workspace/data/mds/complete_transcript_analysis.md",
-          "text": "## Degrees Earned\n\nI earned a Bachelor of Science degree in Computer Science on April 27, 2024. My undergraduate program included a minor in Software Engineering, and I graduated with Summa Cum Laude ...",
-          "distance": 0.14144039154052734,
-          "citation_index": 1
-        },
-        {
-          "id": "transcript-analysis@2025-09-23#overall-academic-performance:1",
-          "source": "/workspace/data/mds/complete_transcript_analysis.md",
-          "text": "## Overall Academic Performance\n\nI earned a total of 169 credits, consisting of 139 undergraduate credits and 30 graduate credits. My undergraduate GPA was 3.97, and my graduate GPA was 4.00. I demons...",
-          "distance": 0.1528826355934143,
-          "citation_index": 2
-        },
-        {
           "id": "resume@2025-09-23#education-degrees-earned:10",
           "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
           "text": "## Degrees Earned\n\nI earned a Bachelor of Science (B.S.) degree in Computer Science from the University of Alabama at Birmingham. I graduated with my Bachelor of Science degree on April 27, 2024. Duri...",
           "distance": 0.26222455501556396,
+          "citation_index": 1
+        },
+        {
+          "id": "resume@2025-09-23#education-education-summary:9",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "## Education Summary\n\nI earned two degrees from the University of Alabama at Birmingham in Birmingham, Alabama. I earned a Bachelor of Science degree in Computer Science, graduating on April 27, 2024 ...",
+          "distance": 0.3052945137023926,
+          "citation_index": 2
+        },
+        {
+          "id": "transcript-analysis@2025-09-23#degrees-earned:0",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "## Degrees Earned\n\nI earned a Bachelor of Science degree in Computer Science on April 27, 2024. My undergraduate program included a minor in Software Engineering, and I graduated with Summa Cum Laude ...",
+          "distance": 0.14144039154052734,
           "citation_index": 3
         }
       ]
@@ -239,10 +217,10 @@
       "test_id": "transcript_007",
       "category": "transcript",
       "question": "When did I graduate with my Bachelor's degree?",
-      "answer": "I graduated with my Bachelor of Science degree in Computer Science on April 27, 2024 [1][2].",
+      "answer": "I graduated with my Bachelor of Science degree on April 27, 2024 [1][2].",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.1140923500061035,
+      "response_time": 0.978508710861206,
       "expected_keywords": [
         "April",
         "2024",
@@ -252,24 +230,24 @@
       "is_impossible": false,
       "sources": [
         {
-          "id": "transcript-analysis@2025-09-23#degrees-earned:0",
-          "source": "/workspace/data/mds/complete_transcript_analysis.md",
-          "text": "## Degrees Earned\n\nI earned a Bachelor of Science degree in Computer Science on April 27, 2024. My undergraduate program included a minor in Software Engineering, and I graduated with Summa Cum Laude ...",
-          "distance": 0.11908414959907532,
-          "citation_index": 1
-        },
-        {
           "id": "resume@2025-09-23#education-degrees-earned:10",
           "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
           "text": "## Degrees Earned\n\nI earned a Bachelor of Science (B.S.) degree in Computer Science from the University of Alabama at Birmingham. I graduated with my Bachelor of Science degree on April 27, 2024. Duri...",
           "distance": 0.21247601509094238,
+          "citation_index": 1
+        },
+        {
+          "id": "transcript-analysis@2025-09-23#degrees-earned:0",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "## Degrees Earned\n\nI earned a Bachelor of Science degree in Computer Science on April 27, 2024. My undergraduate program included a minor in Software Engineering, and I graduated with Summa Cum Laude ...",
+          "distance": 0.11908414959907532,
           "citation_index": 2
         },
         {
-          "id": "transcript-analysis@2025-09-23#graduate-summary:5",
-          "source": "/workspace/data/mds/complete_transcript_analysis.md",
-          "text": "## Graduate Summary\n\nIn my graduate program, I earned 30.00 credits with 30.00 GPA credits and 120.00 quality points, achieving a cumulative GPA of 4.00. My academic standing included Presidential Hon...",
-          "distance": 0.1616242527961731,
+          "id": "resume@2025-09-23#education-education-summary:9",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "## Education Summary\n\nI earned two degrees from the University of Alabama at Birmingham in Birmingham, Alabama. I earned a Bachelor of Science degree in Computer Science, graduating on April 27, 2024 ...",
+          "distance": 0.2880784273147583,
           "citation_index": 3
         }
       ]
@@ -278,10 +256,10 @@
       "test_id": "transcript_008",
       "category": "transcript",
       "question": "When did I graduate with my Master's degree?",
-      "answer": "I graduated with my Master of Science degree on May 1, 2025 [2].",
+      "answer": "I graduated with my Master of Science degree in Computer Science on May 1, 2025 [1][2].",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.0784945487976074,
+      "response_time": 0.8663952350616455,
       "expected_keywords": [
         "May",
         "2025",
@@ -291,24 +269,24 @@
       "is_impossible": false,
       "sources": [
         {
-          "id": "transcript-analysis@2025-09-23#degrees-earned:0",
-          "source": "/workspace/data/mds/complete_transcript_analysis.md",
-          "text": "## Degrees Earned\n\nI earned a Bachelor of Science degree in Computer Science on April 27, 2024. My undergraduate program included a minor in Software Engineering, and I graduated with Summa Cum Laude ...",
-          "distance": 0.1249535083770752,
-          "citation_index": 1
-        },
-        {
           "id": "resume@2025-09-23#education-degrees-earned:10",
           "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
           "text": "## Degrees Earned\n\nI earned a Bachelor of Science (B.S.) degree in Computer Science from the University of Alabama at Birmingham. I graduated with my Bachelor of Science degree on April 27, 2024. Duri...",
           "distance": 0.24258005619049072,
+          "citation_index": 1
+        },
+        {
+          "id": "transcript-analysis@2025-09-23#degrees-earned:0",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "## Degrees Earned\n\nI earned a Bachelor of Science degree in Computer Science on April 27, 2024. My undergraduate program included a minor in Software Engineering, and I graduated with Summa Cum Laude ...",
+          "distance": 0.1249535083770752,
           "citation_index": 2
         },
         {
-          "id": "transcript-analysis@2025-09-23#graduate-summary:5",
-          "source": "/workspace/data/mds/complete_transcript_analysis.md",
-          "text": "## Graduate Summary\n\nIn my graduate program, I earned 30.00 credits with 30.00 GPA credits and 120.00 quality points, achieving a cumulative GPA of 4.00. My academic standing included Presidential Hon...",
-          "distance": 0.14499986171722412,
+          "id": "resume@2025-09-23#education-education-summary:9",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "## Education Summary\n\nI earned two degrees from the University of Alabama at Birmingham in Birmingham, Alabama. I earned a Bachelor of Science degree in Computer Science, graduating on April 27, 2024 ...",
+          "distance": 0.2909824848175049,
           "citation_index": 3
         }
       ]
@@ -317,10 +295,10 @@
       "test_id": "certification_001",
       "category": "certifications",
       "question": "What certifications do I have?",
-      "answer": "I have three professional certifications demonstrating expertise in Kubernetes, cloud computing, and artificial intelligence. \n\nI hold the Certified Kubernetes Administrator (CKA) certification, validating my expertise in Kubernetes container orchestration and cluster administration [1]. \nI earned the AWS Certified Cloud Practitioner certification, demonstrating foundational knowledge of Amazon Web Services cloud platform [2]. \nI earned the AWS Certified AI Practitioner certification, validating my knowledge of AI and machine learning services on Amazon Web Services [3].\n\nThese certifications are:\n- Certified Kubernetes Administrator (CKA)\n- AWS Certified Cloud Practitioner (CCP)\n- AWS Certified AI Practitioner (CAP)\n\n[1] resume--vaishak-menon--2025-09-23.md\n[2] certificate--aws-cloud-practitioner--2025-05-26.md\n[3] certificate--aws-ai-practitioner--2025-06-01.md",
+      "answer": "I have three professional certifications demonstrating expertise in Kubernetes, cloud computing, and artificial intelligence. \n\n* I hold the Certified Kubernetes Administrator (CKA) certification, validating my expertise in Kubernetes container orchestration and cluster administration [4][5].\n* I earned the AWS Certified Cloud Practitioner certification, demonstrating foundational knowledge of Amazon Web Services cloud platform [3].\n* I earned the AWS Certified AI Practitioner certification, validating my knowledge of AI and machine learning services on Amazon Web Services [2].",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 2.139479160308838,
+      "response_time": 1.0156011581420898,
       "expected_keywords": [
         "CKA",
         "Cloud Practitioner",
@@ -356,10 +334,10 @@
       "test_id": "certification_002",
       "category": "certifications",
       "question": "When did I earn my CKA certification?",
-      "answer": "I earned the Certified Kubernetes Administrator (CKA) certification on June 26, 2024 [1][2].",
+      "answer": "I earned my CKA certification on June 26, 2024 [1][2].",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.269059419631958,
+      "response_time": 0.9598195552825928,
       "expected_keywords": [
         "2024-06-26",
         "June 26, 2024",
@@ -369,24 +347,24 @@
       "is_impossible": false,
       "sources": [
         {
-          "id": "certificate-cka@2024-06-26#certification-summary:0",
-          "source": "/workspace/data/mds/certificate--cka--2024-06-26.md",
-          "text": "# Certification Summary\n\nI earned the Certified Kubernetes Administrator (CKA) certification on June 26, 2024 (2024-06-26). The CKA certification was issued by the Cloud Native Computing Foundation (C...",
-          "distance": 0.10147722959518432,
-          "citation_index": 1
-        },
-        {
           "id": "certificate-cka@2024-06-26#certification-details:2",
           "source": "/workspace/data/mds/certificate--cka--2024-06-26.md",
           "text": "# Certification Details\n\nI earned my CKA certification on June 26, 2024. The certification was awarded to me by the Cloud Native Computing Foundation (CNCF) and The Linux Foundation. My CKA credential...",
           "distance": 0.10374491214752198,
+          "citation_index": 1
+        },
+        {
+          "id": "certificate-cka@2024-06-26#certification-summary:0",
+          "source": "/workspace/data/mds/certificate--cka--2024-06-26.md",
+          "text": "# Certification Summary\n\nI earned the Certified Kubernetes Administrator (CKA) certification on June 26, 2024 (2024-06-26). The CKA certification was issued by the Cloud Native Computing Foundation (C...",
+          "distance": 0.10147722959518432,
           "citation_index": 2
         },
         {
-          "id": "certificate-cka@2024-06-26#practical-experience:5",
-          "source": "/workspace/data/mds/certificate--cka--2024-06-26.md",
-          "text": "# Practical Experience [Part 1/2]\n\nI earned the CKA certification after gaining hands-on experience with Kubernetes during my three Infrastructure Internships at Maven Wave Partners in Chicago, Illino...",
-          "distance": 0.14269630908966063,
+          "id": "resume@2025-09-23#certifications-certified-kubernetes-administrator-cka:20",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "## Certified Kubernetes Administrator (CKA)\n\nI earned the Certified Kubernetes Administrator (CKA) certification, a professional certification that validates expertise in Kubernetes container orchestr...",
+          "distance": 0.26579445600509644,
           "citation_index": 3
         }
       ]
@@ -395,10 +373,10 @@
       "test_id": "certification_003",
       "category": "certifications",
       "question": "When does my AWS Cloud Practitioner certification expire?",
-      "answer": "I have one certification that expires in 2028: AWS Certified Cloud Practitioner (expires May 26, 2028) [1]. This is one of two certifications I hold that expire in the year 2028 [2].\n\n[1] certificate--aws-cloud-practitioner--2025-05-26.md\n[Metadata: Earned: 2025-05-26, Expires: 2028-05-26, Issuer: Amazon Web Services, Credential_id: 713c45fb6a6341fca45facfc74fabcaa]\n\n[2] certificate--aws-cloud-practitioner--2025-05-26.md\n[Metadata: Earned: 2025-05-26, Expires: 2028-05-26, Issuer: Amazon Web Services, Credential_id: 713c45fb6a6341fca45facfc74fabcaa]",
+      "answer": "I have one certification expiring in 2028: AWS Certified Cloud Practitioner (expires May 26, 2028) [1].",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 6.918559789657593,
+      "response_time": 0.9730825424194336,
       "expected_keywords": [
         "2028-05-26",
         "May",
@@ -416,17 +394,17 @@
           "citation_index": 1
         },
         {
-          "id": "certificate-aws-cloud-practitioner@2025-05-26#certification-details:2",
-          "source": "/workspace/data/mds/certificate--aws-cloud-practitioner--2025-05-26.md",
-          "text": "# Certification Details\n\nI earned my AWS Certified Cloud Practitioner certification on May 26, 2025. The certification was awarded to me by Amazon Web Services. My AWS Cloud Practitioner credential ID...",
-          "distance": 0.044373607635498045,
-          "citation_index": 2
-        },
-        {
           "id": "certificate-aws-cloud-practitioner@2025-05-26#certification-summary:0",
           "source": "/workspace/data/mds/certificate--aws-cloud-practitioner--2025-05-26.md",
           "text": "# Certification Summary\n\nI earned the AWS Certified Cloud Practitioner certification on May 26, 2025 (2025-05-26). The AWS Certified Cloud Practitioner certification was issued by Amazon Web Services ...",
           "distance": 0.04820584058761596,
+          "citation_index": 2
+        },
+        {
+          "id": "certificate-aws-cloud-practitioner@2025-05-26#certification-details:2",
+          "source": "/workspace/data/mds/certificate--aws-cloud-practitioner--2025-05-26.md",
+          "text": "# Certification Details\n\nI earned my AWS Certified Cloud Practitioner certification on May 26, 2025. The certification was awarded to me by Amazon Web Services. My AWS Cloud Practitioner credential ID...",
+          "distance": 0.044373607635498045,
           "citation_index": 3
         }
       ]
@@ -435,10 +413,10 @@
       "test_id": "certification_004",
       "category": "certifications",
       "question": "Do I have any Kubernetes certifications?",
-      "answer": "Yes, I have three Kubernetes certifications. \n\nI earned the Certified Kubernetes Administrator (CKA) certification on June 26, 2024 [1][2][3][4]. The CKA certification is valid through June 26, 2026 [4].",
+      "answer": "Yes, I have a Kubernetes certification. I earned the Certified Kubernetes Administrator (CKA) certification [1], which validates my expertise in Kubernetes container orchestration, cluster administration, and cloud-native technologies [2]. The CKA certification is recognized in the industry as a standard for Kubernetes expertise [2].",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.2360501289367676,
+      "response_time": 0.9813096523284912,
       "expected_keywords": [
         "Certified Kubernetes Administrator"
       ],
@@ -453,10 +431,10 @@
           "citation_index": 1
         },
         {
-          "id": "certificate-cka@2024-06-26#practical-experience:6",
-          "source": "/workspace/data/mds/certificate--cka--2024-06-26.md",
-          "text": "# Practical Experience [Part 2/2]\n\nrnetes, managed cloud-native applications in Kubernetes clusters, and deployed containerized applications to Kubernetes. The Certified Kubernetes Administrator certi...",
-          "distance": 0.08528916835784912,
+          "id": "resume@2025-09-23#certifications-certified-kubernetes-administrator-cka:20",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "## Certified Kubernetes Administrator (CKA)\n\nI earned the Certified Kubernetes Administrator (CKA) certification, a professional certification that validates expertise in Kubernetes container orchestr...",
+          "distance": 0.15380489826202393,
           "citation_index": 2
         },
         {
@@ -475,7 +453,7 @@
       "answer": "I have worked at two organizations throughout my career: the University of Alabama at Birmingham and Maven Wave Partners. \n\nI served as a Computer Science Teaching Assistant at the University of Alabama at Birmingham from August 2022 to May 2025 [1]. \n\nI also completed three summer internships as an Infrastructure Intern at Maven Wave Partners in Chicago, Illinois, working consecutively in the summers of 2021, 2022, and 2023 [1].",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.3111302852630615,
+      "response_time": 1.0148112773895264,
       "expected_keywords": [
         "Maven Wave Partners",
         "University of Alabama at Birmingham"
@@ -498,10 +476,10 @@
           "citation_index": 2
         },
         {
-          "id": "resume@2025-09-23#technical-skills-devops-and-cloud-platform-experience:26",
+          "id": "resume@2025-09-23#technical-skills-devops-and-cloud-platform-experience:24",
           "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
-          "text": "## DevOps and Cloud Platform Experience [Part 3/3]\n\ner in Kubernetes environments. I understand container orchestration, image management, and container security practices. I have worked extensively w...",
-          "distance": 0.3359860360622406,
+          "text": "## DevOps and Cloud Platform Experience [Part 1/3]\n\nI have hands-on experience with Kubernetes container orchestration, having earned the Certified Kubernetes Administrator (CKA) certification. I have...",
+          "distance": 0.31142001152038573,
           "citation_index": 3
         }
       ]
@@ -510,10 +488,10 @@
       "test_id": "work_002",
       "category": "work_experience",
       "question": "What was my role at Maven Wave Partners?",
-      "answer": "I worked as an Infrastructure Intern at Maven Wave Partners in Chicago, Illinois during three consecutive summers: 2021, 2022, and 2023 [1][2][3].",
+      "answer": "I have worked as an Infrastructure Intern at Maven Wave Partners in Chicago, Illinois, consecutively in the summers of 2021, 2022, and 2023 [1][2][4][5].",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.0568740367889404,
+      "response_time": 0.9537432193756104,
       "expected_keywords": [
         "Infrastructure Intern",
         "intern"
@@ -522,10 +500,10 @@
       "is_impossible": false,
       "sources": [
         {
-          "id": "resume@2025-09-23#professional-experience-infrastructure-intern-maven-wave-partners-jun-2023-aug-2023:5",
+          "id": "resume@2025-09-23#professional-experience-professional-experience-summary:2",
           "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
-          "text": "## Infrastructure Intern — Maven Wave Partners (Jun 2023 – Aug 2023) [Part 1/2]\n\nI worked as an Infrastructure Intern at Maven Wave Partners in Chicago, Illinois during the summer of 2023 (June throug...",
-          "distance": 0.16666719913482664,
+          "text": "## Professional Experience Summary\n\nI have worked at two organizations throughout my career, gaining experience in both academic teaching and industry infrastructure roles. I served as a Computer Scie...",
+          "distance": 0.18456647396087644,
           "citation_index": 1
         },
         {
@@ -551,7 +529,7 @@
       "answer": "I have three summers of internship experience at Maven Wave Partners.",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.2876203060150146,
+      "response_time": 0.8884940147399902,
       "expected_keywords": [
         "3"
       ],
@@ -559,17 +537,17 @@
       "is_impossible": false,
       "sources": [
         {
-          "id": "resume@2025-09-23#professional-experience-professional-experience-summary:2",
-          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
-          "text": "## Professional Experience Summary\n\nI have worked at two organizations throughout my career, gaining experience in both academic teaching and industry infrastructure roles. I served as a Computer Scie...",
-          "distance": 0.1882582187652588,
-          "citation_index": 1
-        },
-        {
           "id": "resume@2025-09-23#professional-experience-infrastructure-intern-maven-wave-partners-jun-2023-aug-2023:5",
           "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
           "text": "## Infrastructure Intern — Maven Wave Partners (Jun 2023 – Aug 2023) [Part 1/2]\n\nI worked as an Infrastructure Intern at Maven Wave Partners in Chicago, Illinois during the summer of 2023 (June throug...",
           "distance": 0.18855595588684082,
+          "citation_index": 1
+        },
+        {
+          "id": "resume@2025-09-23#professional-experience-professional-experience-summary:2",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "## Professional Experience Summary\n\nI have worked at two organizations throughout my career, gaining experience in both academic teaching and industry infrastructure roles. I served as a Computer Scie...",
+          "distance": 0.1882582187652588,
           "citation_index": 2
         },
         {
@@ -588,7 +566,7 @@
       "answer": "I started working as a Computer Science Teaching Assistant at the University of Alabama at Birmingham in August 2022 [1][2].",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.1849515438079834,
+      "response_time": 1.02587890625,
       "expected_keywords": [
         "August 2022",
         "Aug 2022",
@@ -598,17 +576,17 @@
       "is_impossible": false,
       "sources": [
         {
-          "id": "resume@2025-09-23#professional-experience-professional-experience-summary:2",
-          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
-          "text": "## Professional Experience Summary\n\nI have worked at two organizations throughout my career, gaining experience in both academic teaching and industry infrastructure roles. I served as a Computer Scie...",
-          "distance": 0.24165873527526854,
-          "citation_index": 1
-        },
-        {
           "id": "resume@2025-09-23#professional-experience-computer-science-teaching-assistant-university-of-alabama-at-birmingham-aug-2022-may-2025:3",
           "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
           "text": "## Computer Science Teaching Assistant — University of Alabama at Birmingham (Aug 2022 – May 2025) [Part 1/2]\n\nI worked as a Computer Science Teaching Assistant at the University of Alabama at Birming...",
           "distance": 0.23623792529106138,
+          "citation_index": 1
+        },
+        {
+          "id": "resume@2025-09-23#professional-experience-professional-experience-summary:2",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "## Professional Experience Summary\n\nI have worked at two organizations throughout my career, gaining experience in both academic teaching and industry infrastructure roles. I served as a Computer Scie...",
+          "distance": 0.24165873527526854,
           "citation_index": 2
         },
         {
@@ -624,10 +602,10 @@
       "test_id": "skills_001",
       "category": "skills",
       "question": "Do I have experience with Kubernetes?",
-      "answer": "Yes, I have hands-on experience with Kubernetes container orchestration. I earned the Certified Kubernetes Administrator (CKA) certification [1] and have deployed and managed applications on Kubernetes clusters in production environments during my Infrastructure Internships at Maven Wave Partners [2]. I worked extensively with Kubernetes during three summer internships, building microservices and managing cloud-native applications.",
+      "answer": "Yes, I have experience with Kubernetes. I have hands-on experience with Kubernetes container orchestration, having earned the Certified Kubernetes Administrator (CKA) certification [1]. I have deployed and managed applications on Kubernetes clusters in production environments during my Infrastructure Internships at Maven Wave Partners [2]. I worked extensively with Kubernetes during three summer internships, building microservices and managing cloud-native applications.\n\n[1][2]",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.1887474060058594,
+      "response_time": 1.0677118301391602,
       "expected_keywords": [
         "yes"
       ],
@@ -642,17 +620,17 @@
           "citation_index": 1
         },
         {
+          "id": "certificate-cka@2024-06-26#practical-experience:5",
+          "source": "/workspace/data/mds/certificate--cka--2024-06-26.md",
+          "text": "# Practical Experience [Part 1/2]\n\nI earned the CKA certification after gaining hands-on experience with Kubernetes during my three Infrastructure Internships at Maven Wave Partners in Chicago, Illino...",
+          "distance": 0.2182307243347168,
+          "citation_index": 2
+        },
+        {
           "id": "resume@2025-09-23#technical-skills-devops-and-cloud-platform-experience:25",
           "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
           "text": "## DevOps and Cloud Platform Experience [Part 2/3]\n\nensively with Kubernetes during three summer internships, building microservices and managing cloud-native applications. I have expertise in Infrast...",
           "distance": 0.1456141471862793,
-          "citation_index": 2
-        },
-        {
-          "id": "resume@2025-09-23#technical-skills-devops-and-cloud-platform-experience:26",
-          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
-          "text": "## DevOps and Cloud Platform Experience [Part 3/3]\n\ner in Kubernetes environments. I understand container orchestration, image management, and container security practices. I have worked extensively w...",
-          "distance": 0.16914798021316527,
           "citation_index": 3
         }
       ]
@@ -661,10 +639,10 @@
       "test_id": "skills_002",
       "category": "skills",
       "question": "What cloud platforms do I have experience with?",
-      "answer": "I have experience with Google Cloud Platform (GCP) [1] and Amazon Web Services (AWS) [2].",
+      "answer": "I have experience with two cloud platforms: Google Cloud Platform (GCP) [1] and Amazon Web Services (AWS) [2].",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.1135451793670654,
+      "response_time": 1.0730197429656982,
       "expected_keywords": [
         "GCP",
         "AWS"
@@ -673,17 +651,17 @@
       "is_impossible": false,
       "sources": [
         {
+          "id": "certificate-aws-cloud-practitioner@2025-05-26#cloud-platform-experience:6",
+          "source": "/workspace/data/mds/certificate--aws-cloud-practitioner--2025-05-26.md",
+          "text": "# Cloud Platform Experience\n\nI earned the AWS Certified Cloud Practitioner certification to validate my cloud computing knowledge and experience with Amazon Web Services. I have worked with both Googl...",
+          "distance": 0.2638012170791626,
+          "citation_index": 1
+        },
+        {
           "id": "resume@2025-09-23#technical-skills-devops-and-cloud-platform-experience:26",
           "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
           "text": "## DevOps and Cloud Platform Experience [Part 3/3]\n\ner in Kubernetes environments. I understand container orchestration, image management, and container security practices. I have worked extensively w...",
           "distance": 0.15563031435012817,
-          "citation_index": 1
-        },
-        {
-          "id": "resume@2025-09-23#technical-skills-devops-and-cloud-platform-experience:25",
-          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
-          "text": "## DevOps and Cloud Platform Experience [Part 2/3]\n\nensively with Kubernetes during three summer internships, building microservices and managing cloud-native applications. I have expertise in Infrast...",
-          "distance": 0.16719053387641905,
           "citation_index": 2
         },
         {
@@ -699,10 +677,10 @@
       "test_id": "skills_003",
       "category": "skills",
       "question": "What programming languages do I know?",
-      "answer": "I have expertise in the following programming languages:\n\n- Java [1] for object-oriented design and systems development\n- Python [2] for backend development, data science, and machine learning applications\n- C [1] for low-level systems programming and algorithms work\n- Rust [2] for systems programming and performance-critical applications\n- JavaScript/TypeScript [3] for full-stack web development\n- C [3] for object-oriented programming and systems development\n\n[1][3] resume--vaishak-menon--2025-09-23.md\n## Programming Languages [Part 3/3]\n## Programming Languages [Part 1/3]\n## Programming Languages [Part 2/3]\n## Programming Languages [Part 3/3]\n## Programming Languages [Part 1/3]\n## Programming Languages [Part 2/3]\n\n[2] resume--vaishak-menon--2025-09-23.md\n## Programming Languages [Part 1/3]",
+      "answer": "I have expertise in the following programming languages: \n\n- Java [1]\n- C [1]\n- Python [2]\n- Rust [2]\n- JavaScript [3]\n- TypeScript [3]\n\n[1][2][3]",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.4205806255340576,
+      "response_time": 1.0259835720062256,
       "expected_keywords": [
         "Python",
         "Java",
@@ -738,10 +716,10 @@
       "test_id": "projects_001",
       "category": "projects",
       "question": "What personal projects have I built?",
-      "answer": "I have built several personal projects demonstrating expertise in machine learning, artificial intelligence, and cloud infrastructure. My personal projects include a FastAPI RAG Service [1] (a retrieval-augmented generation chatbot), a GPT From Scratch implementation [1] (a decoder-only transformer architecture), and a Music Genre Classification system [1] (a CNN-based audio classifier). These personal projects showcase my skills in machine learning, deep learning, natural language processing, retrieval systems, and software development.\n\n[1][2]",
+      "answer": "I have built several personal projects demonstrating expertise in machine learning, artificial intelligence, and cloud infrastructure. My personal projects include a FastAPI RAG Service [1], a GPT From Scratch implementation [2], and a Music Genre Classification system [1]. These personal projects showcase my skills in machine learning, deep learning, natural language processing, retrieval systems, and software development.\n\n[1][2]",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.429307222366333,
+      "response_time": 1.0202422142028809,
       "expected_keywords": [
         "RAG",
         "GPT",
@@ -758,17 +736,17 @@
           "citation_index": 1
         },
         {
+          "id": "resume@2025-09-23#technical-skills-development-tooling:33",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "## Development Tooling [Part 1/2]\n\nI have extensive experience with FastAPI, a modern Python web framework for building APIs. I built my FastAPI RAG Service personal project using FastAPI, demonstrati...",
+          "distance": 0.42899835109710693,
+          "citation_index": 2
+        },
+        {
           "id": "certificate-aws-ai-practitioner@2025-06-01#relationship-to-machine-learning-experience:5",
           "source": "/workspace/data/mds/certificate--aws-ai-practitioner--2025-06-01.md",
           "text": "# Relationship to Machine Learning Experience [Part 1/3]\n\nI earned the AWS Certified AI Practitioner certification to complement my hands-on machine learning experience from personal projects. I have ...",
           "distance": 0.4067281484603882,
-          "citation_index": 2
-        },
-        {
-          "id": "resume@2025-09-23#technical-skills-programming-languages:27",
-          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
-          "text": "## Programming Languages [Part 1/3]\n\nI am proficient in Python for backend development, data science, and machine learning applications. I have used Python extensively in my Teaching Assistant role at...",
-          "distance": 0.4348680377006531,
           "citation_index": 3
         }
       ]
@@ -777,10 +755,10 @@
       "test_id": "projects_002",
       "category": "projects",
       "question": "Have I built any machine learning projects?",
-      "answer": "Yes, I have built several machine learning projects. These projects include a FastAPI RAG Service [1], a GPT From Scratch implementation [2], and a Music Genre Classification system [3]. These projects showcase my skills in machine learning, deep learning, natural language processing, retrieval systems, and software development.\n\n[1] resume--vaishak-menon--2025-09-23.md\n[2] certificate--aws-ai-practitioner--2025-06-01.md\n[3] resume--vaishak-menon--2025-09-23.md",
+      "answer": "Yes, I have built several machine learning projects, including a FastAPI RAG Service [1], a GPT From Scratch implementation [1], and a Music Genre Classification system [2]. These projects demonstrate my expertise in machine learning, deep learning, natural language processing, retrieval systems, and software development.",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.3582751750946045,
+      "response_time": 0.9861948490142822,
       "expected_keywords": [
         "yes",
         "Music Genre Classification",
@@ -790,24 +768,24 @@
       "is_impossible": false,
       "sources": [
         {
-          "id": "resume@2025-09-23#personal-projects-personal-projects-summary:11",
-          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
-          "text": "## Personal Projects Summary\n\nI have built several personal projects demonstrating expertise in machine learning, artificial intelligence, and cloud infrastructure. My personal projects include a Fast...",
-          "distance": 0.2249610424041748,
-          "citation_index": 1
-        },
-        {
           "id": "certificate-aws-ai-practitioner@2025-06-01#relationship-to-machine-learning-experience:5",
           "source": "/workspace/data/mds/certificate--aws-ai-practitioner--2025-06-01.md",
           "text": "# Relationship to Machine Learning Experience [Part 1/3]\n\nI earned the AWS Certified AI Practitioner certification to complement my hands-on machine learning experience from personal projects. I have ...",
           "distance": 0.2364339828491211,
+          "citation_index": 1
+        },
+        {
+          "id": "resume@2025-09-23#personal-projects-personal-projects-summary:11",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "## Personal Projects Summary\n\nI have built several personal projects demonstrating expertise in machine learning, artificial intelligence, and cloud infrastructure. My personal projects include a Fast...",
+          "distance": 0.2249610424041748,
           "citation_index": 2
         },
         {
-          "id": "resume@2025-09-23#technical-skills-programming-languages:27",
+          "id": "resume@2025-09-23#personal-projects-music-genre-classification:17",
           "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
-          "text": "## Programming Languages [Part 1/3]\n\nI am proficient in Python for backend development, data science, and machine learning applications. I have used Python extensively in my Teaching Assistant role at...",
-          "distance": 0.3285837173461914,
+          "text": "## Music Genre Classification [Part 1/2]\n\nI built a machine learning project using Convolutional Neural Networks (CNN) to classify audio spectrograms into music genres. This personal AI project demons...",
+          "distance": 0.317768931388855,
           "citation_index": 3
         }
       ]
@@ -819,7 +797,7 @@
       "answer": "I don't know. It isn't mentioned in the provided documents.",
       "grounded": false,
       "num_sources": 0,
-      "response_time": 1.1775493621826172,
+      "response_time": 0.9286961555480957,
       "expected_keywords": [
         "don't know"
       ],
@@ -834,7 +812,7 @@
       "answer": "I don't know. It isn't mentioned in the provided documents.",
       "grounded": false,
       "num_sources": 0,
-      "response_time": 1.1211037635803223,
+      "response_time": 0.8247942924499512,
       "expected_keywords": [
         "don't know"
       ],
@@ -849,7 +827,7 @@
       "answer": "I don't know. It isn't mentioned in the provided documents.",
       "grounded": false,
       "num_sources": 0,
-      "response_time": 1.0835983753204346,
+      "response_time": 0.8699274063110352,
       "expected_keywords": [
         "don't know"
       ],
@@ -864,7 +842,7 @@
       "answer": "I don't know. It isn't mentioned in the provided documents.",
       "grounded": false,
       "num_sources": 0,
-      "response_time": 1.2667629718780518,
+      "response_time": 1.0109052658081055,
       "expected_keywords": [
         "not mentioned"
       ],
@@ -879,7 +857,7 @@
       "answer": "I don't know. It isn't mentioned in the provided documents.",
       "grounded": false,
       "num_sources": 0,
-      "response_time": 1.112551212310791,
+      "response_time": 0.9204726219177246,
       "expected_keywords": [
         "don't know"
       ],
@@ -894,7 +872,7 @@
       "answer": "No, I have a Bachelor of Science and Master of Science in Computer Science, but not a PhD.",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.1611108779907227,
+      "response_time": 0.9713468551635742,
       "expected_keywords": [
         "no"
       ],
@@ -902,24 +880,24 @@
       "is_impossible": false,
       "sources": [
         {
-          "id": "resume@2025-09-23#professional-summary:1",
-          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
-          "text": "# Professional Summary\n\nI am a graduate student in Computer Science with hands-on experience deploying cloud-based solutions to Google Cloud Platform using Terraform and deploying applications to Kube...",
-          "distance": 0.4038950204849243,
-          "citation_index": 1
-        },
-        {
-          "id": "resume@2025-09-23#professional-experience-professional-experience-summary:2",
-          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
-          "text": "## Professional Experience Summary\n\nI have worked at two organizations throughout my career, gaining experience in both academic teaching and industry infrastructure roles. I served as a Computer Scie...",
-          "distance": 0.421302855014801,
-          "citation_index": 2
-        },
-        {
           "id": "transcript-analysis@2025-09-23#graduate-summary:5",
           "source": "/workspace/data/mds/complete_transcript_analysis.md",
           "text": "## Graduate Summary\n\nIn my graduate program, I earned 30.00 credits with 30.00 GPA credits and 120.00 quality points, achieving a cumulative GPA of 4.00. My academic standing included Presidential Hon...",
           "distance": 0.3831889033317566,
+          "citation_index": 1
+        },
+        {
+          "id": "transcript-analysis@2025-09-23#overall-academic-performance:1",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "## Overall Academic Performance\n\nI earned a total of 169 credits, consisting of 139 undergraduate credits and 30 graduate credits. My undergraduate GPA was 3.97, and my graduate GPA was 4.00. I demons...",
+          "distance": 0.39781081676483154,
+          "citation_index": 2
+        },
+        {
+          "id": "transcript-analysis@2025-09-23#grade-distribution:2",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "### Grade Distribution\n\nI took a total of 45 courses across my undergraduate and graduate programs. My grade distribution was:\n\n- **A grades:** 44 courses (98%) - All courses except one received an A\n...",
+          "distance": 0.38770735263824463,
           "citation_index": 3
         }
       ]
@@ -931,7 +909,7 @@
       "answer": "Could you clarify what you'd like to know about your academic performance? For example, I can provide information about your undergraduate GPA, your graduate GPA, or your overall GPA.",
       "grounded": false,
       "num_sources": 0,
-      "response_time": 0.48398327827453613,
+      "response_time": 0.4191250801086426,
       "expected_keywords": [
         "clarify",
         "which",
@@ -946,10 +924,10 @@
       "test_id": "edge_002",
       "category": "edge_case",
       "question": "Did I take any database courses and what grades did I receive in them?",
-      "answer": "I have taken two database-related courses: CS 610 (Database Systems) and CS 410 (Database App Dev). I received an A grade in both courses, earning 3.00 credits and 12.00 quality points in each. [1][2]",
+      "answer": "I have taken two database-related courses: CS 610 (Database Systems) and CS 410 (Database App Dev). I received an A grade in both courses, earning 3.00 credits and 12.00 quality points in each [1][2].\n\n[1] complete_transcript_analysis.md\n### Spring 2025\n\nDuring Spring 2025, I completed 6.00 credits with a 4.00 GPA, earning 24.00 quality points. I took the following 2 courses:\n\nI took CS 610 (Database Systems) and received a grade of A, earning 3.00 credits and 12.00 quality points. I took CS 685 (Foundations of Data Science) and received a grade of A, earning 3.00 credits and 12.00 quality points.\n\n[2] complete_transcript_analysis.md\n### Fall Term 2022\n\nDuring Fall Term 2022, I completed 15.00 credits with a 4.00 GPA, earning 48.00 quality points. I took the following 5 courses:\n\nI took CMST 101 (Public Speaking) and received a grade of A, earning 3.00 credits and 12.00 quality points. I took CS 410 (Database App Dev) and received a grade of A, earning 3.00 credits and 12.00 quality points. I took CS 420 (Software Engineering) and received a grade of A, earning 3.00 credits and 12.00 quality points. I took CS 436 (Computer Security) and received a grade of A, earning 3.00 credits and 12.00 quality points. I took EE 233 (Engineering Programming Method) and received a grade of A, earning 3.00 credits and 12.00 quality points.",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.3804028034210205,
+      "response_time": 1.3733952045440674,
       "expected_keywords": [
         "CS 410",
         "Database",
@@ -962,21 +940,21 @@
           "id": "transcript-analysis@2025-09-23#spring-2025:10",
           "source": "/workspace/data/mds/complete_transcript_analysis.md",
           "text": "### Spring 2025\n\nDuring Spring 2025, I completed 6.00 credits with a 4.00 GPA, earning 24.00 quality points. I took the following 2 courses:\n\nI took CS 610 (Database Systems) and received a grade of A...",
-          "distance": 0.11866980791091919,
+          "distance": 0.11932504177093506,
           "citation_index": 1
         },
         {
           "id": "transcript-analysis@2025-09-23#fall-term-2022:18",
           "source": "/workspace/data/mds/complete_transcript_analysis.md",
           "text": "### Fall Term 2022\n\nDuring Fall Term 2022, I completed 15.00 credits with a 4.00 GPA, earning 48.00 quality points. I took the following 5 courses:\n\nI took CMST 101 (Public Speaking) and received a gr...",
-          "distance": 0.13717854022979736,
+          "distance": 0.13432914018630981,
           "citation_index": 2
         },
         {
-          "id": "transcript-analysis@2025-09-23#fall-2023:6",
+          "id": "transcript-analysis@2025-09-23#fall-term-2023-dual-enrollment-graduate-courses:21",
           "source": "/workspace/data/mds/complete_transcript_analysis.md",
-          "text": "### Fall 2023\n\nDuring Fall 2023, I completed 6.00 credits with a 4.00 GPA, earning 24.00 quality points. I took the following 2 courses:\n\nI took CS 660 (Artificial Intelligence) and received a grade o...",
-          "distance": 0.14076557755470276,
+          "text": "### Fall Term 2023 (Dual Enrollment - Graduate Courses)\n\nDuring Fall Term 2023 (Dual Enrollment - Graduate Courses), I completed 12.00 credits with a 4.00 GPA, earning 48.00 quality points. I took the...",
+          "distance": 0.14164769649505615,
           "citation_index": 3
         }
       ]
@@ -988,7 +966,7 @@
       "answer": "Could you clarify what you'd like to know about Kubernetes? For example, I can provide information about projects that used Kubernetes, certifications like the CKA, or work experience involving Kubernetes.",
       "grounded": false,
       "num_sources": 0,
-      "response_time": 0.3957071304321289,
+      "response_time": 0.3898794651031494,
       "expected_keywords": [],
       "expected_answer": "Should note Kubernetes context and include a clarifying follow-up.",
       "is_impossible": false,
@@ -998,10 +976,10 @@
       "test_id": "broad_001",
       "category": "broad",
       "question": "Summarize my professional background",
-      "answer": "I have a graduate student background in Computer Science with hands-on experience deploying cloud-based solutions to Google Cloud Platform using Terraform and deploying applications to Kubernetes. I have demonstrated teaching and mentorship skills as a Computer Science Teaching Assistant at the University of Alabama at Birmingham [1]. I have industry exposure from completing three Infrastructure Internships at Maven Wave Partners over three consecutive summers [2]. My technical expertise spans cloud infrastructure, DevOps, programming in multiple languages, and machine learning systems [3].",
+      "answer": "I have a strong professional background in both academic teaching and industry infrastructure roles. I served as a Computer Science Teaching Assistant at the University of Alabama at Birmingham from August 2022 to May 2025, where I taught and mentored students in data structures, algorithms, and systems programming [1]. I also completed three summer internships as an Infrastructure Intern at Maven Wave Partners in Chicago, Illinois, working consecutively in the summers of 2021, 2022, and 2023 [1]. At Maven Wave Partners, I gained extensive hands-on experience with Google Cloud Platform, Kubernetes, Terraform, and Infrastructure as Code practices [2]. My technical expertise spans cloud infrastructure, DevOps, programming in multiple languages, and machine learning systems [2].",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.1947879791259766,
+      "response_time": 0.9622988700866699,
       "expected_keywords": [
         "Computer Science",
         "experience",
@@ -1012,24 +990,24 @@
       "is_impossible": false,
       "sources": [
         {
-          "id": "resume@2025-09-23#education-education-summary:9",
-          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
-          "text": "## Education Summary\n\nI earned two degrees from the University of Alabama at Birmingham in Birmingham, Alabama. I earned a Bachelor of Science degree in Computer Science, graduating on April 27, 2024 ...",
-          "distance": 0.4065951108932495,
-          "citation_index": 1
-        },
-        {
           "id": "resume@2025-09-23#professional-experience-professional-experience-summary:2",
           "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
           "text": "## Professional Experience Summary\n\nI have worked at two organizations throughout my career, gaining experience in both academic teaching and industry infrastructure roles. I served as a Computer Scie...",
           "distance": 0.41560500860214233,
-          "citation_index": 2
+          "citation_index": 1
         },
         {
           "id": "resume@2025-09-23#professional-summary:1",
           "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
           "text": "# Professional Summary\n\nI am a graduate student in Computer Science with hands-on experience deploying cloud-based solutions to Google Cloud Platform using Terraform and deploying applications to Kube...",
           "distance": 0.42153847217559814,
+          "citation_index": 2
+        },
+        {
+          "id": "resume@2025-09-23#education-education-summary:9",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "## Education Summary\n\nI earned two degrees from the University of Alabama at Birmingham in Birmingham, Alabama. I earned a Bachelor of Science degree in Computer Science, graduating on April 27, 2024 ...",
+          "distance": 0.4065951108932495,
           "citation_index": 3
         }
       ]
@@ -1038,10 +1016,10 @@
       "test_id": "broad_002",
       "category": "broad",
       "question": "What technical skills do I have?",
-      "answer": "I have expertise in multiple technical skills including:\n\n- DevOps and cloud infrastructure [1]\n- Programming languages: Python, Rust, JavaScript/TypeScript, Java, and C [1]\n- Data technologies: PostgreSQL, MongoDB, Transformers, RAG systems, and ChromaDB vector database [1]\n- Modern development tools: FastAPI, Next.js, and GitHub Actions [1]\n- Cloud infrastructure: Google Cloud Platform and Amazon Web Services [2]\n- Kubernetes container orchestration and Terraform Infrastructure as Code [2]\n- Machine learning systems [2]\n- Data engineering [2]\n- Cloud-based solutions deployment to Google Cloud Platform using Terraform [2]\n- Application deployment to Kubernetes [2]\n- Programming in multiple languages [2]\n- Machine learning, artificial intelligence, and cloud infrastructure [3]\n- Retrieval-augmented generation chatbot, decoder-only transformer architecture, and CNN-based audio classifier [3]\n- Java programming, object-oriented design, and data structures implementation in Java [4]\n- C for low-level systems programming and algorithms work [4]\n- Systems Programming in C [4]\n- Memory management, pointers, system calls, and low-level programming concepts [4]\n\n[1] resume--vaishak-menon--2025-09-23.md\n[2] resume--vaishak-menon--2025-09-23.md\n[3] resume--vaishak-menon--2025-09-23.md\n[4] resume--vaishak-menon--2025-09-23.md",
+      "answer": "I have expertise in the following technical skills:\n\n- DevOps and cloud infrastructure\n- Programming languages: Python, Rust, JavaScript/TypeScript, Java, and C [1]\n- Data technologies: PostgreSQL, MongoDB, Transformers, RAG systems, and ChromaDB vector database [1]\n- Modern development tools: FastAPI, Next.js, and GitHub Actions [1]\n- Cloud infrastructure: Google Cloud Platform and Amazon Web Services [2]\n- Kubernetes container orchestration and Terraform Infrastructure as Code [2]\n- Machine learning systems [2]\n- Data engineering [2]\n- Full software development lifecycle and engineering methodologies [4]\n- Programming languages: Python, C, and Java [4]\n- AI/ML Technologies: Neural Networks, Deep Learning, Computer Vision, and Natural Language Processing [4]\n- Data & Analytics: Database Systems, Data Science Foundations, and Statistical Analysis [4]\n- Systems & Networks: Computer Organization, Networking, and Cloud Computing [4]\n- Security: Cryptography and Computer Security [4]\n- Certified Kubernetes Administrator (CKA) certification [5]",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.4631001949310303,
+      "response_time": 1.2962944507598877,
       "expected_keywords": [
         "Kubernetes",
         "Docker",
@@ -1069,10 +1047,10 @@
           "citation_index": 2
         },
         {
-          "id": "resume@2025-09-23#personal-projects-personal-projects-summary:11",
+          "id": "resume@2025-09-23#technical-skills-programming-languages:29",
           "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
-          "text": "## Personal Projects Summary\n\nI have built several personal projects demonstrating expertise in machine learning, artificial intelligence, and cloud infrastructure. My personal projects include a Fast...",
-          "distance": 0.4296302795410156,
+          "text": "## Programming Languages [Part 3/3]\n\ngham. I have deep understanding of Java programming, object-oriented design, and data structures implementation in Java. I am skilled in C for low-level systems pr...",
+          "distance": 0.37702441215515137,
           "citation_index": 3
         }
       ]
@@ -1081,10 +1059,10 @@
       "test_id": "broad_003",
       "category": "broad",
       "question": "Give me an overview of my academic performance",
-      "answer": "I have a strong academic record with consistent excellence throughout my undergraduate and graduate programs. My overall academic performance is characterized by:\n\n* A total of 169 credits earned, consisting of 139 undergraduate credits and 30 graduate credits [1].\n* An undergraduate GPA of 3.97 and a graduate GPA of 4.00, with a perfect graduate performance across all graduate coursework [1].\n* Presidential Honors in multiple terms at both undergraduate and graduate levels, demonstrating my academic excellence and leadership potential [1][4].\n* A Summa Cum Laude undergraduate graduation with highest honors, indicating my academic achievement and distinction [1][5].\n* A perfect graduate GPA of 4.00 across all 30 graduate credits, showcasing my academic prowess and dedication [1][5].\n* Early enrollment in graduate-level courses during my undergraduate program, demonstrating my academic preparedness and motivation [1][5].\n* Dual specialization in both theoretical computer science and practical engineering applications, highlighting my comprehensive knowledge and skills [1][5].\n\nOverall, my academic performance is marked by consistent excellence, academic achievement, and a strong foundation in computer science.",
+      "answer": "I have a strong academic record with consistent excellence. My undergraduate GPA was 3.97, and my graduate GPA was 4.00 [1]. I demonstrated academic excellence by earning Presidential Honors in multiple terms and achieving a perfect graduate performance with a 4.00 GPA across all graduate coursework [2]. My grade distribution was 98% A grades, 2% B grades, and 0% C grades or below. The only course that received a grade lower than A was CS 350 (Automata/Formal Langs), which earned a B grade in Spring Term 2022 [3].",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.5281739234924316,
+      "response_time": 1.060152292251587,
       "expected_keywords": [
         "GPA",
         "4.00",
@@ -1103,17 +1081,17 @@
           "citation_index": 1
         },
         {
-          "id": "transcript-analysis@2025-09-23#grade-distribution:2",
-          "source": "/workspace/data/mds/complete_transcript_analysis.md",
-          "text": "### Grade Distribution\n\nI took a total of 45 courses across my undergraduate and graduate programs. My grade distribution was:\n\n- **A grades:** 44 courses (98%) - All courses except one received an A\n...",
-          "distance": 0.16424715518951416,
-          "citation_index": 2
-        },
-        {
           "id": "transcript-analysis@2025-09-23#graduate-summary:5",
           "source": "/workspace/data/mds/complete_transcript_analysis.md",
           "text": "## Graduate Summary\n\nIn my graduate program, I earned 30.00 credits with 30.00 GPA credits and 120.00 quality points, achieving a cumulative GPA of 4.00. My academic standing included Presidential Hon...",
           "distance": 0.16967326402664185,
+          "citation_index": 2
+        },
+        {
+          "id": "transcript-analysis@2025-09-23#grade-distribution:2",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "### Grade Distribution\n\nI took a total of 45 courses across my undergraduate and graduate programs. My grade distribution was:\n\n- **A grades:** 44 courses (98%) - All courses except one received an A\n...",
+          "distance": 0.16424715518951416,
           "citation_index": 3
         }
       ]
@@ -1122,10 +1100,10 @@
       "test_id": "broad_004",
       "category": "broad",
       "question": "Summarize my professional experience, education, and certifications",
-      "answer": "I have a Master of Science in Computer Science from the University of Florida [2]. Throughout my career, I have worked at two organizations, gaining experience in both academic teaching and industry infrastructure roles. I served as a Computer Science Teaching Assistant at the University of Alabama at Birmingham from August 2022 to May 2025, where I taught and mentored students in data structures, algorithms, and systems programming [3]. I also completed three summer internships as an Infrastructure Intern at Maven Wave Partners in Chicago, Illinois, working consecutively in the summers of 2021, 2022, and 2023 [3]. At Maven Wave Partners, I gained extensive hands-on experience with Google Cloud Platform, Kubernetes, Terraform, and Infrastructure as Code practices.\n\nI hold three professional certifications demonstrating expertise in Kubernetes, cloud computing, and artificial intelligence. I earned the Certified Kubernetes Administrator (CKA) certification, validating my expertise in Kubernetes container orchestration and cluster administration [4]. I earned the AWS Certified Cloud Practitioner certification, demonstrating foundational knowledge of Amazon Web Services cloud platform [1]. I earned the AWS Certified AI Practitioner certification, validating my knowledge of AI and machine learning services on Amazon Web Services [2].",
+      "answer": "I have professional experience in both academic teaching and industry infrastructure roles. I served as a Computer Science Teaching Assistant at the University of Alabama at Birmingham from August 2022 to May 2025 [1]. I also completed three summer internships as an Infrastructure Intern at Maven Wave Partners in Chicago, Illinois, working consecutively in the summers of 2021, 2022, and 2023 [1].\n\nI hold a Master of Science in Computer Science from the University of Alabama at Birmingham [2]. My graduate GPA is 4.00 [1].\n\nI hold three professional certifications: Certified Kubernetes Administrator (CKA), AWS Certified Cloud Practitioner, and AWS Certified AI Practitioner [1][3]. I earned the AWS Certified AI Practitioner certification in June 2025, which validates my knowledge of AI and ML concepts and demonstrates my understanding of cloud-based AI services on Amazon Web Services [3].",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.3587002754211426,
+      "response_time": 1.285630464553833,
       "expected_keywords": [
         "Computer Science",
         "education",
@@ -1136,24 +1114,24 @@
       "is_impossible": false,
       "sources": [
         {
-          "id": "certificate-aws-cloud-practitioner@2025-05-26#cloud-platform-experience:6",
-          "source": "/workspace/data/mds/certificate--aws-cloud-practitioner--2025-05-26.md",
-          "text": "# Cloud Platform Experience\n\nI earned the AWS Certified Cloud Practitioner certification to validate my cloud computing knowledge and experience with Amazon Web Services. I have worked with both Googl...",
-          "distance": 0.21668121814727784,
+          "id": "resume@2025-09-23#certifications-certifications-summary:19",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "## Certifications Summary\n\nI hold three professional certifications demonstrating expertise in Kubernetes, cloud computing, and artificial intelligence. I earned the Certified Kubernetes Administrator...",
+          "distance": 0.2343138575553894,
           "citation_index": 1
-        },
-        {
-          "id": "certificate-aws-ai-practitioner@2025-06-01#relationship-to-machine-learning-experience:6",
-          "source": "/workspace/data/mds/certificate--aws-ai-practitioner--2025-06-01.md",
-          "text": "# Relationship to Machine Learning Experience [Part 2/3]\n\nmentation (decoder-only transformer architecture), and a Music Genre Classification system (CNN-based audio classifier). The AWS Certified AI ...",
-          "distance": 0.22910571098327637,
-          "citation_index": 2
         },
         {
           "id": "resume@2025-09-23#professional-experience-professional-experience-summary:2",
           "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
           "text": "## Professional Experience Summary\n\nI have worked at two organizations throughout my career, gaining experience in both academic teaching and industry infrastructure roles. I served as a Computer Scie...",
-          "distance": 0.32896995544433594,
+          "distance": 0.23027896881103513,
+          "citation_index": 2
+        },
+        {
+          "id": "certificate-aws-ai-practitioner@2025-06-01#relationship-to-machine-learning-experience:5",
+          "source": "/workspace/data/mds/certificate--aws-ai-practitioner--2025-06-01.md",
+          "text": "# Relationship to Machine Learning Experience [Part 1/3]\n\nI earned the AWS Certified AI Practitioner certification to complement my hands-on machine learning experience from personal projects. I have ...",
+          "distance": 0.19807130098342896,
           "citation_index": 3
         }
       ]
@@ -1162,10 +1140,10 @@
       "test_id": "broad_multi_001",
       "category": "broad",
       "question": "Give me an overview of my career background and academic achievements",
-      "answer": "**Career Background and Academic Achievements Overview**\n\nI have a strong educational background and professional experience in the field of Computer Science. I earned two degrees from the University of Alabama at Birmingham: a Bachelor of Science degree in Computer Science [4] and a Master of Science degree in Computer Science [4]. My undergraduate GPA was 3.97, and my graduate GPA was 4.00 [1].\n\nThroughout my graduate program, I demonstrated consistent academic excellence by earning Presidential Honors in multiple terms and achieving a cumulative GPA of 4.00 [3]. I also completed advanced coursework, including graduate-level courses during my undergraduate program [2].\n\nProfessionally, I have worked at two organizations: the University of Alabama at Birmingham as a Computer Science Teaching Assistant [5] and Maven Wave Partners as an Infrastructure Intern [5]. At Maven Wave Partners, I gained extensive hands-on experience with Google Cloud Platform, Kubernetes, Terraform, and Infrastructure as Code practices.\n\nMy academic achievements include earning a Summa Cum Laude honors at undergraduate graduation [4] and achieving a perfect graduate GPA of 4.00 across all 30 graduate credits [1]. I also demonstrated consistent excellence by earning Presidential Honors multiple terms at both undergraduate and graduate levels [2].",
+      "answer": "**Education Background**\n\nI earned two degrees from the University of Alabama at Birmingham in Birmingham, Alabama. I earned a Bachelor of Science degree in Computer Science, graduating on April 27, 2024 with an undergraduate GPA of 3.97 and Summa Cum Laude honors [2]. I earned a Master of Science degree in Computer Science, graduating on May 1, 2025 with a graduate GPA of 4.00 [2].\n\n**Academic Achievements**\n\nI achieved perfect graduate performance with a 4.00 GPA across all graduate coursework [3]. My undergraduate GPA was 3.97, and my graduate GPA was 4.00 [3]. I demonstrated consistent academic excellence by earning Presidential Honors in multiple terms [3]. I achieved Summa Cum Laude honors upon undergraduate graduation [2].\n\n**Notable Academic Achievements**\n\n- **Perfect Graduate GPA:** 4.00 across all 30 graduate credits [3]\n- **Summa Cum Laude:** Undergraduate graduation with highest honors [2]\n- **Consistent Excellence:** Presidential Honors multiple terms at both undergraduate and graduate levels [3]\n- **Dual Specialization:** Comprehensive coverage of both theoretical computer science and practical engineering applications [1]\n\n**Grade Distribution**\n\nI took a total of 45 courses across my undergraduate and graduate programs. My grade distribution was:\n- **A grades:** 44 courses (98%) - All courses except one received an A [5]\n- **B grades:** 1 course (2%) - Only CS 350 (Automata/Formal Langs) received a B grade [5]\n- **C grades or below:** 0 courses [5]",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.4864501953125,
+      "response_time": 1.2548160552978516,
       "expected_keywords": [
         "career",
         "academic",
@@ -1175,24 +1153,24 @@
       "is_impossible": false,
       "sources": [
         {
-          "id": "transcript-analysis@2025-09-23#overall-academic-performance:1",
-          "source": "/workspace/data/mds/complete_transcript_analysis.md",
-          "text": "## Overall Academic Performance\n\nI earned a total of 169 credits, consisting of 139 undergraduate credits and 30 graduate credits. My undergraduate GPA was 3.97, and my graduate GPA was 4.00. I demons...",
-          "distance": 0.1524735987186432,
-          "citation_index": 1
-        },
-        {
           "id": "transcript-analysis@2025-09-23#notable-academic-achievements:25",
           "source": "/workspace/data/mds/complete_transcript_analysis.md",
           "text": "## Notable Academic Achievements\n\n- **Perfect Graduate GPA:** 4.00 across all 30 graduate credits\n- **Summa Cum Laude:** Undergraduate graduation with highest honors\n- **Consistent Excellence:** Presi...",
           "distance": 0.16574758291244507,
+          "citation_index": 1
+        },
+        {
+          "id": "resume@2025-09-23#education-education-summary:9",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "## Education Summary\n\nI earned two degrees from the University of Alabama at Birmingham in Birmingham, Alabama. I earned a Bachelor of Science degree in Computer Science, graduating on April 27, 2024 ...",
+          "distance": 0.33553826808929443,
           "citation_index": 2
         },
         {
-          "id": "transcript-analysis@2025-09-23#graduate-summary:5",
+          "id": "transcript-analysis@2025-09-23#overall-academic-performance:1",
           "source": "/workspace/data/mds/complete_transcript_analysis.md",
-          "text": "## Graduate Summary\n\nIn my graduate program, I earned 30.00 credits with 30.00 GPA credits and 120.00 quality points, achieving a cumulative GPA of 4.00. My academic standing included Presidential Hon...",
-          "distance": 0.1698291003704071,
+          "text": "## Overall Academic Performance\n\nI earned a total of 169 credits, consisting of 139 undergraduate credits and 30 graduate credits. My undergraduate GPA was 3.97, and my graduate GPA was 4.00. I demons...",
+          "distance": 0.1524735987186432,
           "citation_index": 3
         }
       ]
@@ -1204,7 +1182,7 @@
       "answer": "Could you clarify what you'd like to know about your experience? For example, I can provide information about your professional roles, projects you've completed, or your technical skills.",
       "grounded": false,
       "num_sources": 0,
-      "response_time": 0.31040310859680176,
+      "response_time": 0.4037044048309326,
       "expected_keywords": [
         "broad",
         "overview",
@@ -1222,10 +1200,10 @@
       "test_id": "ambig_002",
       "category": "ambiguity_detection",
       "question": "Tell me everything about my background and qualifications.",
-      "answer": "**Education Background**\n\nI earned two degrees from the University of Alabama at Birmingham in Birmingham, Alabama. I earned a Bachelor of Science degree in Computer Science, graduating on April 27, 2024 with an undergraduate GPA of 3.97 and Summa Cum Laude honors [1]. I earned a Master of Science degree in Computer Science, graduating on May 1, 2025 with a graduate GPA of 4.00 [1].\n\n**Academic Performance**\n\nI earned a total of 169 credits, consisting of 139 undergraduate credits and 30 graduate credits [2]. My undergraduate GPA was 3.97, and my graduate GPA was 4.00 [2]. I demonstrated consistent academic excellence by earning Presidential Honors in multiple terms [2].\n\n**Grade Distribution**\n\nMy grade distribution was: \n- **A grades:** 44 courses (98%) - All courses except one received an A [2]\n- **B grades:** 1 course (2%) - Only CS 350 (Automata/Formal Langs) received a B grade [2]\n- **C grades or below:** 0 courses [2]\n\n**Coursework**\n\nMy educational background includes comprehensive coursework in algorithms, data structures, systems programming, artificial intelligence, machine learning, deep learning, natural language processing, computer vision, cloud computing, database systems, cryptography, and data science [1].\n\n**Certifications and Experience**\n\nI have experience with Google Cloud Platform (GCP) and Amazon Web Services (AWS) [1].",
-      "grounded": true,
-      "num_sources": 5,
-      "response_time": 1.390362024307251,
+      "answer": "Education Summary:\nI earned two degrees from the University of Alabama at Birmingham in Birmingham, Alabama. I earned a Bachelor of Science degree in Computer Science, graduating on April 27, 2024 with an undergraduate GPA of 3.97 and Summa Cum Laude honors [1]. I earned a Master of Science degree in Computer Science, graduating on May 1, 2025 with a graduate GPA of 4.00 [1].\n\nOverall Academic Performance:\nI earned a total of 169 credits, consisting of 139 undergraduate credits and 30 graduate credits [2]. My undergraduate GPA was 3.97, and my graduate GPA was 4.00 [2]. I demonstrated consistent academic excellence by earning Presidential Honors in multiple terms [2].\n\nGrade Distribution:\nI took a total of 45 courses across my undergraduate and graduate programs [2]. My grade distribution was: 44 courses (98%) received an A grade, and 1 course (2%) received a B grade [2]. The only course that received a grade lower than A was CS 350 (Automata/Formal Langs), which received a B grade in Spring Term 2022 [2].\n\nGraduate Summary:\nIn my graduate program, I earned 30.00 credits with 30.00 GPA credits and 120.00 quality points, achieving a cumulative GPA of 4.00 [2]. My academic standing included Presidential Honors in multiple terms and Good Standing throughout the program [2].\n\nAcademic Highlights:\n- I have a perfect graduate record with a 4.00 GPA and all A grades [2].\n- I earned Presidential Honors in multiple terms [2].\n- I graduated with Summa Cum Laude honors from my undergraduate program [1].\n- The only non-A grade I received was a B in CS 350 (Automata/Formal Langs) in Spring Term 2022 [2].\n\nEducation Background:\nMy educational background includes comprehensive coursework in algorithms, data structures, systems programming, artificial intelligence, machine learning, deep learning, natural language processing, computer vision, cloud computing, database systems, cryptography, and data science [1].\n\nTechnical Skills:\nI have experience with Google Cloud Platform (GCP) and Amazon Web Services (AWS) [1].\n\nCertifications:\nI don't know. It isn't mentioned in the provided documents.\n\nWork Experience:\nI don't know. It isn't mentioned in the provided documents.\n\nPersonal Projects:\nI don't know. It isn't mentioned in the provided documents.\n\nCoursework:\nMy coursework includes:\n- Algorithms\n- Data Structures\n- Systems Programming\n- Artificial Intelligence\n- Machine Learning\n- Deep Learning\n- Natural Language Processing\n- Computer Vision\n- Cloud Computing\n- Database Systems\n- Cryptography\n- Data Science [1]\n\nAcademic Achievements:\n- Presidential Honors in multiple terms [2]\n- Good Standing throughout the graduate program [2]\n- Summa Cum Laude honors from the undergraduate program [1]",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 1.584949016571045,
       "expected_keywords": [
         "education",
         "certifications",
@@ -1235,38 +1213,16 @@
       ],
       "expected_answer": "Should either note the question is broad and ask what specifics are needed, OR provide a comprehensive overview of education, certifications, work experience, and qualifications.",
       "is_impossible": false,
-      "sources": [
-        {
-          "id": "resume@2025-09-23#education-education-summary:9",
-          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
-          "text": "## Education Summary\n\nI earned two degrees from the University of Alabama at Birmingham in Birmingham, Alabama. I earned a Bachelor of Science degree in Computer Science, graduating on April 27, 2024 ...",
-          "distance": 0.34783506393432617,
-          "citation_index": 1
-        },
-        {
-          "id": "transcript-analysis@2025-09-23#overall-academic-performance:1",
-          "source": "/workspace/data/mds/complete_transcript_analysis.md",
-          "text": "## Overall Academic Performance\n\nI earned a total of 169 credits, consisting of 139 undergraduate credits and 30 graduate credits. My undergraduate GPA was 3.97, and my graduate GPA was 4.00. I demons...",
-          "distance": 0.358376145362854,
-          "citation_index": 2
-        },
-        {
-          "id": "transcript-analysis@2025-09-23#grade-distribution:2",
-          "source": "/workspace/data/mds/complete_transcript_analysis.md",
-          "text": "### Grade Distribution\n\nI took a total of 45 courses across my undergraduate and graduate programs. My grade distribution was:\n\n- **A grades:** 44 courses (98%) - All courses except one received an A\n...",
-          "distance": 0.363497257232666,
-          "citation_index": 3
-        }
-      ]
+      "sources": []
     },
     {
       "test_id": "clarify_001",
       "category": "broad",
       "question": "What about my background?",
-      "answer": "You have a strong educational background in Computer Science. You earned two degrees from the University of Alabama at Birmingham: a Bachelor of Science degree in Computer Science [1] and a Master of Science degree in Computer Science [2]. Your undergraduate GPA was 3.97, and your graduate GPA was 4.00 [2]. You demonstrated consistent academic excellence by earning Presidential Honors in multiple terms and achieving perfect graduate performance with a 4.00 GPA across all graduate coursework [2].",
+      "answer": "You have a strong educational background in Computer Science. You earned two degrees from the University of Alabama at Birmingham: a Bachelor of Science degree in Computer Science, graduating on April 27, 2024 with an undergraduate GPA of 3.97 and Summa Cum Laude honors [1], and a Master of Science degree in Computer Science, graduating on May 1, 2025 with a graduate GPA of 4.00 [1]. Your educational background includes comprehensive coursework in various fields, including algorithms, data structures, systems programming, artificial intelligence, machine learning, deep learning, natural language processing, computer vision, cloud computing, database systems, cryptography, and data science [1].\n\nYou have also demonstrated expertise in machine learning, artificial intelligence, and cloud infrastructure through several personal projects, showcasing your skills in machine learning, deep learning, natural language processing, retrieval systems, and software development [2]. Your academic performance has been consistently excellent, with a total of 169 credits, consisting of 139 undergraduate credits and 30 graduate credits, and a cumulative GPA of 4.00 in your graduate program [3][4].",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.232234001159668,
+      "response_time": 1.1021389961242676,
       "expected_keywords": [
         "education",
         "Computer Science",
@@ -1284,17 +1240,17 @@
           "citation_index": 1
         },
         {
-          "id": "transcript-analysis@2025-09-23#overall-academic-performance:1",
-          "source": "/workspace/data/mds/complete_transcript_analysis.md",
-          "text": "## Overall Academic Performance\n\nI earned a total of 169 credits, consisting of 139 undergraduate credits and 30 graduate credits. My undergraduate GPA was 3.97, and my graduate GPA was 4.00. I demons...",
-          "distance": 0.45127689838409424,
-          "citation_index": 2
-        },
-        {
           "id": "resume@2025-09-23#personal-projects-personal-projects-summary:11",
           "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
           "text": "## Personal Projects Summary\n\nI have built several personal projects demonstrating expertise in machine learning, artificial intelligence, and cloud infrastructure. My personal projects include a Fast...",
           "distance": 0.4666699767112732,
+          "citation_index": 2
+        },
+        {
+          "id": "transcript-analysis@2025-09-23#grade-distribution:2",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "### Grade Distribution\n\nI took a total of 45 courses across my undergraduate and graduate programs. My grade distribution was:\n\n- **A grades:** 44 courses (98%) - All courses except one received an A\n...",
+          "distance": 0.46776193380355835,
           "citation_index": 3
         }
       ]
@@ -1303,10 +1259,10 @@
       "test_id": "clarify_002",
       "category": "broad",
       "question": "I'm looking for information about my history - can you help?",
-      "answer": "I'd be happy to help you with your history. Here are a few key points:\n\n**Education:**\nI earned two degrees from the University of Alabama at Birmingham in Birmingham, Alabama [4]. I earned a Bachelor of Science degree in Computer Science, graduating on April 27, 2024 with an undergraduate GPA of 3.97 and Summa Cum Laude honors. I earned a Master of Science degree in Computer Science, graduating on May 1, 2025 with a graduate GPA of 4.00.\n\n**Personal Projects:**\nI have built several personal projects demonstrating expertise in machine learning, artificial intelligence, and cloud infrastructure [3]. My personal projects include a FastAPI RAG Service (a retrieval-augmented generation chatbot), a GPT From Scratch implementation (a decoder-only transformer architecture), and a Music Genre Classification system (a CNN-based audio classifier).\n\n**Certifications:**\nI hold two certifications from Amazon Web Services that expire in 2028 [1] and [2]. The AWS Certified AI Practitioner certification expires on June 1, 2028, and the AWS Certified Cloud Practitioner certification expires on May 26, 2028.\n\nI hope this information helps you understand my history.",
+      "answer": "I can help you with information about your history. Here are a few key points:\n\n**Education:**\nI have a Bachelor's degree from the University of Alabama at Birmingham [1] and a Master's degree from the same university [1]. My graduate GPA is 4.00 [1].\n\n**Work Experience:**\nI worked as an Infrastructure Intern at Maven Wave Partners in Chicago, Illinois during the summer of 2022 (June through August) [3]. This was my second summer internship with Maven Wave Partners.\n\n**Certifications:**\nI hold two certifications that expire in 2028: AWS Certified Cloud Practitioner [2] and AWS Certified AI Practitioner [1]. The AWS Certified Cloud Practitioner certification expires on May 26, 2028, and the AWS Certified AI Practitioner certification expires on June 1, 2028.\n\n**Personal Projects:**\nI have worked on a personal project called FastAPI RAG Service [4], which showcases my ability to build machine learning systems, implement retrieval-augmented generation architectures, work with vector databases like ChromaDB, integrate large language models, and create performant FastAPI applications.\n\nReferences:\n[1] unknown\n[2] unknown\n[3] unknown\n[4] resume--vaishak-menon--2025-09-23.md",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.4234533309936523,
+      "response_time": 1.2712891101837158,
       "expected_keywords": [
         "education",
         "work",
@@ -1332,10 +1288,10 @@
           "citation_index": 2
         },
         {
-          "id": "resume@2025-09-23#personal-projects-personal-projects-summary:11",
-          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
-          "text": "## Personal Projects Summary\n\nI have built several personal projects demonstrating expertise in machine learning, artificial intelligence, and cloud infrastructure. My personal projects include a Fast...",
-          "distance": 0.48992860317230225,
+          "id": "resume@2025-09-23#professional-experience-infrastructure-intern-maven-wave-partners-jun-2022-aug-2022:7",
+          "source": "unknown",
+          "text": "## Infrastructure Intern — Maven Wave Partners (Jun 2022 – Aug 2022)\n\nI worked as an Infrastructure Intern at Maven Wave Partners in Chicago, Illinois during the summer of 2022 (June through August). ...",
+          "distance": null,
           "citation_index": 3
         }
       ]
@@ -1344,10 +1300,10 @@
       "test_id": "summary_001",
       "category": "summary_requests",
       "question": "Can you summarize my education and work experience?",
-      "answer": "**Education Summary:**\n\nI earned two degrees from the University of Alabama at Birmingham in Birmingham, Alabama. I earned a Bachelor of Science degree in Computer Science, graduating on April 27, 2024 with an undergraduate GPA of 3.97 and Summa Cum Laude honors [3]. I earned a Master of Science degree in Computer Science, graduating on May 1, 2025 with a graduate GPA of 4.00 [3]. My educational background includes comprehensive coursework in algorithms, data structures, systems programming, artificial intelligence, machine learning, deep learning, natural language processing, computer vision, cloud computing, database systems, cryptography, and data science [3].\n\n**Work Experience Summary:**\n\nI have worked at two organizations throughout my career, gaining experience in both academic teaching and industry infrastructure roles. I served as a Computer Science Teaching Assistant at the University of Alabama at Birmingham from August 2022 to May 2025, where I taught and mentored students in data structures, algorithms, and systems programming [2]. I also completed three summer internships as an Infrastructure Intern at Maven Wave Partners in Chicago, Illinois, working consecutively in the summers of 2021, 2022, and 2023 [2]. At Maven Wave Partners, I gained extensive hands-on experience with Google Cloud Platform, Kubernetes, Terraform, and Infrastructure as Code practices [2].",
+      "answer": "**Education Summary**\n\nI earned two degrees from the University of Alabama at Birmingham in Birmingham, Alabama. I earned a Bachelor of Science degree in Computer Science, graduating on April 27, 2024 with an undergraduate GPA of 3.97 and Summa Cum Laude honors [1]. I earned a Master of Science degree in Computer Science, graduating on May 1, 2025 with a graduate GPA of 4.00 [2]. My educational background includes comprehensive coursework in algorithms, data structures, systems programming, artificial intelligence, machine learning, deep learning, natural language processing, computer vision, cloud computing, database systems, cryptography, and data science.\n\n**Work Experience Summary**\n\nI have worked at two organizations throughout my career, gaining experience in both academic teaching and industry infrastructure roles. I served as a Computer Science Teaching Assistant at the University of Alabama at Birmingham from August 2022 to May 2025, where I taught and mentored students in data structures, algorithms, and systems programming [1]. I also completed three summer internships as an Infrastructure Intern at Maven Wave Partners in Chicago, Illinois, working consecutively in the summers of 2021, 2022, and 2023 [1]. At Maven Wave Partners, I gained extensive hands-on experience with Google Cloud Platform, Kubernetes, Terraform, and Infrastructure as Code practices.",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.2821125984191895,
+      "response_time": 1.1035284996032715,
       "expected_keywords": [
         "education",
         "work experience",
@@ -1359,24 +1315,24 @@
       "is_impossible": false,
       "sources": [
         {
-          "id": "resume@2025-09-23#technical-skills-technical-skills-summary:23",
-          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
-          "text": "## Technical Skills Summary\n\nMy technical expertise spans DevOps and cloud infrastructure, programming languages, data engineering and machine learning, and modern development tooling. I have hands-on...",
-          "distance": 0.27715733647346497,
-          "citation_index": 1
-        },
-        {
           "id": "resume@2025-09-23#professional-experience-professional-experience-summary:2",
           "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
           "text": "## Professional Experience Summary\n\nI have worked at two organizations throughout my career, gaining experience in both academic teaching and industry infrastructure roles. I served as a Computer Scie...",
           "distance": 0.2441025078296661,
-          "citation_index": 2
+          "citation_index": 1
         },
         {
           "id": "resume@2025-09-23#education-education-summary:9",
           "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
           "text": "## Education Summary\n\nI earned two degrees from the University of Alabama at Birmingham in Birmingham, Alabama. I earned a Bachelor of Science degree in Computer Science, graduating on April 27, 2024 ...",
           "distance": 0.2699589073657989,
+          "citation_index": 2
+        },
+        {
+          "id": "resume@2025-09-23#technical-skills-technical-skills-summary:23",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "## Technical Skills Summary\n\nMy technical expertise spans DevOps and cloud infrastructure, programming languages, data engineering and machine learning, and modern development tooling. I have hands-on...",
+          "distance": 0.27715733647346497,
           "citation_index": 3
         }
       ]
@@ -1385,10 +1341,10 @@
       "test_id": "control_specific_001",
       "category": "ambiguity_control",
       "question": "What grade did I receive in CS 410 in Fall 2022?",
-      "answer": "I received a grade of A in CS 410 (Database App Dev) in Fall Term 2022 [1].\n\n[1] complete_transcript_analysis.md\n### Fall Term 2022\n\nDuring Fall Term 2022, I completed 15.00 credits with a 4.00 GPA, earning 48.00 quality points. I took the following 5 courses:\n\nI took CMST 101 (Public Speaking) and received a grade of A, earning 3.00 credits and 12.00 quality points. I took CS 410 (Database App Dev) and received a grade of A, earning 3.00 credits and 12.00 quality points. I took CS 420 (Software Engineering) and received a grade of A, earning 3.00 credits and 12.00 quality points. I took CS 436 (Computer Security) and received a grade of A, earning 3.00 credits and 12.00 quality points. I took EE 233 (Engineering Programming Method) and received a grade of A, earning 3.00 credits and 12.00 quality points.",
+      "answer": "I received a grade of A in CS 410 (Database App Dev) in Fall Term 2022, earning 3.00 credits and 12.00 quality points [1].",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 6.799024820327759,
+      "response_time": 0.9478664398193359,
       "expected_keywords": [
         "CS 410",
         "A"
@@ -1411,10 +1367,10 @@
           "citation_index": 2
         },
         {
-          "id": "transcript-analysis@2025-09-23#fall-2023:6",
+          "id": "transcript-analysis@2025-09-23#spring-term-2022:16",
           "source": "/workspace/data/mds/complete_transcript_analysis.md",
-          "text": "### Fall 2023\n\nDuring Fall 2023, I completed 6.00 credits with a 4.00 GPA, earning 24.00 quality points. I took the following 2 courses:\n\nI took CS 660 (Artificial Intelligence) and received a grade o...",
-          "distance": 0.13021159172058105,
+          "text": "### Spring Term 2022\n\nDuring Spring Term 2022, I completed 15.00 credits with a 3.80 GPA, earning 57.00 quality points. I took the following 5 courses:\n\nI took CS 332 (Systems Programming) and receive...",
+          "distance": 0.13959082961082458,
           "citation_index": 3
         }
       ]
@@ -1426,7 +1382,7 @@
       "answer": "I have two certifications that expire in 2028: \nAWS Certified Cloud Practitioner (expires May 26, 2028) [2] and \nAWS Certified AI Practitioner (expires June 1, 2028) [1].",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.3403732776641846,
+      "response_time": 1.04579758644104,
       "expected_keywords": [
         "AWS",
         "Cloud Practitioner",
@@ -1450,10 +1406,10 @@
           "citation_index": 2
         },
         {
-          "id": "certificate-aws-cloud-practitioner@2025-05-26#certification-details:2",
-          "source": "/workspace/data/mds/certificate--aws-cloud-practitioner--2025-05-26.md",
-          "text": "# Certification Details\n\nI earned my AWS Certified Cloud Practitioner certification on May 26, 2025. The certification was awarded to me by Amazon Web Services. My AWS Cloud Practitioner credential ID...",
-          "distance": 0.15570040941238403,
+          "id": "certificate-aws-ai-practitioner@2025-06-01#certification-summary:0",
+          "source": "/workspace/data/mds/certificate--aws-ai-practitioner--2025-06-01.md",
+          "text": "# Certification Summary\n\nI earned the AWS Certified AI Practitioner certification on June 1, 2025 (2025-06-01). The AWS Certified AI Practitioner certification was issued by Amazon Web Services (AWS)....",
+          "distance": 0.1695210099220276,
           "citation_index": 3
         }
       ]
@@ -1462,10 +1418,10 @@
       "test_id": "control_specific_003",
       "category": "ambiguity_control",
       "question": "What personal projects have I built?",
-      "answer": "I have built several personal projects demonstrating expertise in machine learning, artificial intelligence, and cloud infrastructure. My personal projects include a FastAPI RAG Service [1] (a retrieval-augmented generation chatbot), a GPT From Scratch implementation [1] (a decoder-only transformer architecture), and a Music Genre Classification system [1] (a CNN-based audio classifier). These personal projects showcase my skills in machine learning, deep learning, natural language processing, retrieval systems, and software development.\n\n[1][2]",
+      "answer": "I have built several personal projects demonstrating expertise in machine learning, artificial intelligence, and cloud infrastructure. My personal projects include a FastAPI RAG Service [1], a GPT From Scratch implementation [2], and a Music Genre Classification system [1]. These personal projects showcase my skills in machine learning, deep learning, natural language processing, retrieval systems, and software development.\n\n[1][2]",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 0.913560152053833,
+      "response_time": 1.0094926357269287,
       "expected_keywords": [
         "RAG",
         "GPT",
@@ -1482,17 +1438,17 @@
           "citation_index": 1
         },
         {
+          "id": "resume@2025-09-23#technical-skills-development-tooling:33",
+          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
+          "text": "## Development Tooling [Part 1/2]\n\nI have extensive experience with FastAPI, a modern Python web framework for building APIs. I built my FastAPI RAG Service personal project using FastAPI, demonstrati...",
+          "distance": 0.42899835109710693,
+          "citation_index": 2
+        },
+        {
           "id": "certificate-aws-ai-practitioner@2025-06-01#relationship-to-machine-learning-experience:5",
           "source": "/workspace/data/mds/certificate--aws-ai-practitioner--2025-06-01.md",
           "text": "# Relationship to Machine Learning Experience [Part 1/3]\n\nI earned the AWS Certified AI Practitioner certification to complement my hands-on machine learning experience from personal projects. I have ...",
           "distance": 0.4067281484603882,
-          "citation_index": 2
-        },
-        {
-          "id": "resume@2025-09-23#technical-skills-programming-languages:27",
-          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
-          "text": "## Programming Languages [Part 1/3]\n\nI am proficient in Python for backend development, data science, and machine learning applications. I have used Python extensively in my Teaching Assistant role at...",
-          "distance": 0.4348680377006531,
           "citation_index": 3
         }
       ]
@@ -1501,10 +1457,10 @@
       "test_id": "control_specific_004",
       "category": "ambiguity_control",
       "question": "Give me a summary of my academic performance including GPA and honors",
-      "answer": "I have a consistent academic record with multiple honors. My undergraduate GPA was 3.97 [1], and I graduated with Summa Cum Laude honors. My graduate GPA was 4.00 [2], and I achieved a perfect graduate performance with a 4.00 GPA across all graduate coursework. I also received Presidential Honors in multiple terms at both undergraduate and graduate levels.",
+      "answer": "I have a cumulative GPA of 4.00 [1] and a graduate GPA of 4.00 [2]. I achieved Presidential Honors in multiple terms and demonstrated consistent academic excellence throughout my graduate program. I also earned Summa Cum Laude honors in my undergraduate program with a GPA of 3.97 [1].",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.235816478729248,
+      "response_time": 0.9860758781433105,
       "expected_keywords": [
         "GPA",
         "3.97",
@@ -1515,17 +1471,17 @@
       "is_impossible": false,
       "sources": [
         {
-          "id": "transcript-analysis@2025-09-23#overall-academic-performance:1",
-          "source": "/workspace/data/mds/complete_transcript_analysis.md",
-          "text": "## Overall Academic Performance\n\nI earned a total of 169 credits, consisting of 139 undergraduate credits and 30 graduate credits. My undergraduate GPA was 3.97, and my graduate GPA was 4.00. I demons...",
-          "distance": 0.08390202522277833,
-          "citation_index": 1
-        },
-        {
           "id": "transcript-analysis@2025-09-23#graduate-summary:5",
           "source": "/workspace/data/mds/complete_transcript_analysis.md",
           "text": "## Graduate Summary\n\nIn my graduate program, I earned 30.00 credits with 30.00 GPA credits and 120.00 quality points, achieving a cumulative GPA of 4.00. My academic standing included Presidential Hon...",
           "distance": 0.09905786514282228,
+          "citation_index": 1
+        },
+        {
+          "id": "transcript-analysis@2025-09-23#overall-academic-performance:1",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "## Overall Academic Performance\n\nI earned a total of 169 credits, consisting of 139 undergraduate credits and 30 graduate credits. My undergraduate GPA was 3.97, and my graduate GPA was 4.00. I demons...",
+          "distance": 0.08390202522277833,
           "citation_index": 2
         },
         {
@@ -1541,10 +1497,10 @@
       "test_id": "control_specific_005",
       "category": "ambiguity_control",
       "question": "List all the AWS certifications I have with their expiration dates",
-      "answer": "I have two AWS certifications that expire in 2028: \nAWS Certified Cloud Practitioner (expires May 26, 2028) [1], \nAWS Certified AI Practitioner (expires June 1, 2028) [2].",
+      "answer": "I have two AWS certifications that expire in 2028: \nAWS Certified Cloud Practitioner (expires May 26, 2028) [2] and \nAWS Certified AI Practitioner (expires June 1, 2028) [1].",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.2773621082305908,
+      "response_time": 1.1300835609436035,
       "expected_keywords": [
         "AWS",
         "Cloud Practitioner",
@@ -1555,24 +1511,24 @@
       "is_impossible": false,
       "sources": [
         {
-          "id": "certificate-aws-cloud-practitioner@2025-05-26#expiration-information:5",
-          "source": "/workspace/data/mds/certificate--aws-cloud-practitioner--2025-05-26.md",
-          "text": "# Expiration Information\n\nMy AWS Certified Cloud Practitioner certification expires on May 26, 2028. The certification expiration date is exactly three years from the date I earned the certification (...",
-          "distance": 0.10908558368682861,
-          "citation_index": 1
-        },
-        {
           "id": "certificate-aws-ai-practitioner@2025-06-01#expiration-information:8",
           "source": "/workspace/data/mds/certificate--aws-ai-practitioner--2025-06-01.md",
           "text": "# Expiration Information\n\nMy AWS Certified AI Practitioner certification expires on June 1, 2028. The certification expiration date is exactly three years from the date I earned the certification (Jun...",
           "distance": 0.11063568592071533,
+          "citation_index": 1
+        },
+        {
+          "id": "certificate-aws-cloud-practitioner@2025-05-26#expiration-information:5",
+          "source": "/workspace/data/mds/certificate--aws-cloud-practitioner--2025-05-26.md",
+          "text": "# Expiration Information\n\nMy AWS Certified Cloud Practitioner certification expires on May 26, 2028. The certification expiration date is exactly three years from the date I earned the certification (...",
+          "distance": 0.10908558368682861,
           "citation_index": 2
         },
         {
-          "id": "certificate-aws-cloud-practitioner@2025-05-26#certification-details:2",
-          "source": "/workspace/data/mds/certificate--aws-cloud-practitioner--2025-05-26.md",
-          "text": "# Certification Details\n\nI earned my AWS Certified Cloud Practitioner certification on May 26, 2025. The certification was awarded to me by Amazon Web Services. My AWS Cloud Practitioner credential ID...",
-          "distance": 0.12556822299957274,
+          "id": "certificate-aws-ai-practitioner@2025-06-01#certification-summary:0",
+          "source": "/workspace/data/mds/certificate--aws-ai-practitioner--2025-06-01.md",
+          "text": "# Certification Summary\n\nI earned the AWS Certified AI Practitioner certification on June 1, 2025 (2025-06-01). The AWS Certified AI Practitioner certification was issued by Amazon Web Services (AWS)....",
+          "distance": 0.1362665891647339,
           "citation_index": 3
         }
       ]
@@ -1584,7 +1540,7 @@
       "answer": "Your question seems a bit broad. Could you clarify which specific details you're looking for about your profile? For example, I can share information about your education, your work experience, your certifications, your skills, or your qualifications. Typical areas I can cover include education, work experience, certifications, skills, and other qualifications. Please let me know which detail to focus on so I can reference the right documents.",
       "grounded": false,
       "num_sources": 0,
-      "response_time": 0.3909189701080322,
+      "response_time": 0.38811397552490234,
       "expected_keywords": [
         "clarify",
         "which",
@@ -1599,10 +1555,10 @@
       "test_id": "vague_002",
       "category": "ambiguity_detection",
       "question": "tell me more",
-      "answer": "**Education**\n\nI have a Bachelor of Science and Master of Science in Computer Science from the University of Alabama at Birmingham [1]. My graduate GPA is 4.00 [1].\n\n**Work Experience**\n\nI have worked at two organizations throughout my career. I served as a Computer Science Teaching Assistant at the University of Alabama at Birmingham from August 2022 to May 2025, where I taught and mentored students in data structures, algorithms, and systems programming. I also completed three summer internships as an Infrastructure Intern at Maven Wave Partners in Chicago, Illinois, working consecutively in the summers of 2021, 2022, and 2023.\n\n**Personal Projects**\n\nI have built several personal projects demonstrating expertise in machine learning, artificial intelligence, and cloud infrastructure. My personal projects include a FastAPI RAG Service (a retrieval-augmented generation chatbot), a GPT From Scratch implementation (a decoder-only transformer architecture), and a Music Genre Classification system (a CNN-based audio classifier).\n\n**Coursework**\n\nI have taken a total of 45 courses across my undergraduate and graduate programs. My grade distribution was:\n\n- **A grades:** 44 courses (98%) - All courses except one received an A\n- **B grades:** 1 course (2%) - Only CS 350 (Automata/Formal Langs) received a B grade\n- **C grades or below:** 0 courses\n\nSome of my notable courses include:\n\n- CS 660 (Artificial Intelligence)\n- CS 662 (Natural Language Processing)\n- CS 410 (Database App Dev)\n- CS 420 (Software Engineering)\n- CS 436 (Computer Security)\n- EE 233 (Engineering Programming Method)\n- CMST 101 (Public Speaking)\n\n**Certifications**\n\nNo certifications are mentioned in the provided documents.\n\n**Technical Skills**\n\nMy technical skills include expertise in machine learning, artificial intelligence, cloud infrastructure, and software development. I have hands-on experience with Google Cloud Platform, Kubernetes, Terraform, and Infrastructure as Code practices.\n\n**Programming Languages**\n\nNo specific programming languages are mentioned in the provided documents.\n\n**Academic Achievements**\n\nI earned a 4.00 GPA in Fall Term 2022 and Fall Term 2023 (Dual Enrollment - Graduate Courses). I also earned a B grade in CS 350 (Automata/Formal Langs) in Spring Term 2022.",
-      "grounded": true,
-      "num_sources": 5,
-      "response_time": 1.6507823467254639,
+      "answer": "**Education:**\n\nI have a Bachelor of Science and Master of Science in Computer Science. My graduate GPA is 4.00 [1]. I graduated Summa Cum Laude [4].\n\n**Work Experience:**\n\nI don't know. It isn't mentioned in the provided documents.\n\n**Certifications:**\n\nI don't know. It isn't mentioned in the provided documents.\n\n**Technical Skills:**\n\nI don't know. It isn't mentioned in the provided documents.\n\n**Programming Languages:**\n\nI don't know. It isn't mentioned in the provided documents.\n\n**Personal Projects:**\n\nI don't know. It isn't mentioned in the provided documents.\n\n**Coursework:**\n\nI took a total of 45 courses across my undergraduate and graduate programs. My grade distribution was:\n\n- **A grades:** 44 courses (98%) - All courses except one received an A\n- **B grades:** 1 course (2%) - Only CS 350 (Automata/Formal Langs) received a B grade\n- **C grades or below:** 0 courses\n\nI took the following courses:\n\n- PY 212 (Developmental Psychology) - A grade, Summer Term 2022\n- EE 447 (Inter/Intranet App Development) - A grade, Summer Term 2023\n- CS 350 (Automata/Formal Langs) - B grade, Spring Term 2022\n\n**Academic Achievements:**\n\n- **Only non-A grade:** CS 350 (Automata/Formal Langs) - B grade, Spring Term 2022\n- **Perfect graduate record:** 4.00 GPA with all A grades\n- **Presidential Honors:** Earned in multiple terms\n- **Graduation Honors:** Summa Cum Laude (undergraduate)\n\n[1] complete_transcript_analysis.md\n[2] complete_transcript_analysis.md\n[3] complete_transcript_analysis.md\n[4] complete_transcript_analysis.md",
+      "grounded": false,
+      "num_sources": 0,
+      "response_time": 1.1578090190887451,
       "expected_keywords": [
         "clarify",
         "what",
@@ -1610,29 +1566,7 @@
       ],
       "expected_answer": "Should request clarification - 'more' about what?",
       "is_impossible": false,
-      "sources": [
-        {
-          "id": "transcript-analysis@2025-09-23#grade-distribution:2",
-          "source": "/workspace/data/mds/complete_transcript_analysis.md",
-          "text": "### Grade Distribution\n\nI took a total of 45 courses across my undergraduate and graduate programs. My grade distribution was:\n\n- **A grades:** 44 courses (98%) - All courses except one received an A\n...",
-          "distance": 0.45224225521087646,
-          "citation_index": 1
-        },
-        {
-          "id": "resume@2025-09-23#personal-projects-personal-projects-summary:11",
-          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
-          "text": "## Personal Projects Summary\n\nI have built several personal projects demonstrating expertise in machine learning, artificial intelligence, and cloud infrastructure. My personal projects include a Fast...",
-          "distance": 0.4575701951980591,
-          "citation_index": 2
-        },
-        {
-          "id": "transcript-analysis@2025-09-23#fall-term-2022:18",
-          "source": "/workspace/data/mds/complete_transcript_analysis.md",
-          "text": "### Fall Term 2022\n\nDuring Fall Term 2022, I completed 15.00 credits with a 4.00 GPA, earning 48.00 quality points. I took the following 5 courses:\n\nI took CMST 101 (Public Speaking) and received a gr...",
-          "distance": 0.46257156133651733,
-          "citation_index": 3
-        }
-      ]
+      "sources": []
     },
     {
       "test_id": "vague_003",
@@ -1641,7 +1575,7 @@
       "answer": "Your question seems a bit broad. Could you clarify which specific details you're looking for about your profile? For example, I can share information about your education, your work experience, your certifications, your skills, or your qualifications. Typical areas I can cover include education, work experience, certifications, skills, and other qualifications. Please let me know which detail to focus on so I can reference the right documents.",
       "grounded": false,
       "num_sources": 0,
-      "response_time": 0.2258613109588623,
+      "response_time": 0.2268509864807129,
       "expected_keywords": [
         "clarify",
         "which",
@@ -1658,7 +1592,7 @@
       "answer": "Your question seems a bit broad. Could you clarify which specific details you're looking for about your profile? For example, I can share information about your education, your work experience, your certifications, your skills, or your qualifications. Typical areas I can cover include education, work experience, certifications, skills, and other qualifications. Please let me know which detail to focus on so I can reference the right documents.",
       "grounded": false,
       "num_sources": 0,
-      "response_time": 0.17833781242370605,
+      "response_time": 0.19416165351867676,
       "expected_keywords": [
         "clarify",
         "which",
@@ -1675,7 +1609,7 @@
       "answer": "Could you clarify what you'd like to know about your history? For example, I can provide information about your education history, your work history, or key milestones.",
       "grounded": false,
       "num_sources": 0,
-      "response_time": 0.19445514678955078,
+      "response_time": 0.2069227695465088,
       "expected_keywords": [
         "clarify",
         "which",
@@ -1693,7 +1627,7 @@
       "answer": "Could you clarify what you'd like to know about your certifications? For example, I can provide information about specific certification details (name, date, expiration), which certifications you hold, or skills validated by each certification.",
       "grounded": false,
       "num_sources": 0,
-      "response_time": 0.30945277214050293,
+      "response_time": 0.39568543434143066,
       "expected_keywords": [
         "clarify",
         "which",
@@ -1707,10 +1641,10 @@
       "test_id": "vague_007",
       "category": "ambiguity_detection",
       "question": "more info",
-      "answer": "Based on the provided context, here are the key points about Vaishak Menon's education, degrees, GPA, work experience, certifications, technical skills, programming languages, personal projects, coursework, and academic achievements:\n\n**Education:**\n\n* Bachelor's degree from the University of Alabama at Birmingham (UAB)\n* Master's degree from the University of Alabama at Birmingham (UAB)\n* Graduate GPA: 4.00 [1]\n\n**Work Experience:**\n\n* Computer Science Teaching Assistant at the University of Alabama at Birmingham from August 2022 to May 2025\n* Infrastructure Intern at Maven Wave Partners in Chicago, Illinois, for three consecutive summers (2021, 2022, and 2023)\n\n**Technical Skills:**\n\n* Programming languages: Java, C, and Python (not explicitly mentioned, but inferred from the context)\n* Data structures and algorithms\n* Systems programming\n* Cloud computing: Google Cloud Platform (GCP)\n* Containerization: Kubernetes\n* Infrastructure as Code: Terraform\n* Database management: PostgreSQL (PSQL) and MongoDB\n* Machine learning: Transformers, attention mechanisms, multi-head attention, positional encodings, and retrieval-augmented generation (RAG) systems\n* Vector databases: ChromaDB\n* Large language models: GPT transformer model\n\n**Personal Projects:**\n\n* FastAPI RAG Service: a production-ready RAG system with evaluation metrics, demonstrating effective semantic search capabilities\n* GPT transformer model: built from scratch, showcasing expertise in Transformers and attention mechanisms\n\n**Coursework:**\n\n* Data structures\n* Algorithms\n* Systems programming\n* Database design and optimization\n* NoSQL database concepts\n* Machine learning: Transformers, attention mechanisms, multi-head attention, positional encodings, and retrieval-augmented generation (RAG) systems\n\n**Academic Achievements:**\n\n* Graduate GPA: 4.00 [1]\n* Teaching Assistant role at UAB, mentoring students in data structures, algorithms, and systems programming\n\nNote: The context does not provide information about Vaishak Menon's high school or other personal details.",
+      "answer": "Based on the provided context, here are some key points about Vaishak Menon's education, degrees, GPA, work experience, certifications, technical skills, programming languages, personal projects, coursework, and academic achievements:\n\n**Education:**\n\n- Bachelor's degree from the University of Alabama at Birmingham (UAB) [1]\n- Master's degree from UAB with a graduate GPA of 4.00 out of 4.00 [2]\n- Summa Cum Laude undergraduate honors [2]\n\n**GPA:**\n\n- Undergraduate GPA: 3.97 out of 4.00 (139 credits) [2]\n- Graduate GPA: 4.00 out of 4.00 (30 credits) [2]\n- Lowest Term GPA: 3.80 in Spring Term 2022 due to a B grade in CS 350 (Automata/Formal Langs) [2]\n\n**Technical Skills:**\n\n- Proficient in Java programming, object-oriented design, and data structures implementation in Java [1]\n- Skilled in C for low-level systems programming and algorithms work [1]\n- Expertise in C programming, memory management, pointers, system calls, and low-level programming concepts [1]\n\n**Programming Languages:**\n\n- Java\n- C\n\n**Coursework:**\n\n- Strong foundation in Artificial Intelligence & Machine Learning with courses in AI, NLP, Deep Learning, Machine Learning, and Computer Vision [2]\n- Comprehensive coverage in Data Science & Analytics with courses in Database Systems, Foundations of Data Science, and Cloud Computing [2]\n- Advanced Computing with courses in Modern Cryptography and Advanced Algorithms & Applications [2]\n- Emerging Technologies with courses in Cloud Computing and Computer Vision with Convolutional Neural Networks [2]\n\n**Certifications:**\n\n- No certifications mentioned in the provided context.\n\n**Work Experience:**\n\n- Teaching Assistant role at UAB where he taught Systems Programming in C [1]\n\n**Personal Projects:**\n\n- No personal projects mentioned in the provided context.\n\n**Academic Achievements:**\n\n- Presidential Honors earned in multiple terms [2]\n- Graduation Honors: Summa Cum Laude (undergraduate) [2]\n\nNote: The provided context does not mention any high school attended by Vaishak Menon.",
       "grounded": true,
       "num_sources": 5,
-      "response_time": 1.6352260112762451,
+      "response_time": 1.1583757400512695,
       "expected_keywords": [
         "clarify",
         "what",
@@ -1727,17 +1661,17 @@
           "citation_index": 1
         },
         {
-          "id": "resume@2025-09-23#technical-skills-data-engineering-and-machine-learning:31",
-          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
-          "text": "## Data Engineering and Machine Learning [Part 2/3]\n\nI understand attention mechanisms, multi-head attention, positional encodings, and transformer architecture components. I have hands-on experience ...",
-          "distance": 0.44469720125198364,
+          "id": "transcript-analysis@2025-09-23#graduate-focus-areas:23",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "## Graduate Focus Areas\n\n- **Artificial Intelligence & Machine Learning:** Strong foundation with AI, NLP, Deep Learning, Machine Learning, and Computer Vision\n- **Data Science & Analytics:** Comprehe...",
+          "distance": 0.4400365352630615,
           "citation_index": 2
         },
         {
-          "id": "resume@2025-09-23#professional-experience-professional-experience-summary:2",
-          "source": "/workspace/data/mds/resume--vaishak-menon--2025-09-23.md",
-          "text": "## Professional Experience Summary\n\nI have worked at two organizations throughout my career, gaining experience in both academic teaching and industry infrastructure roles. I served as a Computer Scie...",
-          "distance": 0.44631391763687134,
+          "id": "transcript-analysis@2025-09-23#academic-highlights:4",
+          "source": "/workspace/data/mds/complete_transcript_analysis.md",
+          "text": "### Academic Highlights\n\n- **Only non-A grade:** CS 350 (Automata/Formal Langs) - B grade, Spring Term 2022\n- **Perfect graduate record:** 4.00 GPA with all A grades\n- **Presidential Honors:** Earned ...",
+          "distance": 0.4317835569381714,
           "citation_index": 3
         }
       ]

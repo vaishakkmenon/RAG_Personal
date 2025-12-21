@@ -174,10 +174,10 @@ def get_existing_versions(doc_id: str, base_version: str) -> List[str]:
     """
     try:
         # Import ChromaDB collection here to avoid circular imports
-        from app.retrieval.store import _collection
+        from app.retrieval.vector_store import get_vector_store
 
         # Query chunks matching doc_id
-        results = _collection.get(
+        results = get_vector_store()._collection.get(
             where={"doc_id": {"$eq": doc_id}},
             limit=10000,  # Get all chunks for this doc
         )
@@ -215,10 +215,10 @@ def get_existing_content_hash(doc_id: str, version: str) -> Optional[str]:
     """
     try:
         # Import ChromaDB collection here to avoid circular imports
-        from app.retrieval.store import _collection
+        from app.retrieval.vector_store import get_vector_store
 
         # Query chunks for this specific doc_id and version
-        results = _collection.get(
+        results = get_vector_store()._collection.get(
             where={
                 "$and": [
                     {"doc_id": {"$eq": doc_id}},

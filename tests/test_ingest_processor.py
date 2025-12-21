@@ -118,7 +118,7 @@ class TestIngestPaths:
 
     @patch("app.ingest.processor.find_files")
     @patch("app.ingest.processor._process_file")
-    @patch("app.ingest.processor.add_documents")
+    @patch("app.retrieval.vector_store.VectorStore.add_documents")
     def test_ingest_paths_processes_files(self, mock_add_docs, mock_process, mock_find):
         """Test that ingest_paths processes all discovered files."""
         from app.ingest.processor import ingest_paths
@@ -128,8 +128,8 @@ class TestIngestPaths:
 
         # Mock processing to return chunks
         mock_process.side_effect = [
-            [{"id": "chunk-1", "text": "Content 1", "metadata": {}}],
-            [{"id": "chunk-2", "text": "Content 2", "metadata": {}}],
+            [{"id": "chunk-1", "text": "Content 1", "metadata": {"source": "f1"}}],
+            [{"id": "chunk-2", "text": "Content 2", "metadata": {"source": "f2"}}],
         ]
 
         result = ingest_paths(["/docs"])
@@ -140,7 +140,7 @@ class TestIngestPaths:
 
     @patch("app.ingest.processor.find_files")
     @patch("app.ingest.processor._process_file")
-    @patch("app.ingest.processor.add_documents")
+    @patch("app.retrieval.vector_store.VectorStore.add_documents")
     def test_ingest_paths_deduplication(self, mock_add_docs, mock_process, mock_find):
         """Test that duplicate chunks are skipped."""
         from app.ingest.processor import ingest_paths
@@ -149,9 +149,17 @@ class TestIngestPaths:
 
         # Return duplicate chunks (same text content)
         mock_process.return_value = [
-            {"id": "chunk-1", "text": "Same content", "metadata": {}},
-            {"id": "chunk-2", "text": "Same content", "metadata": {}},  # Duplicate
-            {"id": "chunk-3", "text": "Different content", "metadata": {}},
+            {"id": "chunk-1", "text": "Same content", "metadata": {"source": "f1"}},
+            {
+                "id": "chunk-2",
+                "text": "Same content",
+                "metadata": {"source": "f2"},
+            },  # Duplicate
+            {
+                "id": "chunk-3",
+                "text": "Different content",
+                "metadata": {"source": "f3"},
+            },
         ]
 
         result = ingest_paths(["/docs"])

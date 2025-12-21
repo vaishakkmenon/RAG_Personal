@@ -111,7 +111,7 @@ class TestChatServiceSessionErrors:
     """Tests for session management error handling."""
 
     @patch("app.core.chat_service.get_response_cache")
-    @patch("app.core.retrieval_orchestrator.search")
+    @patch("app.retrieval.search_engine.SearchEngine.search")
     def test_session_http_exception_reraises(self, mock_search, mock_cache):
         """Test that HTTPException from session is re-raised."""
         from app.core.chat_service import ChatService
@@ -121,10 +121,6 @@ class TestChatServiceSessionErrors:
         mock_store.get_or_create_session.side_effect = HTTPException(
             status_code=429, detail="Rate limit exceeded"
         )
-        # Assuming SessionManager delegates to store or raises on its own
-        # In the new impl, get_or_create_session is called on self.session_manager.
-        # But ChatService init takes session_store and initializes SessionManager with it.
-        # If SessionManager.get_or_create_session calls store.get_or_create_session...
 
         service = ChatService(session_store=mock_store)
         request = ChatRequest(question="Test question")
@@ -135,7 +131,7 @@ class TestChatServiceSessionErrors:
         assert exc_info.value.status_code == 429
 
     @patch("app.core.chat_service.get_response_cache")
-    @patch("app.core.retrieval_orchestrator.search")
+    @patch("app.retrieval.search_engine.SearchEngine.search")
     @patch("app.core.chat_service.generate_with_llm")
     def test_session_unexpected_error_creates_temp_session(
         self, mock_generate, mock_search, mock_cache
@@ -167,11 +163,6 @@ class TestChatServiceSessionErrors:
         service = ChatService(session_store=mock_store)
         request = ChatRequest(question="What is Python?")
 
-        # Should not raise, should create temp session inside SessionManager -> returned to ChatService
-        # Actually SessionManager handles the try/catch logic internally?
-        # Checking SessionManager source in my memory:
-        # SessionManager.get_or_create_session DOES have a try/except for Exception.
-
         response = service.handle_chat(request=request)
 
         assert response is not None
@@ -201,9 +192,6 @@ class TestChatServiceCachePaths:
         mock_session.session_id = "test-session"
         mock_session.get_truncated_history.return_value = []
         mock_store.get_or_create_session.return_value = mock_session
-
-        # Note: ChatService calls session_manager.check_rate_limit(session).
-        # We need to ensure that passes or we mock session_manager.
 
         service = ChatService(session_store=mock_store)
 
@@ -249,7 +237,7 @@ class TestChatServiceGreetings:
 class TestChatServiceRateLimit:
     """Tests for rate limiting."""
 
-    @patch("app.core.retrieval_orchestrator.search")
+    @patch("app.retrieval.search_engine.SearchEngine.search")
     def test_rate_limit_check_fails(self, mock_search):
         """Test that rate limit check failure raises HTTPException."""
         from app.core.chat_service import ChatService

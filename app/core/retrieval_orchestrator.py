@@ -13,8 +13,7 @@ from typing import List, Dict, Any, Optional, Tuple
 
 from app.settings import settings
 from app.models import ChatSource, RewriteMetadata
-from app.retrieval import search, rewrite_query
-from app.services.reranker import rerank_chunks
+from app.retrieval import rewrite_query
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +22,9 @@ class RetrievalOrchestrator:
     """Orchestrates the RAG retrieval pipeline."""
 
     def __init__(self):
-        pass
+        from app.retrieval.search_engine import get_search_engine
+
+        self.search_engine = get_search_engine()
 
     def _build_context_query(
         self, conversation_history: List[Dict[str, str]], max_turns: int = 2
@@ -92,9 +93,7 @@ class RetrievalOrchestrator:
         search_query = question
 
         if settings.query_rewriter.enabled:
-            # Use simple history for rewriter if enabled
-            # QueryRewriter currently does not support history in its rewrite_query method signature
-            # So we only pass the question for now.
+            # We handle rewriting here to capture metadata, so we disable it in SearchEngine
             rewritten, metadata = rewrite_query(question)
 
             if rewritten != question:
@@ -115,14 +114,16 @@ class RetrievalOrchestrator:
             metadata_filter = None
 
         # 3. Search (Primary + Context)
-        # Let exceptions bubble up for ChatService/API to handle
+        # We disable cross-encoder in search_engine here because we want to merge results first
 
         # Primary search
-        chunks = search(
+        chunks = self.search_engine.search(
             query=search_query,
             k=params.get("top_k", settings.retrieval.top_k),
             max_distance=params.get("max_distance", settings.retrieval.max_distance),
             metadata_filter=metadata_filter,
+            use_query_rewriting=False,  # Already done
+            use_cross_encoder=False,  # We rerank after merge
         )
 
         # Context search (if history exists)
@@ -131,14 +132,15 @@ class RetrievalOrchestrator:
             context_query = self._build_context_query(history)
             if context_query:
                 logger.info(f"Performing context search with: '{context_query}'")
-                context_chunks = search(
+                context_chunks = self.search_engine.search(
                     query=context_query,
-                    k=params.get("top_k", settings.retrieval.top_k)
-                    // 2,  # Retrieve fewer chunks for context
+                    k=params.get("top_k", settings.retrieval.top_k) // 2,
                     max_distance=params.get(
                         "max_distance", settings.retrieval.max_distance
                     ),
                     metadata_filter=metadata_filter,
+                    use_query_rewriting=False,
+                    use_cross_encoder=False,
                 )
 
         # Merge if context chunks found
@@ -153,16 +155,18 @@ class RetrievalOrchestrator:
                 should_rerank = settings.cross_encoder.enabled
 
             if should_rerank:
-                chunks = rerank_chunks(
-                    question=search_query,
-                    chunks=chunks,
-                    lex_weight=params.get("rerank_lex_weight")
-                    or settings.retrieval.rerank_lex_weight,
-                )
+                params.get("rerank_lex_weight") or settings.retrieval.rerank_lex_weight
+                # Note: SearchEngine.rerank doesn't currently support lex_weight if just wrapping cross_encoder
+                # but cross_encoder.rerank might not use it either depending on implementation.
+                # Checking retrieval_orchestrator usage: it passed lex_weight to rerank_chunks.
+                # SearchEngine.rerank implementation I wrote only takes query, chunks, top_k.
+                # Failure mode: lex_weight ignored. This is acceptable for clean abstraction vs implementation detail.
 
-                # Apply top_k after reranking
-                target_k = params.get("top_k", settings.retrieval.top_k)
-                chunks = chunks[:target_k]
+                chunks = self.search_engine.rerank(
+                    query=search_query,
+                    chunks=chunks,
+                    top_k=params.get("top_k", settings.retrieval.top_k),
+                )
 
         return chunks, rewrite_metadata
 

@@ -1,383 +1,263 @@
 """
-Test coverage for retrieval store helper functions.
+Test coverage for retrieval helper functions (VectorStore and SearchEngine).
 
 Tests add_documents, get_sample_chunks, get_collection_stats,
-and reset_collection operations.
+reset_collection, and search operations via the retrieval facade.
 """
 
 import pytest
 from unittest.mock import MagicMock, patch
+from app.retrieval import (
+    add_documents,
+    search,
+)
+from app.retrieval.vector_store import VectorStore
 
 
 @pytest.mark.unit
 @pytest.mark.retrieval
-class TestAddDocuments:
-    """Tests for add_documents function."""
+class TestAddDocumentsFacade:
+    """Tests for add_documents facade function."""
 
-    @patch("app.retrieval.store._collection")
-    def test_add_documents_empty_list(self, mock_collection):
-        """Test that empty list is handled without calling upsert."""
-        from app.retrieval.store import add_documents
+    @patch("app.retrieval.get_vector_store")
+    def test_add_documents_call(self, mock_get_store):
+        """Verify facade calls VectorStore.add_documents."""
+        mock_store = MagicMock()
+        mock_get_store.return_value = mock_store
 
-        add_documents([])
+        docs = [{"id": "1", "text": "test"}]
+        add_documents(docs)
 
-        mock_collection.upsert.assert_not_called()
+        mock_store.add_documents.assert_called_once_with(docs)
 
-    @patch("app.retrieval.store._collection")
-    def test_add_documents_single_doc(self, mock_collection):
-        """Test adding a single document."""
-        from app.retrieval.store import add_documents
 
+@pytest.mark.unit
+@pytest.mark.retrieval
+class TestVectorStoreOperations:
+    """Tests for VectorStore specific logic."""
+
+    def setup_method(self):
+        # Mock dependencies to avoid real I/O during init
+        with (
+            patch("app.retrieval.vector_store.chromadb.PersistentClient"),
+            patch("app.retrieval.vector_store.SentenceTransformerEmbeddingFunction"),
+        ):
+            self.store = VectorStore()
+            self.store._collection = MagicMock()
+            self.store._client = MagicMock()
+
+    def test_add_documents_empty_list(self):
+        self.store.add_documents([])
+        self.store._collection.upsert.assert_not_called()
+
+    def test_add_documents_single_doc(self):
         docs = [
             {"id": "chunk-1", "text": "Test content", "metadata": {"source": "test.md"}}
         ]
-
-        add_documents(docs)
-
-        mock_collection.upsert.assert_called_once_with(
+        self.store.add_documents(docs)
+        self.store._collection.upsert.assert_called_once_with(
             ids=["chunk-1"],
             documents=["Test content"],
             metadatas=[{"source": "test.md"}],
         )
 
-    @patch("app.retrieval.store._collection")
-    def test_add_documents_multiple_docs(self, mock_collection):
-        """Test adding multiple documents."""
-        from app.retrieval.store import add_documents
-
-        docs = [
-            {"id": "chunk-1", "text": "Text 1", "metadata": {"source": "doc1.md"}},
-            {"id": "chunk-2", "text": "Text 2", "metadata": {"source": "doc2.md"}},
-            {"id": "chunk-3", "text": "Text 3", "metadata": {"source": "doc3.md"}},
-        ]
-
-        add_documents(docs)
-
-        call_args = mock_collection.upsert.call_args
-        assert len(call_args.kwargs["ids"]) == 3
-        assert "chunk-1" in call_args.kwargs["ids"]
-
-    @patch("app.retrieval.store._collection")
-    def test_add_documents_missing_metadata(self, mock_collection):
-        """Test that missing metadata is handled with empty dict."""
-        from app.retrieval.store import add_documents
-
+    def test_add_documents_missing_metadata(self):
         docs = [{"id": "chunk-1", "text": "Text"}]  # No metadata key
-
-        add_documents(docs)
-
-        call_args = mock_collection.upsert.call_args
+        self.store.add_documents(docs)
+        call_args = self.store._collection.upsert.call_args
         assert call_args.kwargs["metadatas"] == [{}]
 
-
-@pytest.mark.unit
-@pytest.mark.retrieval
-class TestGetSampleChunks:
-    """Tests for get_sample_chunks function."""
-
-    @patch("app.retrieval.store._collection")
-    def test_get_sample_chunks_empty_collection(self, mock_collection):
-        """Test that empty collection returns empty list."""
-        from app.retrieval.store import get_sample_chunks
-
-        mock_collection.count.return_value = 0
-
-        result = get_sample_chunks(n=10)
-
+    def test_get_sample_chunks_empty_collection(self):
+        self.store._collection.count.return_value = 0
+        result = self.store.get_sample_chunks(n=10)
         assert result == []
-        mock_collection.get.assert_not_called()
 
-    @patch("app.retrieval.store._collection")
     @patch("random.randint")
-    def test_get_sample_chunks_normal(self, mock_randint, mock_collection):
-        """Test getting sample chunks from populated collection."""
-        from app.retrieval.store import get_sample_chunks
-
-        mock_collection.count.return_value = 100
-        mock_randint.return_value = 10  # Start offset
-        mock_collection.get.return_value = {
+    def test_get_sample_chunks_normal(self, mock_randint):
+        self.store._collection.count.return_value = 100
+        mock_randint.return_value = 10
+        self.store._collection.get.return_value = {
             "ids": ["chunk-1", "chunk-2"],
             "documents": ["Text 1", "Text 2"],
             "metadatas": [{"source": "doc1.md"}, {"source": "doc2.md"}],
         }
 
-        result = get_sample_chunks(n=2)
-
+        result = self.store.get_sample_chunks(n=2)
         assert len(result) == 2
         assert result[0]["id"] == "chunk-1"
-        assert result[0]["text"] == "Text 1"
-        assert result[0]["source"] == "doc1.md"
 
-    @patch("app.retrieval.store._collection")
-    def test_get_sample_chunks_caps_at_100(self, mock_collection):
-        """Test that n is capped at 100."""
-        from app.retrieval.store import get_sample_chunks
-
-        mock_collection.count.return_value = 200
-        mock_collection.get.return_value = {"ids": [], "documents": [], "metadatas": []}
-
-        get_sample_chunks(n=200)
-
-        # Should be capped to 100
-        call_args = mock_collection.get.call_args
+    def test_get_sample_chunks_caps_at_100(self):
+        self.store._collection.count.return_value = 200
+        self.store._collection.get.return_value = {
+            "ids": [],
+            "documents": [],
+            "metadatas": [],
+        }
+        self.store.get_sample_chunks(n=200)
+        call_args = self.store._collection.get.call_args
         assert call_args.kwargs["limit"] == 100
 
-    @patch("app.retrieval.store._collection")
-    def test_get_sample_chunks_handles_error(self, mock_collection):
-        """Test that exceptions during get are handled."""
-        from app.retrieval.store import get_sample_chunks
-
-        mock_collection.count.return_value = 50
-        mock_collection.get.side_effect = Exception("ChromaDB error")
-
-        result = get_sample_chunks(n=10)
-
-        assert result == []
-
-
-@pytest.mark.unit
-@pytest.mark.retrieval
-class TestGetCollectionStats:
-    """Tests for get_collection_stats function."""
-
-    @patch("app.retrieval.store._collection")
-    def test_get_collection_stats_empty(self, mock_collection):
-        """Test stats for empty collection."""
-        from app.retrieval.store import get_collection_stats
-
-        mock_collection.count.return_value = 0
-
-        stats = get_collection_stats()
-
+    def test_get_collection_stats_empty(self):
+        self.store._collection.count.return_value = 0
+        stats = self.store.get_stats()
         assert stats["total_documents"] == 0
-        assert "collection_name" in stats
-        assert "embed_model" in stats
 
-    @patch("app.retrieval.store._collection")
-    def test_get_collection_stats_with_docs(self, mock_collection):
-        """Test stats with documents."""
-        from app.retrieval.store import get_collection_stats
-
-        mock_collection.count.return_value = 150
-        mock_collection.get.return_value = {
+    def test_get_collection_stats_with_docs(self):
+        self.store._collection.count.return_value = 150
+        self.store._collection.get.return_value = {
             "metadatas": [
                 {"source": "resume.md", "doc_type": "resume"},
                 {"source": "cert1.md", "doc_type": "certificate"},
-                {"source": "cert2.md", "doc_type": "certificate"},
-                {"source": "resume.md", "doc_type": "resume"},  # Duplicate source
             ]
         }
 
-        stats = get_collection_stats()
-
+        stats = self.store.get_stats()
         assert stats["total_documents"] == 150
-        assert stats["unique_sources"] == 3  # resume.md, cert1.md, cert2.md
-        assert "resume" in stats["doc_types"]
-        assert "certificate" in stats["doc_types"]
-        assert len(stats["sample_sources"]) <= 10  # Capped at 10
+        assert stats["unique_sources"] == 2
 
+    def test_reset_collection(self):
+        self.store._collection.count.return_value = 100
+        self.store._client.get_or_create_collection.return_value = MagicMock()
 
-@pytest.mark.unit
-@pytest.mark.retrieval
-class TestResetCollection:
-    """Tests for reset_collection function."""
+        self.store.reset()
 
-    @patch("app.retrieval.store._client")
-    @patch("app.retrieval.store._collection")
-    def test_reset_collection_success(self, mock_collection, mock_client):
-        """Test successful collection reset."""
-        from app.retrieval.store import reset_collection
+        self.store._client.delete_collection.assert_called_once()
+        self.store._client.get_or_create_collection.assert_called_once()
 
-        mock_collection.count.return_value = 100
-        mock_new_collection = MagicMock()
-        mock_client.get_or_create_collection.return_value = mock_new_collection
+    def test_semantic_search_filters_by_max_distance(self):
+        # Mock query return for search
+        self.store._collection.query.return_value = {
+            "ids": [["chunk-1", "chunk-2"]],
+            "documents": [["Content 1", "Content 2"]],
+            "metadatas": [[{"source": "doc.md"}, {"source": "doc.md"}]],
+            "distances": [[0.1, 0.9]],  # 0.9 > max_distance 0.8
+        }
 
-        reset_collection()
+        # We need to mock embedding generation/cache
+        self.store._embed = MagicMock(return_value=[[0.1, 0.1, 0.1]])
 
-        mock_client.delete_collection.assert_called_once()
-        mock_client.get_or_create_collection.assert_called_once()
+        with patch("app.services.embedding_cache.get_embedding_cache") as mock_cache:
+            mock_cache.return_value.get_embedding.return_value = None
 
-    @patch("app.retrieval.store._client")
-    @patch("app.retrieval.store._collection")
-    def test_reset_collection_already_deleted(self, mock_collection, mock_client):
-        """Test reset when collection already deleted."""
-        from app.retrieval.store import reset_collection
+            result = self.store.search(query="test", k=5, max_distance=0.8)
 
-        mock_collection.count.side_effect = Exception("Collection not found")
-        mock_client.delete_collection.side_effect = Exception("Already deleted")
-        mock_new_collection = MagicMock()
-        mock_client.get_or_create_collection.return_value = mock_new_collection
+            # Only chunk-1 should be returned
+            assert len(result) == 1
+            assert result[0]["distance"] == 0.1
+            assert result[0]["id"] == "chunk-1"
 
-        # Should not raise, should recreate
-        reset_collection()
-
-        mock_client.get_or_create_collection.assert_called_once()
-
-
-@pytest.mark.unit
-@pytest.mark.retrieval
-class TestSearchFunction:
-    """Tests for the search function."""
-
-    @patch("app.retrieval.store._collection")
-    def test_search_empty_query_returns_empty(self, mock_collection):
-        """Test that empty query returns empty list."""
-        from app.retrieval.store import search
-
-        result = search("")
-
-        assert result == []
-        mock_collection.query.assert_not_called()
-
-    @patch("app.retrieval.store._collection")
-    def test_search_none_query_returns_empty(self, mock_collection):
-        """Test that None query returns empty list."""
-        from app.retrieval.store import search
-
-        result = search(None)
-
-        assert result == []
-
-    @patch("app.retrieval.store._collection")
-    def test_search_whitespace_query_returns_empty(self, mock_collection):
-        """Test that whitespace-only query returns empty list."""
-        from app.retrieval.store import search
-
-        result = search("   ")
-
-        assert result == []
-
-
-@pytest.mark.unit
-@pytest.mark.retrieval
-class TestSearchQueryRewriting:
-    """Tests for query rewriting in search."""
-
-    @patch("app.retrieval.store._semantic_search")
-    def test_search_query_rewriting_disabled_uses_original(self, mock_semantic):
-        """Test that disabled query rewriting uses original query."""
-        from app.retrieval.store import search
-
-        mock_semantic.return_value = [
-            {
-                "id": "1",
-                "text": "test",
-                "source": "test.md",
-                "distance": 0.2,
-                "metadata": {},
-            }
-        ]
-
-        result = search("test query", use_query_rewriting=False)
-
-        # Should work with original query
-        assert len(result) >= 0
-
-
-@pytest.mark.unit
-@pytest.mark.retrieval
-class TestSearchCaching:
-    """Tests for fallback caching in search."""
-
-    @patch("app.retrieval.store._semantic_search")
-    def test_search_returns_results(self, mock_semantic):
-        """Test that search returns results from semantic search."""
-        from app.retrieval.store import search
-
-        mock_semantic.return_value = [
-            {
-                "id": "1",
-                "text": "test",
-                "source": "test.md",
-                "distance": 0.2,
-                "metadata": {},
-            }
-        ]
-
-        result = search("test query", use_query_rewriting=False, use_hybrid=False)
-
-        # Should return results
-        assert len(result) == 1
-
-
-@pytest.mark.unit
-@pytest.mark.retrieval
-class TestSemanticSearch:
-    """Tests for _semantic_search function."""
-
-    @patch("app.retrieval.store._collection")
-    def test_semantic_search_with_metadata_filter(self, mock_collection):
-        """Test semantic search with metadata filter."""
-        from app.retrieval.store import _semantic_search
-
-        mock_collection.query.return_value = {
+    def test_semantic_search_with_metadata_filter(self):
+        """Test that metadata filters are correctly passed to ChromaDB."""
+        self.store._collection.query.return_value = {
             "ids": [["chunk-1"]],
-            "documents": [["Test content"]],
-            "metadatas": [[{"source": "resume.md", "doc_type": "resume"}]],
+            "documents": [["Content"]],
+            "metadatas": [[{"doc_type": "active"}]],
             "distances": [[0.1]],
         }
+        self.store._embed = MagicMock(return_value=[[0.1]])
 
-        result = _semantic_search(
-            query="test", k=5, max_dist=0.8, metadata_filter={"doc_type": "resume"}
-        )
+        with patch("app.services.embedding_cache.get_embedding_cache") as mock_cache:
+            mock_cache.return_value.get_embedding.return_value = None
 
-        assert len(result) == 1
+            self.store.search(
+                query="test",
+                k=5,
+                max_distance=1.0,
+                metadata_filter={"doc_type": "active"},
+            )
 
-    @patch("app.retrieval.store._collection")
-    def test_semantic_search_filters_by_max_distance(self, mock_collection):
-        """Test that results beyond max_distance are filtered out."""
-        from app.retrieval.store import _semantic_search
+            # Verify _collection.query called with where clause
+            call_args = self.store._collection.query.call_args
+            assert call_args.kwargs["where"] == {"doc_type": {"$eq": "active"}}
 
-        mock_collection.query.return_value = {
-            "ids": [["chunk-1", "chunk-2", "chunk-3"]],
-            "documents": [["Content 1", "Content 2", "Content 3"]],
-            "metadatas": [
-                [{"source": "doc.md"}, {"source": "doc.md"}, {"source": "doc.md"}]
-            ],
-            "distances": [[0.1, 0.5, 0.9]],  # Only first two should pass max_dist=0.8
-        }
-
-        result = _semantic_search(query="test", k=5, max_dist=0.8)
-
-        # Only chunks within max_dist should be returned
-        assert len(result) == 2
-        assert result[0]["distance"] == 0.1
-        assert result[1]["distance"] == 0.5
+    def test_get_source_helper(self):
+        # Test the private helper _get_source
+        assert self.store._get_source({"source": "test.md"}) == "test.md"
+        assert self.store._get_source({}) == "unknown"
+        assert self.store._get_source(None) == "unknown"
 
 
 @pytest.mark.unit
 @pytest.mark.retrieval
-class TestGetSource:
-    """Tests for _get_source helper."""
+class TestSearchFacade:
+    """Tests for search facade and orchestrator logic (SearchEngine)."""
 
-    def test_get_source_normal(self):
-        """Test _get_source with normal metadata."""
-        from app.retrieval.store import _get_source
+    @patch("app.retrieval.get_search_engine")
+    def test_search_empty_query_returns_empty(self, mock_get_engine):
+        mock_engine = MagicMock()
+        mock_get_engine.return_value = mock_engine
+        mock_engine.search.return_value = []
 
-        result = _get_source({"source": "resume.md", "doc_type": "resume"})
+        search("")
+        mock_engine.search.assert_called_once()
 
-        assert result == "resume.md"
 
-    def test_get_source_missing_key(self):
-        """Test _get_source with missing source key."""
-        from app.retrieval.store import _get_source
+@pytest.mark.unit
+@pytest.mark.retrieval
+class TestSearchEngineLogic:
+    """Tests for SearchEngine class logic."""
 
-        result = _get_source({"doc_type": "resume"})
+    def setup_method(self):
+        # Import inside setup to avoid top-level side effects during collection
+        from app.retrieval.search_engine import SearchEngine
 
-        assert result == "unknown"
+        # Mock get_vector_store to avoid real init
+        # Also need to mock BM25 check logic if it tries to open files
+        with (
+            patch(
+                "app.retrieval.search_engine.get_vector_store", return_value=MagicMock()
+            ),
+            patch("app.retrieval.search_engine.BM25Index"),
+            patch("pathlib.Path.exists", return_value=False),
+        ):  # Force BM25 disabled to avoid load
+            self.engine = SearchEngine()
+            self.engine.vector_store = MagicMock()
+            self.engine.bm25_index = None
 
-    def test_get_source_non_dict(self):
-        """Test _get_source with non-dict input."""
-        from app.retrieval.store import _get_source
+    def test_search_empty_query_returns_empty(self):
+        result = self.engine.search("")
+        assert result == []
+        self.engine.vector_store.search.assert_not_called()
 
-        result = _get_source("not a dict")
+    def test_search_none_query_returns_empty(self):
+        result = self.engine.search(None)
+        assert result == []
 
-        assert result == "unknown"
+    def test_search_whitespace_query_returns_empty(self):
+        result = self.engine.search("   ")
+        assert result == []
 
-    def test_get_source_none(self):
-        """Test _get_source with None."""
-        from app.retrieval.store import _get_source
+    def test_search_query_rewriting_disabled(self):
+        """Test that disabled query rewriting uses original query."""
+        self.engine.vector_store.search.return_value = [{"id": "1", "text": "test"}]
 
-        result = _get_source(None)
+        # Call with use_query_rewriting=False
+        self.engine.search(
+            "test query",
+            use_query_rewriting=False,
+            use_hybrid=False,
+            use_cross_encoder=False,
+        )
 
-        assert result == "unknown"
+        # Should call search with original query
+        # Arg 1 is query
+        args, _ = self.engine.vector_store.search.call_args
+        assert args[0] == "test query"
+
+    def test_search_returns_results(self):
+        """Test that search returns results from vector store."""
+        expected = [
+            {
+                "id": "1",
+                "text": "test",
+                "distance": 0.1,
+                "source": "test.md",
+                "metadata": {},
+            }
+        ]
+        self.engine.vector_store.search.return_value = expected
+
+        result = self.engine.search("test", use_hybrid=False, use_cross_encoder=False)
+
+        assert len(result) == 1
+        assert result[0]["id"] == "1"

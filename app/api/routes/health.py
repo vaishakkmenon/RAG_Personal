@@ -96,11 +96,11 @@ async def detailed_health_check() -> Dict[str, Any]:
 
     # Check ChromaDB
     try:
-        from app.retrieval.store import get_chroma_client
+        from app.retrieval.vector_store import get_vector_store
 
-        client = get_chroma_client()
+        store = get_vector_store()
         # Try to heartbeat or list collections to verify connectivity
-        client.heartbeat()
+        store.heartbeat()
         health_status["dependencies"]["chromadb"] = "healthy"
     except Exception as e:
         logger.warning(f"ChromaDB health check failed: {e}")
@@ -118,11 +118,11 @@ async def readiness_check() -> Dict[str, str]:
     """Kubernetes-style readiness probe"""
     # Check if app can serve requests (e.g. DB is accessible)
     try:
-        from app.retrieval.store import get_chroma_client
+        from app.retrieval.vector_store import get_vector_store
 
-        client = get_chroma_client()
+        store = get_vector_store()
         # Simple verification
-        client.heartbeat()
+        store.heartbeat()
         return {"status": "ready"}
     except Exception:
         return {"status": "not_ready"}

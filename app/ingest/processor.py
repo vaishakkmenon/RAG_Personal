@@ -10,7 +10,6 @@ import os
 from typing import Dict, List, Optional
 from datetime import datetime
 
-from app.retrieval import add_documents
 from app.settings import ingest_settings
 from app.ingest.chunking import (
     smart_chunk,
@@ -185,7 +184,9 @@ def ingest_paths(paths: Optional[List[str]] = None, batch_size: int = None) -> i
 
             # Process in batches
             if len(docs_batch) >= batch_size:
-                add_documents(docs_batch)
+                from app.retrieval.vector_store import get_vector_store
+
+                get_vector_store().add_documents(docs_batch)
                 _record_metric(lambda: rag_ingested_chunks_total.inc(len(docs_batch)))
                 added_total += len(docs_batch)
                 logger.info(f"Added batch of {len(docs_batch)} chunks to ChromaDB")
@@ -197,7 +198,9 @@ def ingest_paths(paths: Optional[List[str]] = None, batch_size: int = None) -> i
 
     # Flush any remaining chunks
     if docs_batch:
-        add_documents(docs_batch)
+        from app.retrieval.vector_store import get_vector_store
+
+        get_vector_store().add_documents(docs_batch)
         _record_metric(lambda: rag_ingested_chunks_total.inc(len(docs_batch)))
         added_total += len(docs_batch)
         logger.info(f"Added final batch of {len(docs_batch)} chunks to ChromaDB")

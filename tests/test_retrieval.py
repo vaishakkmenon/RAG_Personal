@@ -14,19 +14,28 @@ Tests:
 import pytest
 from unittest.mock import MagicMock, patch
 
+from app.retrieval.vector_store import get_vector_store
+from app.retrieval.search_engine import get_search_engine
+from app.retrieval import search
+
 
 @pytest.mark.unit
 @pytest.mark.retrieval
 class TestSemanticSearch:
     """Tests for basic semantic search functionality."""
 
-    @patch("app.retrieval.store._collection")
-    def test_search_returns_chunks(self, mock_collection):
-        """Test that search returns relevant chunks."""
-        from app.retrieval import search
+    def setup_method(self):
+        self.store = get_vector_store()
+        self.patcher = patch.object(self.store, "_collection")
+        self.mock_collection = self.patcher.start()
 
+    def teardown_method(self):
+        self.patcher.stop()
+
+    def test_search_returns_chunks(self):
+        """Test that search returns relevant chunks."""
         # Mock collection query
-        mock_collection.query.return_value = {
+        self.mock_collection.query.return_value = {
             "ids": [["chunk-1", "chunk-2"]],
             "documents": [["Text 1", "Text 2"]],
             "metadatas": [[{"source": "test1.md"}, {"source": "test2.md"}]],
@@ -40,7 +49,6 @@ class TestSemanticSearch:
             use_query_rewriting=False,
             use_cross_encoder=False,
         )
-        print(f"\nDEBUG: Results returned: {results}")
 
         assert len(results) == 2
         assert results[0]["id"] == "chunk-1"
@@ -48,13 +56,10 @@ class TestSemanticSearch:
         assert results[0]["distance"] == 0.15
         assert results[1]["distance"] == 0.25
 
-    @patch("app.retrieval.store._collection")
-    def test_search_respects_max_distance(self, mock_collection):
+    def test_search_respects_max_distance(self):
         """Test that max_distance filters out distant chunks."""
-        from app.retrieval import search
-
-        # Mock collection query (return chunks with varying distances)
-        mock_collection.query.return_value = {
+        # Mock collection query
+        self.mock_collection.query.return_value = {
             "ids": [["chunk-1", "chunk-2", "chunk-3"]],
             "documents": [["Close", "Medium", "Far"]],
             "metadatas": [[{}, {}, {}]],
@@ -74,12 +79,9 @@ class TestSemanticSearch:
         assert results[0]["distance"] == 0.15
         assert results[1]["distance"] == 0.55
 
-    @patch("app.retrieval.store._collection")
-    def test_search_with_metadata_filter(self, mock_collection):
+    def test_search_with_metadata_filter(self):
         """Test that metadata filters are applied."""
-        from app.retrieval import search
-
-        mock_collection.query.return_value = {
+        self.mock_collection.query.return_value = {
             "ids": [["chunk-1"]],
             "documents": [["Resume content"]],
             "metadatas": [[{"doc_type": "resume"}]],
@@ -95,17 +97,14 @@ class TestSemanticSearch:
         )
 
         # Verify query was called with where clause
-        query_call = mock_collection.query.call_args
+        query_call = self.mock_collection.query.call_args
         assert "where" in query_call.kwargs
         assert query_call.kwargs["where"]["doc_type"]["$eq"] == "resume"
 
-    @patch("app.retrieval.store._collection")
-    def test_search_empty_results(self, mock_collection):
+    def test_search_empty_results(self):
         """Test handling of empty search results."""
-        from app.retrieval import search
-
         # Mock empty results
-        mock_collection.query.return_value = {
+        self.mock_collection.query.return_value = {
             "ids": [[]],
             "documents": [[]],
             "metadatas": [[]],
@@ -124,14 +123,27 @@ class TestSemanticSearch:
 class TestBM25Reranking:
     """Tests for BM25 lexical reranking (hybrid search)."""
 
-    @patch("app.retrieval.store._collection")
-    @patch("app.retrieval.store._bm25_index")
-    def test_bm25_reranking_applied(self, mock_bm25_index, mock_collection):
+    def setup_method(self):
+        self.engine = get_search_engine()
+        self.store = get_vector_store()
+
+        # Patch BM25 index on the engine instance
+        self.bm25_patcher = patch.object(self.engine, "bm25_index")
+        self.mock_bm25_index = self.bm25_patcher.start()
+
+        # Patch vector store search to avoid real DB calls
+        self.store_patcher = patch.object(self.store, "search")
+        self.mock_store_search = self.store_patcher.start()
+
+    def teardown_method(self):
+        self.bm25_patcher.stop()
+        self.store_patcher.stop()
+
+    def test_bm25_reranking_applied(self):
         """Test that BM25 hybrid search is applied when enabled."""
-        from app.retrieval import search
 
         # Mock BM25 index search results
-        mock_bm25_index.search.return_value = [
+        self.mock_bm25_index.search.return_value = [
             {
                 "id": "chunk-2",
                 "text": "Java development",
@@ -146,13 +158,23 @@ class TestBM25Reranking:
             },
         ]
 
-        # Mock semantic search results (ChromaDB)
-        mock_collection.query.return_value = {
-            "ids": [["chunk-1", "chunk-2"]],
-            "documents": [["Python programming", "Java development"]],
-            "metadatas": [[{"source": "test1.md"}, {"source": "test2.md"}]],
-            "distances": [[0.2, 0.3]],
-        }
+        # Mock semantic search results
+        self.mock_store_search.return_value = [
+            {
+                "id": "chunk-1",
+                "text": "Python programming",
+                "distance": 0.2,
+                "source": "test1.md",
+                "metadata": {},
+            },
+            {
+                "id": "chunk-2",
+                "text": "Java development",
+                "distance": 0.3,
+                "source": "test2.md",
+                "metadata": {},
+            },
+        ]
 
         # Call with use_hybrid=True (enables BM25)
         results = search(
@@ -164,28 +186,26 @@ class TestBM25Reranking:
         )
 
         # Verify BM25 was called
-        mock_bm25_index.search.assert_called_once()
+        self.mock_bm25_index.search.assert_called_once()
 
-        # Verify semantic search was also called (for hybrid)
-        assert mock_collection.query.called
+        # Verify semantic search was also called
+        self.mock_store_search.assert_called()
 
-        # Results should be merged using RRF
+        # Results should be merged
         assert len(results) > 0
 
-    @patch("app.retrieval.store._collection")
-    @patch("app.retrieval.store._bm25_index")
-    def test_bm25_disabled_when_use_hybrid_false(
-        self, mock_bm25_index, mock_collection
-    ):
+    def test_bm25_disabled_when_use_hybrid_false(self):
         """Test that BM25 is not applied when use_hybrid=False."""
-        from app.retrieval import search
 
-        mock_collection.query.return_value = {
-            "ids": [["chunk-1"]],
-            "documents": [["Test"]],
-            "metadatas": [[{"source": "test.md"}]],
-            "distances": [[0.15]],
-        }
+        self.mock_store_search.return_value = [
+            {
+                "id": "chunk-1",
+                "text": "Test",
+                "distance": 0.15,
+                "source": "test.md",
+                "metadata": {},
+            }
+        ]
 
         search(
             query="test",
@@ -196,10 +216,10 @@ class TestBM25Reranking:
         )
 
         # Verify BM25 was NOT called
-        mock_bm25_index.search.assert_not_called()
+        self.mock_bm25_index.search.assert_not_called()
 
-        # Verify only semantic search was used
-        assert mock_collection.query.called
+        # Verify semantic search was used
+        self.mock_store_search.assert_called()
 
 
 @pytest.mark.unit
@@ -207,19 +227,35 @@ class TestBM25Reranking:
 class TestCrossEncoderReranking:
     """Tests for cross-encoder neural reranking."""
 
-    @patch("app.retrieval.store._collection")
+    def setup_method(self):
+        self.store = get_vector_store()
+        self.store_patcher = patch.object(self.store, "search")
+        self.mock_store_search = self.store_patcher.start()
+
+    def teardown_method(self):
+        self.store_patcher.stop()
+
     @patch("app.services.cross_encoder_reranker.get_cross_encoder_reranker")
-    def test_cross_encoder_reranking(self, mock_get_reranker, mock_collection):
+    def test_cross_encoder_reranking(self, mock_get_reranker):
         """Test that cross-encoder reranking is applied when use_cross_encoder=True."""
-        from app.retrieval import search
 
         # Mock semantic search results
-        mock_collection.query.return_value = {
-            "ids": [["chunk-1", "chunk-2"]],
-            "documents": [["Relevant text", "Less relevant"]],
-            "metadatas": [[{"source": "test1.md"}, {"source": "test2.md"}]],
-            "distances": [[0.25, 0.15]],
-        }
+        self.mock_store_search.return_value = [
+            {
+                "id": "chunk-1",
+                "text": "Relevant text",
+                "distance": 0.25,
+                "source": "test1.md",
+                "metadata": {},
+            },
+            {
+                "id": "chunk-2",
+                "text": "Less relevant",
+                "distance": 0.15,
+                "source": "test2.md",
+                "metadata": {},
+            },
+        ]
 
         # Mock cross-encoder reranker instance
         mock_reranker = MagicMock()
@@ -249,6 +285,9 @@ class TestCrossEncoderReranking:
             use_cross_encoder=True,
         )
 
+        # Verify semantic search called
+        self.mock_store_search.assert_called()
+
         # Verify cross-encoder was called
         mock_reranker.rerank.assert_called_once()
 
@@ -263,11 +302,17 @@ class TestCrossEncoderReranking:
 class TestQueryRewriting:
     """Tests for query rewriting functionality."""
 
-    @patch("app.retrieval.store._collection")
+    def setup_method(self):
+        self.store = get_vector_store()
+        self.store_patcher = patch.object(self.store, "search")
+        self.mock_store_search = self.store_patcher.start()
+
+    def teardown_method(self):
+        self.store_patcher.stop()
+
     @patch("app.retrieval.query_rewriter.get_query_rewriter")
-    def test_query_rewriting_applied(self, mock_get_rewriter, mock_collection):
+    def test_query_rewriting_applied(self, mock_get_rewriter):
         """Test that query rewriting is applied when enabled."""
-        from app.retrieval import search
         from app.models import RewriteMetadata
         from app.settings import settings
 
@@ -291,13 +336,16 @@ class TestQueryRewriting:
             )
             mock_get_rewriter.return_value = mock_rewriter
 
-            # Mock semantic search
-            mock_collection.query.return_value = {
-                "ids": [["chunk-1"]],
-                "documents": [["Test"]],
-                "metadatas": [[{"source": "test.md"}]],
-                "distances": [[0.15]],
-            }
+            # Mock semantic search results
+            self.mock_store_search.return_value = [
+                {
+                    "id": "chunk-1",
+                    "text": "Test",
+                    "distance": 0.15,
+                    "source": "test.md",
+                    "metadata": {},
+                }
+            ]
 
             results = search(
                 query="What is my Python experience?",
@@ -318,18 +366,18 @@ class TestQueryRewriting:
             # Restore original setting
             settings.query_rewriter.enabled = original_enabled
 
-    @patch("app.retrieval.store._collection")
-    def test_query_rewriting_disabled(self, mock_collection):
+    def test_query_rewriting_disabled(self):
         """Test that query rewriting can be disabled."""
-        from app.retrieval import search
 
-        # Mock semantic search
-        mock_collection.query.return_value = {
-            "ids": [["chunk-1"]],
-            "documents": [["Test"]],
-            "metadatas": [[{"source": "test.md"}]],
-            "distances": [[0.15]],
-        }
+        self.mock_store_search.return_value = [
+            {
+                "id": "chunk-1",
+                "text": "Test",
+                "distance": 0.15,
+                "source": "test.md",
+                "metadata": {},
+            }
+        ]
 
         # Mock query rewriter to verify it's NOT called
         with patch(
@@ -352,14 +400,19 @@ class TestQueryRewriting:
 class TestRetrievalEdgeCases:
     """Tests for edge cases and error handling."""
 
-    @patch("app.retrieval.store._collection")
-    def test_empty_collection(self, mock_collection):
-        """Test handling of empty collection."""
-        from app.retrieval import search
+    def setup_method(self):
+        self.store = get_vector_store()
+        self.patcher = patch.object(self.store, "_collection")
+        self.mock_collection = self.patcher.start()
 
+    def teardown_method(self):
+        self.patcher.stop()
+
+    def test_empty_collection(self):
+        """Test handling of empty collection."""
         # Mock empty collection
-        mock_collection.count.return_value = 0
-        mock_collection.query.return_value = {
+        self.mock_collection.count.return_value = 0
+        self.mock_collection.query.return_value = {
             "ids": [[]],
             "documents": [[]],
             "metadatas": [[]],
@@ -376,13 +429,10 @@ class TestRetrievalEdgeCases:
 
         assert len(results) == 0
 
-    @patch("app.retrieval.store._collection")
-    def test_k_larger_than_collection(self, mock_collection):
+    def test_k_larger_than_collection(self):
         """Test requesting more chunks than exist in collection."""
-        from app.retrieval import search
-
         # Collection only has 2 chunks but we request 10
-        mock_collection.query.return_value = {
+        self.mock_collection.query.return_value = {
             "ids": [["chunk-1", "chunk-2"]],
             "documents": [["Text 1", "Text 2"]],
             "metadatas": [[{"source": "test1.md"}, {"source": "test2.md"}]],
@@ -400,11 +450,8 @@ class TestRetrievalEdgeCases:
         # Should return only available chunks
         assert len(results) == 2
 
-    @patch("app.retrieval.store._collection")
-    def test_chromadb_connection_failure(self, mock_collection):
+    def test_chromadb_connection_failure(self):
         """Test handling of ChromaDB connection failures."""
-        from app.retrieval import search
-
         # Clear fallback cache to ensure no cached results
         try:
             from app.retrieval.fallback_cache import get_fallback_cache
@@ -415,7 +462,10 @@ class TestRetrievalEdgeCases:
             pass
 
         # Mock connection failure
-        mock_collection.query.side_effect = Exception("ChromaDB connection failed")
+        self.mock_collection.query.side_effect = Exception("ChromaDB connection failed")
+
+        # The search engine now catches exceptions and tries fallback cache
+        # If fallback cache is empty, it re-raises
 
         with pytest.raises(Exception, match="ChromaDB connection failed"):
             search(

@@ -119,5 +119,22 @@ class QueryValidator:
         if len(words) <= 1:
             return True
 
+        # Check for vague continuation phrases without context
+        if not history:
+            vague_phrases = {
+                "tell me more",
+                "say more",
+                "explain more",
+                "what else",
+                "anything else",
+                "elaborate",
+                "details",
+                "more info",
+                "continue",
+            }
+            clean_q = q.lower().strip("?!.")
+            if clean_q in vague_phrases:
+                return True
+
         # Let the system prompt (Rule 11) handle everything else
         return False

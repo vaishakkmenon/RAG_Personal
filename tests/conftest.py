@@ -93,8 +93,14 @@ def mock_chromadb():
     # Count returns 0 by default
     mock_collection.count.return_value = 0
 
-    # Patch the global _collection object in store.py
-    with patch("app.retrieval.store._collection", mock_collection):
+    # Patch the global get_vector_store to return our mock store
+    mock_store = MagicMock()
+    mock_store._collection = mock_collection
+
+    # We also mock the 'search' method on the store to delegate to collection or return expected format if needed
+    # But mostly tests inspect _collection.query calls or mock return values of _collection.
+
+    with patch("app.retrieval.vector_store.get_vector_store", return_value=mock_store):
         yield mock_collection
 
 

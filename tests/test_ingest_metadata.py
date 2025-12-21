@@ -260,14 +260,22 @@ class TestGenerateVersionIdentifier:
 class TestGetExistingVersions:
     """Tests for get_existing_versions."""
 
-    @patch("app.retrieval.store._collection")
-    def test_get_existing_versions_returns_list(self, mock_collection):
+    @patch("app.retrieval.vector_store.get_vector_store")
+    def test_get_existing_versions_returns_list(self, mock_get_store):
         """Test that get_existing_versions returns a list."""
         from app.ingest.metadata import get_existing_versions
+        from unittest.mock import MagicMock
 
+        # Setup mock collection
+        mock_collection = MagicMock()
         mock_collection.get.return_value = {
             "metadatas": [{"version_identifier": "2025-01-15"}]
         }
+
+        # Configure get_vector_store to return object with _collection
+        mock_store = MagicMock()
+        mock_store._collection = mock_collection
+        mock_get_store.return_value = mock_store
 
         result = get_existing_versions("resume", "2025-01-15")
 
@@ -278,12 +286,20 @@ class TestGetExistingVersions:
 class TestGetExistingContentHash:
     """Tests for get_existing_content_hash."""
 
-    @patch("app.retrieval.store._collection")
-    def test_get_existing_content_hash_returns_hash(self, mock_collection):
+    @patch("app.retrieval.vector_store.get_vector_store")
+    def test_get_existing_content_hash_returns_hash(self, mock_get_store):
         """Test that get_existing_content_hash works."""
         from app.ingest.metadata import get_existing_content_hash
+        from unittest.mock import MagicMock
 
+        # Setup mock collection
+        mock_collection = MagicMock()
         mock_collection.get.return_value = {"metadatas": [{"content_hash": "abc123"}]}
+
+        # Configure get_vector_store
+        mock_store = MagicMock()
+        mock_store._collection = mock_collection
+        mock_get_store.return_value = mock_store
 
         result = get_existing_content_hash("resume", "2025-01-15")
 
