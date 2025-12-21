@@ -502,8 +502,9 @@ def chat(
         from app.storage import get_session_store
 
         session_store = get_session_store()
-        client_ip = http_request.client.host if http_request.client else "unknown"
-        session = session_store.get_or_create_session(request.session_id, client_ip)
+        session_store = get_session_store()
+        # count=False avoids incrementing the rate limit counter here (done in chat_service)
+        session = session_store.get_session(request.session_id)
         conversation_history = session.get_truncated_history() if session else []
 
         guard = get_prompt_guard()

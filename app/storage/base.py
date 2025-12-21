@@ -126,7 +126,7 @@ class SessionStore(ABC):
         # Count requests in last hour
         recent_requests = [ts for ts in session.request_timestamps if ts > one_hour_ago]
 
-        within_limit = len(recent_requests) < settings.session.queries_per_hour
+        within_limit = len(recent_requests) <= settings.session.queries_per_hour
 
         if not within_limit:
             logger.warning(

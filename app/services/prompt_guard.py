@@ -162,21 +162,31 @@ class PromptGuard:
         # Build input with conversation context for multi-turn attack detection
         input_to_check = user_input
         if conversation_history and len(conversation_history) > 0:
-            # Take last N turns (limit to max_history_turns)
-            recent_history = conversation_history[-max_history_turns:]
+            # Llama Prompt Guard has small context (512 tokens).
+            # We ONLY send the last 2 user messages and the current one, skipping assistant replies
+            # or truncating severely.
+            # Simple fix: Use only last 2 turns and limit total chars.
+            recent_history = conversation_history[-2:]
 
             # Build context string: concatenate recent messages
             context_parts = []
             for turn in recent_history:
                 role = turn.get("role", "user")
                 content = turn.get("content", "")
+                # Truncate content to 200 chars to save space for the actual injection payload
+                if len(content) > 200:
+                    content = content[:200] + "..."
                 context_parts.append(f"{role}: {content}")
 
-            # Append current input
+            # Append current input (full)
             context_parts.append(f"user: {user_input}")
 
             # Join with newlines for clarity
             input_to_check = "\n".join(context_parts)
+
+            # Hard cap at 2000 chars (~500 tokens)
+            if len(input_to_check) > 2000:
+                input_to_check = input_to_check[-2000:]
 
             logger.debug(
                 f"PromptGuard checking with {len(recent_history)} turns of context "
