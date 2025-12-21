@@ -20,16 +20,15 @@ A production-ready Retrieval-Augmented Generation (RAG) system for querying pers
                                     │
                       ┌─────────────┴─────────────┐
                       ▼                           ▼
-            ┌─────────────────┐      ┌──────────────────┐
-            │   ChatService   │      │ CertHandler      │
-            │   (Core Logic)  │      │ (Cert Queries)   │
-            └─────────────────┘      └──────────────────┘
+            ┌─────────────────┐
+            │   ChatService   │
+            │   (Core Logic)  │
+            └─────────────────┘
                       │
         ┌─────────────┼─────────────┬─────────────┐
         ▼             ▼             ▼             ▼
-   ┌────────┐   ┌──────────┐   ┌────────┐   ┌─────────┐
    │Negative│   │ Retrieval│   │  LLM   │   │Prompt   │
-   │Inferenc│   │ (Chroma) │   │(Ollama)│   │Builder  │
+   │Inferenc│   │ (Chroma) │   │ (Groq) │   │Builder  │
    └────────┘   └──────────┘   └────────┘   └─────────┘
 ```
 
@@ -41,10 +40,9 @@ A production-ready Retrieval-Augmented Generation (RAG) system for querying pers
 
 - **`app/core/`** - Business logic layer
   - `chat_service.py` - Main RAG orchestration (~500 lines)
-  - `certification_handler.py` - Certification-specific logic (~450 lines)
 
 - **`app/services/`** - External service integrations
-  - `llm.py` - Ollama/Groq LLM integration
+  - `llm.py` - Groq LLM integration
   - `reranker.py` - Hybrid lexical + semantic reranking
 
 - **`app/retrieval/`** - Vector database operations
@@ -173,9 +171,8 @@ RAG_Personal/
 │   │   └── dependencies.py      # Shared dependencies
 │   ├── core/                     # Business logic
 │   │   ├── chat_service.py      # Main RAG orchestration
-│   │   └── certification_handler.py  # Cert logic
 │   ├── services/                 # External integrations
-│   │   ├── llm.py               # Ollama/Groq client
+│   │   ├── llm.py               # Groq client
 │   │   └── reranker.py          # Result reranking
 │   ├── retrieval/               # Vector database
 │   │   ├── store.py             # ChromaDB integration
@@ -183,7 +180,6 @@ RAG_Personal/
 │   │   └── adaptive_threshold.py
 │   ├── prompting/               # Prompt engineering
 │   ├── ingest/                  # Document processing
-│   ├── certifications/          # Cert management
 │   ├── middleware/              # HTTP middleware
 │   ├── monitoring/              # Performance tracking
 │   ├── main.py                  # FastAPI app setup
@@ -411,10 +407,10 @@ For questions or issues, refer to the documentation in `docs/`.
 
 ---
 
-**Status**: 🟢 **Production Ready (Beta)**
-**Version**: 0.6.0
-**Last Updated**: 2025-12-16
+**Status**: 🟢 **Production Ready (v1.0)**
+**Version**: 1.0.0
+**Last Updated**: 2025-12-21
 **Recent Changes**:
-- Completed production readiness (metrics, logging, tests).
-- Implemented Prompt Guard for security.
-- Consolidated configuration system.
+- **Major Refactoring**: Modularized Ingestion (`loader`, `chunker`, `pipeline`) and Retrieval (`search`, `ranking`) layers.
+- **Ollama Removal**: Standardized on Groq for all environments.
+- **Documentation**: Updated architecture guides and runbooks.

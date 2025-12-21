@@ -25,8 +25,7 @@ graph TD
     subgraph "Generation Engine"
         ChatService -->|Prompt + Context| PromptBuilder[Prompt Builder]
         PromptBuilder -->|Formatted Prompt| LLM[LLM Provider]
-        LLM --"Groq (Prod)"--> Response
-        LLM --"Ollama (Local)"--> Response
+        LLM --"Groq"--> Response
     end
 
     Response -->|ChatResponse| User
@@ -62,11 +61,10 @@ The `ChatService` class is the heart of the application. It orchestrates the RAG
 -   **Ingestion**: Scripts in `app/ingest` process Markdown files from `./data/mds`, chunk them, and load them into ChromaDB.
 
 ### 4. LLM Providers (`app/services/llm.py`)
-The system supports a hybrid approach:
--   **Groq (Primary)**: High-speed inference for production-like responsiveness.
-    -   Model: `llama-3.1-8b-instant`
--   **Ollama (Fallback/Local)**: Fully local inference for development or offline use.
-    -   Model: `llama3.2:3b-instruct-q4_K_M`
+The system uses a focused approach:
+-   **Groq (Exclusive)**: High-speed inference for production responsiveness.
+    -   Model: `llama-3.1-8b-instant` (configurable)
+    -   Legacy local model support (Ollama) has been deprecated to streamline the architecture.
 
 ## ⚙️ Configuration & Settings
 
@@ -74,7 +72,7 @@ All configuration is managed via `pydantic` in `app/settings.py` and can be over
 
 | Category | Key Setting | Env Var | Default | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| **LLM** | Provider | `LLM_PROVIDER` | `ollama` | Choose `groq` or `ollama`. |
+| **LLM** | Provider | `LLM_PROVIDER` | `groq` | Must be `groq`. |
 | | Groq Key | `LLM_GROQ_API_KEY` | - | Required if using Groq. |
 | **Retrieval** | Top K | `TOP_K` | `5` | Number of chunks to retrieve. |
 | | Rerank | `RERANK` | `true` | Enable/disable reranking step. |
@@ -109,7 +107,7 @@ All configuration is managed via `pydantic` in `app/settings.py` and can be over
     -   System prompt constructed with grounding instructions
     -   Negative inference hints added if applicable
 9.  **Generation**:
-    -   Prompt sent to active LLM provider (Groq or Ollama)
+    -   Prompt sent to active LLM provider (Groq)
     -   LLM generates answer based on provided context
 10. **Response**: JSON response returned with answer, sources, and grounding status.
 
@@ -120,7 +118,7 @@ All configuration is managed via `pydantic` in `app/settings.py` and can be over
 -   ✅ **Negative Inference Detection**: Automatically handles queries about non-existent entities.
 -   ✅ **Adaptive Thresholding**: Data-driven entity existence detection.
 -   ✅ **Multi-turn Conversation**: Supported via `session_id` (history injection + context retrieval).
--   ✅ **Multi-Provider LLM**: Implemented and configurable (Groq/Ollama).
+-   ✅ **Multi-Provider LLM**: Consolidated to **Groq-only** for performance and simplicity.
 -   ✅ **Observability**: Prometheus metrics exposed at `/metrics`.
 
 ## ⚠️ Known Issues & Limitations

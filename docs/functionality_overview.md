@@ -32,9 +32,10 @@ The system includes a robust pipeline to process raw files into searchable knowl
 -   **Metadata Extraction**: Parses YAML front-matter (e.g., `doc_type: resume`) to enable powerful filtering.
 -   **Smart Chunking**: Splits long documents into smaller, meaningful "chunks" while preserving context (e.g., keeping headers with their content).
 
-### 5. High-Speed Inference & Local Testing
--   **Primary (Groq)**: The system primarily uses **Groq** for lightning-fast inference in production, ensuring near-instant responses to user queries.
--   **Testing (Ollama)**: For development and testing purposes, the system supports **Ollama** to run models locally, allowing for offline development and privacy-focused experiments.
+### 5. High-Speed Inference (Groq Only)
+-   **Primary (Groq)**: The system exclusively uses **Groq** for lightning-fast inference in production, ensuring near-instant responses to user queries.
+-   **No Local Fallback**: To ensure consistent performance and simplify architecture, local LLM fallback (Ollama) has been deprecated. All inference is handled by Groq's LPU clusters.
+
 
 ## ⚙️ How It Works (Workflow)
 

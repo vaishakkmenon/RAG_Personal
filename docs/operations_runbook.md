@@ -240,19 +240,17 @@ curl http://localhost:8000/health/live
 
 **Symptoms:**
 - Error logs: "Groq API error"
-- Warning logs: "Falling back to Ollama"
-- Increased latency (Ollama is slower than Groq)
+- 503 Service Unavailable responses
+- Increased latency or timeouts
 
 **Impact:**
-- **Severity:** LOW
-- Automatic fallback to Ollama
-- Slower response times but fully functional
-- No user-visible errors
+- **Severity:** HIGH
+- Service interruptions for chat endpoints
+- Retrieval still functional (search results available)
 
 **Automatic Recovery:**
 - Retry with exponential backoff (2 attempts)
-- Automatic fallback to Ollama if Groq fails
-- Prometheus metrics track fallback usage
+- Prometheus metrics track failure rates
 
 **Manual Recovery Steps:**
 1. Check Groq API status:
@@ -274,85 +272,12 @@ curl http://localhost:8000/health/live
 
 4. If using rate-limited Groq tier:
    - Wait for rate limit to reset
-   - Monitor metrics for fallback usage
+   - Monitor metrics for usage
    - Consider upgrading Groq tier
-
-5. Force Ollama-only mode temporarily:
-   ```bash
-   # Edit .env
-   LLM_PROVIDER=ollama
-
-   # Restart
-   docker compose restart api
-   ```
-
-**Monitoring Fallback:**
-```bash
-# Check Prometheus metrics
-curl http://localhost:8000/metrics | grep llm_fallback
-
-# Look for:
-# llm_fallback_count - number of times fallback was used
-# llm_retry_count - number of retries before fallback
-```
 
 **Prevention:**
 - Monitor Groq API rate limits
-- Keep Ollama up-to-date
-- Test fallback regularly
 - Consider Groq paid tier for production
-
----
-
-### Ollama Failure (Both Groq and Ollama Down)
-
-**Symptoms:**
-- Error logs: "LLM generation failed"
-- 503 Service Unavailable responses
-- Both primary and fallback LLM unavailable
-
-**Impact:**
-- **Severity:** CRITICAL
-- Cannot generate responses
-- Application returns 503 errors
-- Only retrieval works (search results available)
-
-**Manual Recovery Steps:**
-1. Check Ollama container:
-   ```bash
-   docker compose ps ollama
-   docker compose logs ollama
-   ```
-
-2. Restart Ollama:
-   ```bash
-   docker compose restart ollama
-   ```
-
-3. Test Ollama directly:
-   ```bash
-   curl http://localhost:11434/api/generate -d '{
-     "model": "llama3.1:8b-instruct-q4_K_M",
-     "prompt": "test",
-     "stream": false
-   }'
-   ```
-
-4. If model not found:
-   ```bash
-   docker compose exec ollama ollama pull llama3.1:8b-instruct-q4_K_M
-   ```
-
-5. Check GPU/CPU resources:
-   ```bash
-   docker stats ollama
-   ```
-
-**Prevention:**
-- Monitor Ollama container health
-- Ensure sufficient resources (RAM/CPU/GPU)
-- Keep Ollama model pulled and ready
-- Test LLM endpoints regularly
 
 ---
 
@@ -485,10 +410,7 @@ Key metrics to monitor:
 curl http://localhost:8000/metrics | grep rag_request_total
 
 # Error rate
-curl http://localhost:8000/metrics | grep rag_request_total | grep status=\"500\"
-
-# LLM fallback usage
-curl http://localhost:8000/metrics | grep llm_fallback_count
+curl http://localhost:8000/metrics | grep rag_request_total | grep status="500"
 
 # Session counts
 curl http://localhost:8000/metrics | grep session_
@@ -537,28 +459,23 @@ curl http://localhost:8000/metrics | grep session_
 - Users complaining about latency
 
 **Diagnostic Steps:**
-1. Check if using Ollama fallback:
+1. Check Groq performance:
    ```bash
-   docker compose logs api | grep -i fallback
+   docker compose logs api | grep -i "groq latency"
    ```
 
-2. Check Ollama performance:
-   ```bash
-   docker stats ollama
-   ```
-
-3. Check ChromaDB query times:
+2. Check ChromaDB query times:
    ```bash
    docker compose logs api | grep "Semantic search"
    ```
 
-4. Check Redis latency:
+3. Check Redis latency:
    ```bash
    docker compose exec redis redis-cli --latency
    ```
 
 **Solutions:**
-- Ensure Groq API is working (faster than Ollama)
+- Ensure Groq API is working
 - Check if cross-encoder is enabled (adds latency)
 - Consider disabling HyDE for faster queries
 - Monitor disk I/O for ChromaDB
@@ -634,7 +551,6 @@ curl http://localhost:8000/metrics | grep session_
 1. **Review Prometheus Metrics:**
    - Check average response times
    - Review error rates
-   - Monitor fallback usage trends
 
 2. **Update Dependencies:**
    ```bash
@@ -670,7 +586,6 @@ curl http://localhost:8000/metrics | grep session_
 - `ALLOWED_ORIGINS` - CORS allowed origins
 
 ### Optional Performance Tuning
-- `LLM_OLLAMA_TIMEOUT` - Ollama timeout (default: 60s)
 - `RESPONSE_CACHE_ENABLED` - Enable/disable caching (default: true)
 - `SESSION_QUERIES_PER_HOUR` - Rate limiting (default: 20)
 
@@ -680,5 +595,5 @@ curl http://localhost:8000/metrics | grep session_
 
 ---
 
-**Last Updated:** 2025-12-17
-**Version:** 1.0
+**Last Updated:** 2025-12-21
+**Version:** 1.1
