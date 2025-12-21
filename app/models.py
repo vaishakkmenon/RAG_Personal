@@ -29,6 +29,12 @@ class IngestResponse(BaseModel):
         json_schema_extra={"example": 150},
     )
 
+    bm25_stats: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Statistics from the BM25 index rebuild (e.g. document count).",
+        json_schema_extra={"example": {"status": "rebuilt", "doc_count": 12}},
+    )
+
 
 class ChatRequest(BaseModel):
     """Request to answer a question using RAG."""

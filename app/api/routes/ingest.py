@@ -28,6 +28,8 @@ async def ingest(req: IngestRequest):
     paths = req.paths or [settings.docs_dir]
     added = ingest_paths(paths)
 
+    bm25_info = {"status": "skipped", "message": "No new chunks added"}
+
     # Automatically rebuild BM25 index to keep it in sync with ChromaDB
     if added > 0:
         try:
@@ -49,16 +51,18 @@ async def ingest(req: IngestRequest):
                 bm25_index.build_index(documents)
                 bm25_index.save_index()
 
-                logger.info(
-                    f"BM25 index rebuilt successfully with {len(documents)} documents"
-                )
+                count = len(documents)
+                logger.info(f"BM25 index rebuilt successfully with {count} documents")
+                bm25_info = {"status": "rebuilt", "doc_count": count}
             else:
                 logger.warning(
                     "No documents found in VectorStore, skipping BM25 rebuild"
                 )
+                bm25_info = {"status": "skipped", "reason": "empty_vector_store"}
 
         except Exception as e:
             logger.error(f"Failed to rebuild BM25 index: {e}")
             logger.warning("Ingestion completed but BM25 index may be out of sync")
+            bm25_info = {"status": "failed", "error": str(e)}
 
-    return IngestResponse(ingested_chunks=added)
+    return IngestResponse(ingested_chunks=added, bm25_stats=bm25_info)

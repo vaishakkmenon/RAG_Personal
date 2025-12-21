@@ -1,0 +1,58 @@
+---
+title: "Resume — Vaishak Menon"
+doc_type: resume
+version_date: 2025-12-21
+pii_sanitized: true
+tags: [resume, backend, cloud, infrastructure, full-stack]
+source_file: "Resume-Vaishak_Menon.pdf"
+---
+
+# Vaishak Menon
+**Location:** Waxhaw, NC | **Phone:** 630-425-2435 | **Email:** vaishakkmenon25@gmail.com
+**Links:** [Portfolio](#) | [GitHub](#) | [LinkedIn](#)
+
+## Professional Summary
+Graduate student in Computer Science with experience across full-stack backend development and cloud infrastructure[cite: 4]. Delivered production features including RESTful API design, third-party integrations, and algorithmic solutions in Agile environments, alongside expertise deploying scalable solutions to GCP using Terraform and Kubernetes[cite: 5]. Demonstrated technical leadership through Teaching Assistant role and Infrastructure Internships[cite: 6].
+
+## Work Experience
+
+### Finchirp
+**Backend Software Developer** | Remote | *Aug 2025 – Present*
+* Architected real-time financial data integration system integrating multiple third-party APIs with caching layer and RESTful endpoints, enabling platform to deliver live market data to users at scale using Agile methodologies[cite: 12].
+* Developed proprietary multi-factor scoring algorithm combining weighted data from multiple sources to identify market trends, with optimized query performance through intelligent caching strategies[cite: 13].
+* Delivered full-stack features across 3,000+ LOC in 2-week sprint cycles, integrating multiple external APIs, designing database schemas, and managing migrations using Jira for project tracking and team coordination[cite: 14].
+
+### University of Alabama at Birmingham
+**Computer Science Teaching Assistant** | Birmingham, Alabama | *Aug 2022 – May 2025*
+* Assisted professors in teaching Data Structure and Algorithms in Python and Java and Systems Programming in C[cite: 17].
+* Evaluated and provided feedback on more than 400 assignments each semester, achieving a turnaround time of under 72 hours[cite: 17].
+* Mentored students in core programming concepts, guided them through assignment completion, and delivered in-depth code feedback to accelerate skill development[cite: 18].
+
+### Maven Wave Partners
+**Infrastructure Intern** | Chicago, Illinois | *Jun 2023 – Aug 2023*
+* Authored comprehensive training documentation on YAML/Terraform and created interactive demos for cloud technologies, accelerating new employee onboarding and adoption of Infrastructure as Code practices[cite: 22].
+
+**Infrastructure Intern** | *Jun 2022 – Aug 2022*
+* Refined Terraform configurations to finalize a scalable GCP environment and streamlined deployment documentation to maintain consistent infrastructure management across the organization[cite: 25].
+
+**Infrastructure Intern** | *Jun 2021 – Aug 2021*
+* Engineered a secure data-sharing microservice using Kubernetes, enabling seamless data exchange between provider and third-party companies within a progressive GCP implementation[cite: 28].
+
+## Education
+
+**University of Alabama at Birmingham**
+* **M.S in Computer Science** | [cite_start]*Graduation Date: May 2025* [cite: 32, 37]
+* **B.S in Computer Science** | [cite_start]*Graduation Date: Apr 2024* [cite: 31, 36]
+
+## Projects
+
+**FastAPI RAG Service**
+* Built and tuned a retrieval-augmented chatbot with reproducible evals on SQUAD v2 (500 ex), reaching Pareto-frontier generative settings (F1 0.54, NoAns 0.92, p50~130 ms) and retrieval Recall@5 0.85 (Hit@1 0.65).
+
+**GPT From Scratch**
+* Developed a large language model, decoder-only flash transformer architecture using Python.
+* One version of the model is available on Huggingface.
+
+## Certifications & Skills
+* **Certifications:** Certified Kubernetes Administrator, AWS Certified Cloud Practitioner, AWS Certified AI Practitioner.
+* **Skills:** Kubernetes, Terraform, GCP, AWS, C, Python, Java, JavaScript, PSQL, MongoDB, Docker, Ollama.

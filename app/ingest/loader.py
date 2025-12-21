@@ -83,7 +83,10 @@ class Loader:
             metadata["filename"] = os.path.basename(file_path)
 
             # Extract identifiers
-            doc_id, doc_type = extract_doc_id(file_path)
+            doc_id, inferred_doc_type = extract_doc_id(file_path)
+
+            # Use explicit doc_type from frontmatter if available, otherwise use inferred
+            doc_type = metadata.get("doc_type") or inferred_doc_type
 
             # Calculate hash
             content_hash = hashlib.sha256(body.encode("utf-8")).hexdigest()
