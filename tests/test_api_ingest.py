@@ -6,15 +6,13 @@ ingestion service, and handles errors appropriately.
 """
 
 from unittest.mock import patch
-from fastapi.testclient import TestClient
-from app.main import app
 
 
 from app.settings import settings
 
 # raise_server_exceptions=False allows us to test 500 error responses
 # without the TestClient raising the exception directly.
-client = TestClient(app, raise_server_exceptions=False)
+# client = TestClient(app, raise_server_exceptions=False)
 
 
 # Correct path for where ingest_documents is imported/used in the route handler
@@ -22,7 +20,7 @@ client = TestClient(app, raise_server_exceptions=False)
 MOCK_TARGET = "app.api.routes.ingest.ingest_paths"
 
 
-def test_ingest_happy_path(mock_chromadb):
+def test_ingest_happy_path(client, mock_chromadb):
     """Verify successful ingestion triggering."""
 
     # Mock the return value of the service function
@@ -53,7 +51,7 @@ def test_ingest_happy_path(mock_chromadb):
         # assert args[0] == ["./data/test.md"]
 
 
-def test_ingest_service_failure():
+def test_ingest_service_failure(client):
     """Verify 500 response when ingestion service fails."""
 
     with patch(MOCK_TARGET) as mock_ingest:
@@ -72,7 +70,7 @@ def test_ingest_service_failure():
         assert "internal error occurred" in response.json()["detail"]
 
 
-def test_ingest_unauthorized():
+def test_ingest_unauthorized(client):
     """Verify 401 when API key is missing or invalid."""
 
     response = client.post(

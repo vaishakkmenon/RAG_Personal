@@ -25,6 +25,7 @@ from fastapi.testclient import TestClient
 def setup_test_environment():
     """Set up test environment variables before any tests run."""
     os.environ["API_KEY"] = "test-api-key"
+    os.environ["REDIS_PASSWORD"] = "test-redis-password"
     os.environ["LLM_PROVIDER"] = "groq"
     os.environ["LLM_GROQ_API_KEY"] = "test-groq-key"
     os.environ["SESSION_STORAGE_BACKEND"] = "memory"
