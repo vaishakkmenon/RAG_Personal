@@ -6,10 +6,12 @@ import urllib3
 # Disable SSL warnings for local testing
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Load API Key from env or use a default (ensure this matches your .env)
-API_KEY = os.getenv(
-    "API_KEY", "f466d43aac4de77c4ce6c37650290f32c7a48e95f0d6626bdc22341c6b483eea"
-)
+# Load API Key from env (REQUIRED)
+API_KEY = os.getenv("API_KEY")
+if not API_KEY:
+    raise ValueError(
+        "API_KEY environment variable must be set for performance testing."
+    )
 
 
 class RAGUser(HttpUser):
