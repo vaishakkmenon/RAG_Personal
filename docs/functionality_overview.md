@@ -32,7 +32,12 @@ The system includes a robust pipeline to process raw files into searchable knowl
 -   **Metadata Extraction**: Parses YAML front-matter (e.g., `doc_type: resume`) to enable powerful filtering.
 -   **Smart Chunking**: Splits long documents into smaller, meaningful "chunks" while preserving context (e.g., keeping headers with their content).
 
-### 5. High-Speed Inference (Groq Only)
+### 5. Feedback System
+-   **User Feedback**: Allows users to rate responses (thumbs up/down) and provide comments.
+-   **Persistence**: Stores feedback in a dedicated PostgreSQL database for long-term analysis.
+-   **Metrics**: Automatically tracks feedback sentiment via Prometheus metrics (`rag_feedback_total`), enabling real-time quality monitoring.
+
+### 6. High-Speed Inference (Groq Only)
 -   **Primary (Groq)**: The system exclusively uses **Groq** for lightning-fast inference in production, ensuring near-instant responses to user queries.
 -   **No Local Fallback**: To ensure consistent performance and simplify architecture, local LLM fallback (Ollama) has been deprecated. All inference is handled by Groq's LPU clusters.
 
@@ -142,6 +147,22 @@ curl http://localhost:8000/health
 
 **Samples**: `GET /samples?n=5`
 - Returns random chunks from the database to verify data integrity.
+
+### 6. Feedback
+**Endpoint**: `POST /feedback`
+**Description**: Collects user feedback for quality improvement.
+**Usage**:
+```bash
+curl -X POST http://localhost:8000/feedback \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{
+    "session_id": "uuid",
+    "message_id": "uuid",
+    "thumbs_up": true,
+    "comment": "Great answer!"
+  }'
+```
 
 ## ⚠️ Known Limitations
 

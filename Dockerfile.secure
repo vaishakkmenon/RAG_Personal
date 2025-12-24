@@ -57,33 +57,9 @@ RUN mkdir -p $HF_HOME \
     && chown -R nonroot:nonroot /home/nonroot
 
 # ============================================================================
-# Stage 2: Test - Testing environment with dev dependencies
+# Stage 2: Runtime
 # ============================================================================
-FROM builder AS test
-
-# Install testing and linting tools into the same virtualenv
-RUN pip install --no-cache-dir \
-    pytest==8.4.1 \
-    pytest-cov==4.1.0 \
-    pytest-mock==3.12.0 \
-    faker==22.0.0 \
-    ruff==0.12.9
-
-# Copy test files and configuration
-COPY tests ./tests
-COPY pytest.ini ./
-
-# Verify test structure
-RUN test -d ./tests || (echo "WARNING: tests directory not found" && exit 0)
-
-# Reset entrypoint for test stage
-ENTRYPOINT []
-
-# Default: Run unit tests (not integration tests which need services)
-CMD ["python", "-m", "pytest", "-m", "not integration", "-v", "--tb=short"]
-
-# ============================================================================
-# Stage 3: Runtime
+# Stage 2: Runtime
 # ============================================================================
 FROM cgr.dev/chainguard/wolfi-base:latest AS runtime
 

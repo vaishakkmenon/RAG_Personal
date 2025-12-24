@@ -1,207 +1,90 @@
-# Prometheus Alert Rules for RAG System
-# Monitors API health, performance, security, and LLM operations
-
 groups:
-  - name: rag_api_alerts
-    interval: 30s
+  - name: rag_system_alerts
     rules:
-      # High Error Rate
+      # 1. High Error Rate: > 5% 5xx errors over 5m
+      # Using http_request_duration_seconds_count (standard metric for total requests)
       - alert: HighErrorRate
         expr: |
-          (
-            sum(rate(rag_request_total{status="error"}[5m]))
-            /
-            sum(rate(rag_request_total[5m]))
-          ) > 0.05
+          sum(rate(http_request_duration_seconds_count{status=~"5.."}[5m]))
+          /
+          sum(rate(http_request_duration_seconds_count[5m])) > 0.05
         for: 5m
         labels:
-          severity: warning
-          component: api
-        annotations:
-          summary: "High error rate detected"
-          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
-
-      # Critical Error Rate
-      - alert: CriticalErrorRate
-        expr: |
-          (
-            sum(rate(rag_request_total{status="error"}[5m]))
-            /
-            sum(rate(rag_request_total[5m]))
-          ) > 0.20
-        for: 2m
-        labels:
           severity: critical
-          component: api
         annotations:
-          summary: "CRITICAL: Very high error rate"
-          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 20%)"
+          summary: "High 5xx error rate detected"
+          description: "Over 5% of requests are failing with 5xx errors."
 
-      # High Latency (P95)
+      # 2. High Latency: 99th percentile > 2s over 5m
       - alert: HighLatency
         expr: |
-          histogram_quantile(0.95,
-            sum(rate(rag_request_latency_seconds_bucket[5m])) by (le, endpoint)
-          ) > 2.0
+          histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 2
         for: 5m
         labels:
           severity: warning
-          component: api
         annotations:
-          summary: "High request latency (P95) on {{ $labels.endpoint }}"
-          description: "P95 latency is {{ $value }}s (threshold: 2s)"
+          summary: "High Latency (p99)"
+          description: "99th percentile response time is above 2 seconds."
 
-      # Very High Latency (P95)
-      - alert: VeryHighLatency
-        expr: |
-          histogram_quantile(0.95,
-            sum(rate(rag_request_latency_seconds_bucket[5m])) by (le, endpoint)
-          ) > 5.0
-        for: 2m
-        labels:
-          severity: critical
-          component: api
-        annotations:
-          summary: "CRITICAL: Very high latency on {{ $labels.endpoint }}"
-          description: "P95 latency is {{ $value }}s (threshold: 5s)"
-
-  - name: rag_security_alerts
-    interval: 30s
-    rules:
-      # High Prompt Guard Block Rate
-      - alert: HighPromptGuardBlockRate
-        expr: |
-          (
-            sum(rate(prompt_guard_checks_total{result="blocked"}[5m]))
-            /
-            sum(rate(prompt_guard_checks_total[5m]))
-          ) > 0.10
-        for: 5m
-        labels:
-          severity: warning
-          component: security
-        annotations:
-          summary: "High prompt injection block rate"
-          description: "{{ $value | humanizePercentage }} of prompts are being blocked (threshold: 10%)"
-
-      # Prompt Guard Errors
-      - alert: PromptGuardErrors
-        expr: sum(rate(prompt_guard_errors_total[5m])) > 0.1
-        for: 5m
-        labels:
-          severity: warning
-          component: security
-        annotations:
-          summary: "Prompt guard errors detected"
-          description: "{{ $value }} errors/sec in prompt guard service"
-
-      # Rate Limit Violations
-      - alert: RateLimitViolations
-        expr: sum(rate(rag_rate_limit_violations_total[5m])) > 1.0
-        for: 5m
-        labels:
-          severity: info
-          component: security
-        annotations:
-          summary: "Rate limit violations detected"
-          description: "{{ $value }} violations/sec (type: {{ $labels.limit_type }})"
-
-  - name: rag_llm_alerts
-    interval: 30s
-    rules:
-      # LLM Service Failures
-      - alert: LLMServiceFailures
-        expr: |
-          sum(rate(rag_llm_request_total{status="error"}[5m])) by (model) > 0.5
-        for: 5m
-        labels:
-          severity: warning
-          component: llm
-        annotations:
-          summary: "LLM service failures on {{ $labels.model }}"
-          description: "{{ $value }} failures/sec on model {{ $labels.model }}"
-
-      # High Fallback Rate (Groq -> Ollama)
-      - alert: HighLLMFallbackRate
-        expr: |
-          sum(rate(rag_fallback_operations_total{from_service="groq"}[5m])) > 0.5
-        for: 10m
-        labels:
-          severity: warning
-          component: llm
-        annotations:
-          summary: "High Groq->Ollama fallback rate"
-          description: "{{ $value }} fallbacks/sec - Groq may be down or rate limited"
-
-      # LLM High Latency
-      - alert: LLMHighLatency
-        expr: |
-          histogram_quantile(0.95,
-            sum(rate(rag_llm_latency_seconds_bucket[5m])) by (le, model)
-          ) > 5.0
-        for: 5m
-        labels:
-          severity: warning
-          component: llm
-        annotations:
-          summary: "High LLM latency on {{ $labels.model }}"
-          description: "P95 latency is {{ $value }}s (threshold: 5s)"
-
-  - name: rag_retrieval_alerts
-    interval: 30s
-    rules:
-      # Low Grounding Rate
-      - alert: LowGroundingRate
-        expr: |
-          (
-            sum(rate(rag_grounding_total{grounded="true"}[10m]))
-            /
-            sum(rate(rag_grounding_total[10m]))
-          ) < 0.50
-        for: 10m
-        labels:
-          severity: info
-          component: retrieval
-        annotations:
-          summary: "Low grounding rate detected"
-          description: "Only {{ $value | humanizePercentage }} of queries are grounded (threshold: 50%)"
-
-      # High Retrieval Latency
-      - alert: HighRetrievalLatency
-        expr: |
-          histogram_quantile(0.95,
-            sum(rate(rag_retrieval_latency_seconds_bucket[5m])) by (le)
-          ) > 1.0
-        for: 5m
-        labels:
-          severity: warning
-          component: retrieval
-        annotations:
-          summary: "High retrieval latency"
-          description: "P95 retrieval latency is {{ $value }}s (threshold: 1s)"
-
-  - name: rag_system_health
-    interval: 30s
-    rules:
-      # API Down
-      - alert: APIDown
-        expr: up{job="rag-api"} == 0
+      # 3. Instance Down: Target down for > 1m
+      - alert: InstanceDown
+        expr: up == 0
         for: 1m
         labels:
           severity: critical
-          component: system
         annotations:
-          summary: "RAG API is down"
-          description: "API service is not responding to Prometheus scrapes"
+          summary: "Instance {{ $labels.instance }} down"
+          description: "{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 1 minute."
 
-      # No Requests (Service may be unreachable)
-      - alert: NoRequests
-        expr: |
-          sum(rate(rag_request_total[5m])) == 0
-        for: 10m
+      # 4. Near OOM (Memory Usage)
+      # Assuming process_resident_memory_bytes is available from the Python client
+      # Alert if memory usage is absurdly high (e.g. > 1GB for a specific container, adjusting as needed)
+      # Since we don't have container memory limits strictly visible here (except redis), this is a basic check.
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes > 1073741824
+        for: 5m
         labels:
           severity: warning
-          component: system
         annotations:
-          summary: "No requests received"
-          description: "API has not received any requests in 10 minutes"
+          summary: "High Memory Usage"
+          description: "Instance {{ $labels.instance }} is using more than 1GB of RAM."
+
+      # 5. Redis Down
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis Service Down"
+          description: "Redis service has been down for more than 1 minute."
+
+      # 6. Postgres Down
+      - alert: PostgresDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL Service Down"
+          description: "PostgreSQL service has been down for more than 1 minute."
+
+      # 7. LLMErrorsHigh
+      - alert: LLMErrorsHigh
+        expr: rate(llm_request_errors_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High LLM Error Rate"
+          description: "LLM API error rate is above 5%."
+
+      # 8. DiskSpaceLow
+      - alert: DiskSpaceLow
+        expr: node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} * 100 < 15
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low Disk Space"
+          description: "Disk space is below 15%."

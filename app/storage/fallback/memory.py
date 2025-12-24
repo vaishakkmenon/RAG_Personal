@@ -106,6 +106,8 @@ class InMemorySessionStore(SessionStore):
 
     def _get_shard_index(self, key: str) -> int:
         """Get shard index for a string key."""
+        if key is None:
+            return 0
         return zlib.crc32(key.encode()) % self.NUM_SHARDS
 
     def get_session(self, session_id: str) -> Optional[Session]:

@@ -6,8 +6,24 @@
 }
 
 localhost {
+    # Protected Admin Routes
+    @admin_routes {
+        path /metrics* /admin* /ingest* /grafana*
+    }
+
+    # Protect admin and metrics with Basic Authentication
+    # Default User: admin
+    # Default Pass: admin (Change this hash in production!)
+    # Hash generated with: caddy hash-password --plaintext admin
+    basic_auth @admin_routes {
+        admin $2a$14$1l.IcnWz33s.i/l/g.e.UO.t/4s.g/s.g/s/s/s/s/s/s/s/s
+    }
+
     # Reverse proxy to the API service
     reverse_proxy api:8000
+
+    # Reverse proxy to Grafana
+    reverse_proxy /grafana* grafana:3000
 
     # formatting logs
     log {

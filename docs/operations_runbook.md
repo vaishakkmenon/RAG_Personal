@@ -281,6 +281,47 @@ curl http://localhost:8000/health/live
 
 ---
 
+### PostgreSQL Failure (Feedback DB)
+
+**Symptoms:**
+- Detailed health check shows Postgres as "degraded"
+- Error logs: "Postgres connection failed"
+- Feedback submission (`POST /feedback`) returns 500 error
+
+**Impact:**
+- **Severity:** LOW
+- User feedback cannot be collected or is lost
+- Core chat functionality remains **unaffected**
+- Metric `rag_feedback_total` stops incrementing
+
+**Automatic Recovery:**
+- Application retries connection on next request
+- No persistent connection pool to stall
+
+**Manual Recovery Steps:**
+1. Check Postgres container status:
+   ```bash
+   docker compose ps postgres
+   docker compose logs postgres
+   ```
+
+2. Check disk space (Postgres volume):
+   ```bash
+   df -h
+   ```
+
+3. Restart Postgres:
+   ```bash
+   docker compose restart postgres
+   ```
+
+4. Verify connection:
+   ```bash
+   docker compose exec postgres pg_isready -U rag_user
+   ```
+
+---
+
 ### Complete System Failure
 
 **Symptoms:**
@@ -368,6 +409,7 @@ curl http://localhost:8000/health/live
   "dependencies": {
     "redis": "healthy",
     "chromadb": "healthy",
+    "postgres": "healthy",
     "llm": "not_checked"
   }
 }

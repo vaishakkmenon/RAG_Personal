@@ -43,6 +43,14 @@ def setup_test_environment():
     settings.session.queries_per_hour = 10000  # Disable rate limiting in tests
     settings.session.max_sessions_per_ip = 10000  # Disable IP session limits
 
+    # Use a temporary directory for ChromaDB in tests to avoid permission errors
+    # and ensuring isolation.
+    import tempfile
+
+    test_chroma_dir = tempfile.mkdtemp()
+    os.environ["CHROMA_PATH"] = test_chroma_dir
+    settings.chroma_dir = test_chroma_dir
+
     yield
     # Cleanup after all tests
 

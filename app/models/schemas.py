@@ -231,12 +231,32 @@ class ErrorResponse(BaseModel):
 class FeedbackRequest(BaseModel):
     """Request to submit feedback for a chat response."""
 
-    session_id: str = Field(description="Session ID of the chat")
-    message_id: str = Field(description="Message ID or simple identifier")
+    session_id: str = Field(
+        description="Session ID of the chat",
+        min_length=1,
+        max_length=64,
+        pattern="^[a-zA-Z0-9_-]+$",
+    )
+    message_id: str = Field(
+        description="Message ID or simple identifier",
+        min_length=1,
+        max_length=64,
+    )
     thumbs_up: bool = Field(
         description="True for positive feedback, False for negative"
     )
-    comment: Optional[str] = Field(default=None, description="Optional text comment")
+    comment: Optional[str] = Field(
+        default=None,
+        description="Optional text comment",
+        max_length=1000,
+    )
+
+    @field_validator("comment")
+    @classmethod
+    def strip_whitespace(cls, v: Optional[str]) -> Optional[str]:
+        if v:
+            v = v.strip()
+        return v
 
 
 class FeedbackResponse(BaseModel):

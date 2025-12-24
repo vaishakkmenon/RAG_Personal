@@ -66,6 +66,10 @@ services:
       - SESSION_MAX_HISTORY_TOKENS=${SESSION_MAX_HISTORY_TOKENS:-250}
       - SESSION_MAX_HISTORY_TURNS=${SESSION_MAX_HISTORY_TURNS:-5}
 
+      # ============ Database Configuration ============
+      # Force internal port to 5432 (standard) even if host uses 5433
+      - POSTGRES_PORT=5432
+
       # ============ Security ============
       - SESSION_REQUIRE_HTTPS=true  # Now handled by Caddy
 
@@ -164,15 +168,15 @@ services:
     # Restart policy
     restart: unless-stopped
 
-    # Resource limits (optional, uncomment for production)
-    # deploy:
-    #   resources:
-    #     limits:
-    #       cpus: '2.0'
-    #       memory: 4G
-    #     reservations:
-    #       cpus: '1.0'
-    #       memory: 2G
+    # Resource limits (MATCHING CONTABO VPS SPECS)
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
+        reservations:
+          cpus: '2.0'
+          memory: 2G
 
     # Logging configuration
     logging:
@@ -181,6 +185,9 @@ services:
         max-size: "10m"
         max-file: "3"
         labels: "service=api"
+    networks:
+      - frontend
+      - backend
 
   # ==========================================================================
   # Caddy Service - URL/HTTPS Reverse Proxy
@@ -200,6 +207,8 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    networks:
+      - frontend
     logging:
       driver: "json-file"
       options:
@@ -223,7 +232,11 @@ services:
       - postgres_password
 
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      # Bind to localhost only to prevent external access even if UFW fails
+      # Using 5433 externally to avoid conflict with local Postgres (PID 8660)
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5433}:5432"
+    networks:
+      - backend
 
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -270,7 +283,10 @@ services:
       - --tcp-keepalive 300                 # TCP keepalive
 
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      # Bind to localhost only
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    networks:
+      - backend
 
     volumes:
       - redis_data:/data
@@ -316,6 +332,100 @@ services:
         labels: "service=redis"
 
   # ==========================================================================
+  # Redis Exporter - Prometheus metrics for Redis
+  # ==========================================================================
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: rag_redis_exporter
+    hostname: redis-exporter
+    environment:
+      - REDIS_ADDR=redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-devpassword123}
+    ports:
+      - "127.0.0.1:9121:9121"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - backend
+      - frontend  # Allow Prometheus to scrape
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==========================================================================
+  # PostgreSQL Exporter - Prometheus metrics for PostgreSQL
+  # ==========================================================================
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: rag_postgres_exporter
+    hostname: postgres-exporter
+    environment:
+      - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER:-rag_user}:${POSTGRES_PASSWORD:-postgrespass}@postgres:5432/${POSTGRES_DB:-rag_db}?sslmode=disable
+    ports:
+      - "127.0.0.1:9187:9187"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend
+      - frontend  # Allow Prometheus to scrape
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==========================================================================
+  # Backup Service - Automated Nightly Backups
+  # ==========================================================================
+  backup:
+    image: postgres:15-alpine
+    container_name: rag_backup
+    hostname: backup
+    restart: unless-stopped
+
+    # Run the backup script every 24 hours (86400 seconds)
+    command: >
+      sh -c "while true; do
+        echo 'Running daily backup...';
+        /scripts/backup.sh;
+        echo 'Sleeping for 24 hours...';
+        sleep 86400;
+      done"
+
+    volumes:
+      - ./backups:/backups
+      - ./scripts:/scripts:ro
+      - redis_data:/var/lib/redis:ro      # Read-only access to Redis data
+      - ./data/chroma:/chroma_data:ro     # Read-only access to Chroma data
+
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+      - BACKUP_DIR=/backups
+
+    secrets:
+      - postgres_password
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    networks:
+      - backend
+
+  # ==========================================================================
   # Prometheus Service - Metrics collection and alerting
   # ==========================================================================
   prometheus:
@@ -342,6 +452,9 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    networks:
+      - backend
+      - frontend  # Allow localhost access
 
     restart: unless-stopped
 
@@ -369,6 +482,42 @@ services:
         labels: "service=prometheus,env=development"
 
   # ==========================================================================
+  # Alertmanager Service - Alert notifications
+  # ==========================================================================
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    container_name: rag_alertmanager
+    hostname: alertmanager
+    ports:
+      - "127.0.0.1:9093:9093"
+    volumes:
+      - ./monitoring/prometheus/alertmanager.yml.template:/etc/alertmanager/alertmanager.yml.template:ro
+      - alertmanager_data:/alertmanager
+    # Use sed to substitute environment variables into the config template
+    # (Alertmanager doesn't support env var substitution natively)
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        sed -e "s|\$${SMTP_FROM}|$$SMTP_FROM|g" \
+            -e "s|\$${SMTP_USERNAME}|$$SMTP_USERNAME|g" \
+            -e "s|\$${SMTP_PASSWORD}|$$SMTP_PASSWORD|g" \
+            -e "s|\$${ALERT_EMAIL}|$$ALERT_EMAIL|g" \
+            /etc/alertmanager/alertmanager.yml.template > /tmp/alertmanager.yml && \
+        exec /bin/alertmanager --config.file=/tmp/alertmanager.yml --storage.path=/alertmanager
+    environment:
+      - SMTP_FROM=${SMTP_FROM}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - ALERT_EMAIL=${ALERT_EMAIL}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - backend
+      - frontend  # Allow localhost access
+
+  # ==========================================================================
   # Grafana Service - Metrics visualization and dashboards
   # ==========================================================================
   grafana:
@@ -385,8 +534,8 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
 
       # Server configuration
-      - GF_SERVER_ROOT_URL=http://localhost:3000
-      - GF_SERVER_SERVE_FROM_SUB_PATH=false
+      - GF_SERVER_ROOT_URL=https://localhost/grafana/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
 
       # Anonymous access disabled
       - GF_AUTH_ANONYMOUS_ENABLED=false
@@ -405,6 +554,9 @@ services:
     depends_on:
       prometheus:
         condition: service_healthy
+    networks:
+      - backend
+      - frontend  # Allow localhost access
 
     restart: unless-stopped
 
@@ -514,6 +666,11 @@ volumes:
     driver: local
     name: rag_grafana_data
 
+  # Alertmanager data
+  alertmanager_data:
+    driver: local
+    name: rag_alertmanager_data
+
   # PostgreSQL data
   postgres_data:
     driver: local
@@ -533,12 +690,12 @@ volumes:
 # Networks (optional - Docker Compose creates default network)
 # ============================================================================
 # Uncomment to use custom network with specific configuration
-# networks:
-#   rag_network:
-#     driver: bridge
-#     ipam:
-#       config:
-#         - subnet: 172.28.0.0/16
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    internal: true
+    driver: bridge
 
 # ============================================================================
 # Secrets - Secure credential injection
@@ -552,6 +709,8 @@ secrets:
     file: ./secrets/postgres_password
   redis_password:
     file: ./secrets/redis_password
+
+
 
 # ============================================================================
 # Usage Instructions

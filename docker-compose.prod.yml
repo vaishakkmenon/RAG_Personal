@@ -318,6 +318,49 @@ services:
       - rag_network
 
   # ==========================================================================
+  # Alertmanager Service - Alert notifications (Production)
+  # ==========================================================================
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    container_name: rag_alertmanager_prod
+    hostname: alertmanager
+    ports:
+      - "127.0.0.1:9093:9093"
+    volumes:
+      - ./monitoring/prometheus/alertmanager.yml.template:/etc/alertmanager/alertmanager.yml.template:ro
+      - alertmanager_data_prod:/alertmanager
+    # Use sed to substitute environment variables into the config template
+    # (Alertmanager doesn't support env var substitution natively)
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        sed -e "s|\$${SMTP_FROM}|$$SMTP_FROM|g" \
+            -e "s|\$${SMTP_USERNAME}|$$SMTP_USERNAME|g" \
+            -e "s|\$${SMTP_PASSWORD}|$$SMTP_PASSWORD|g" \
+            -e "s|\$${ALERT_EMAIL}|$$ALERT_EMAIL|g" \
+            /etc/alertmanager/alertmanager.yml.template > /tmp/alertmanager.yml && \
+        exec /bin/alertmanager --config.file=/tmp/alertmanager.yml --storage.path=/alertmanager
+    environment:
+      - SMTP_FROM=${SMTP_FROM}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - ALERT_EMAIL=${ALERT_EMAIL}
+    restart: always
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    networks:
+      - rag_network
+
+  # ==========================================================================
   # Grafana Service - Metrics visualization and dashboards (Production)
   # ==========================================================================
   grafana:
@@ -394,6 +437,63 @@ services:
     networks:
       - rag_network
 
+  # ==========================================================================
+  # Redis Exporter - Prometheus metrics for Redis (Production)
+  # ==========================================================================
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: rag_redis_exporter_prod
+    hostname: redis-exporter
+    environment:
+      - REDIS_ADDR=redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: always
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 64M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - rag_network
+
+  # ==========================================================================
+  # PostgreSQL Exporter - Prometheus metrics for PostgreSQL (Production)
+  # ==========================================================================
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: rag_postgres_exporter_prod
+    hostname: postgres-exporter
+    environment:
+      - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: always
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 64M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - rag_network
+
 # ============================================================================
 # Named Volumes - Persistent data storage
 # ============================================================================
@@ -421,6 +521,11 @@ volumes:
   grafana_data_prod:
     driver: local
     name: rag_grafana_data_prod
+
+  # Alertmanager data (production)
+  alertmanager_data_prod:
+    driver: local
+    name: rag_alertmanager_data_prod
 
 # ============================================================================
 # Networks - Internal communication

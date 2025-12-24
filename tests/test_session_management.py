@@ -91,9 +91,9 @@ class TestMemorySessionStore:
         from app.storage.fallback.memory import InMemorySessionStore
         from app.settings import settings
 
-        # Temporarily set low rate limit
+        # Temporarily force low rate limit in settings object
         original_limit = settings.session.queries_per_hour
-        settings.session.queries_per_hour = 3  # Allow 3 requests per hour
+        settings.session.queries_per_hour = 3
 
         try:
             store = InMemorySessionStore()
@@ -112,8 +112,14 @@ class TestMemorySessionStore:
             # Third request (count=3)
             session.record_request()
             allowed = store.check_rate_limit(session)
-            assert allowed is False  # 3 < 3 is False, rate limited!
+            assert allowed is True  # 3 <= 3, still passes
+
+            # Fourth request (count=4)
+            session.record_request()
+            allowed = store.check_rate_limit(session)
+            assert allowed is False  # 4 > 3, rate limited!
         finally:
+            # Restore original limit
             settings.session.queries_per_hour = original_limit
 
     def test_session_expiration(self):

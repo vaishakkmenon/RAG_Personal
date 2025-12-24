@@ -1,0 +1,640 @@
+
+C:\Users\vaish\Personal\Other\Coding\RAG_Personal>docker compose down && docker compose up
+[+] Running 9/9
+ ✔ Container rag_grafana                 Removed                                                             0.0s
+ ✔ Container rag_caddy                   Removed                                                             0.1s
+ ✔ Container rag_backup                  Removed                                                             0.1s
+ ✔ Container rag_prometheus              Removed                                                             0.1s
+ ✔ Container rag_api                     Removed                                                             0.1s
+ ✔ Container rag_postgres                Removed                                                             0.1s
+ ✔ Container rag_redis                   Removed                                                             0.2s
+ ✔ Network personal-rag-system_frontend  Removed                                                             0.7s
+ ✔ Network personal-rag-system_backend   Removed                                                             1.0s
+[+] Running 9/9
+ ✔ Network personal-rag-system_frontend  Created                                                             0.0s
+ ✔ Network personal-rag-system_backend   Created                                                             0.0s
+ ✔ Container rag_postgres                Created                                                             0.2s
+ ✔ Container rag_redis                   Created                                                             0.2s
+ ✔ Container rag_backup                  Created                                                             0.3s
+ ✔ Container rag_api                     Created                                                             0.5s
+ ✔ Container rag_caddy                   Created                                                             0.3s
+ ✔ Container rag_prometheus              Created                                                             0.4s
+ ✔ Container rag_grafana                 Created                                                             0.2s
+Attaching to rag_api, rag_backup, rag_caddy, rag_grafana, rag_postgres, rag_prometheus, rag_redis
+rag_redis  | 1:C 23 Dec 2025 12:40:36.740 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+rag_redis  | 1:C 23 Dec 2025 12:40:36.740 * Redis version=7.4.6, bits=64, commit=00000000, modified=0, pid=1, just started
+rag_redis  | 1:C 23 Dec 2025 12:40:36.740 * Configuration loaded
+rag_redis  | 1:M 23 Dec 2025 12:40:36.741 * monotonic clock: POSIX clock_gettime
+rag_redis  | 1:M 23 Dec 2025 12:40:36.747 * Running mode=standalone, port=6379.
+rag_redis  | 1:M 23 Dec 2025 12:40:36.748 * Server initialized
+rag_redis  | 1:M 23 Dec 2025 12:40:36.748 * Reading RDB base file on AOF loading...
+rag_redis  | 1:M 23 Dec 2025 12:40:36.748 * Loading RDB produced by version 7.4.6
+rag_redis  | 1:M 23 Dec 2025 12:40:36.748 * RDB age 137 seconds
+rag_redis  | 1:M 23 Dec 2025 12:40:36.748 * RDB memory usage when created 0.91 Mb
+rag_redis  | 1:M 23 Dec 2025 12:40:36.748 * RDB is base AOF
+rag_redis  | 1:M 23 Dec 2025 12:40:36.748 * Done loading RDB, keys loaded: 0, keys expired: 0.
+rag_redis  | 1:M 23 Dec 2025 12:40:36.748 * DB loaded from base file appendonly.aof.1.base.rdb: 0.001 seconds
+rag_redis  | 1:M 23 Dec 2025 12:40:36.749 * DB loaded from incr file appendonly.aof.1.incr.aof: 0.001 seconds
+rag_redis  | 1:M 23 Dec 2025 12:40:36.749 * DB loaded from append only file: 0.001 seconds
+rag_redis  | 1:M 23 Dec 2025 12:40:36.749 * Opening AOF incr file appendonly.aof.1.incr.aof on server start
+rag_redis  | 1:M 23 Dec 2025 12:40:36.749 * Ready to accept connections tcp
+rag_postgres  |
+rag_postgres  | PostgreSQL Database directory appears to contain a database; Skipping initialization
+rag_postgres  |
+rag_postgres  | 2025-12-23 12:40:37.006 UTC [1] LOG:  starting PostgreSQL 15.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+rag_postgres  | 2025-12-23 12:40:37.006 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+rag_postgres  | 2025-12-23 12:40:37.006 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+rag_postgres  | 2025-12-23 12:40:37.019 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+rag_postgres  | 2025-12-23 12:40:37.037 UTC [29] LOG:  database system was shut down at 2025-12-23 12:40:29 UTC
+rag_postgres  | 2025-12-23 12:40:37.065 UTC [1] LOG:  database system is ready to accept connections
+rag_backup    | Running daily backup...
+rag_backup    | [INFO] Starting backup for 20251223_124046...
+rag_backup    | [INFO] Backing up Postgres...
+rag_api       | ==========================================
+rag_api       | Personal RAG System - Initialization
+rag_api       | ==========================================
+rag_api       |
+rag_api       | [1/4] Verifying NLTK data...
+rag_backup    | [INFO] Backing up Redis...
+rag_backup    | [INFO] Backing up ChromaDB...
+rag_backup    | [INFO] Cleaning up backups older than 7 days...
+rag_backup    | [SUCCESS] Backup completed: 20251223_124046
+rag_backup    | total 12M
+rag_backup    | -rwxrwxrwx    1 root     root       29.6K Dec 16 20:07 DEPLOYMENT_GUIDE_CONTABO.md
+rag_backup    | -rw-r--r--    1 root     root      724.7K Dec 21 23:41 chroma_20251221_234112.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.7K Dec 22 03:18 chroma_20251222_031833.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.7K Dec 22 03:20 chroma_20251222_032035.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.8K Dec 22 03:30 chroma_20251222_033044.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.7K Dec 22 03:33 chroma_20251222_033317.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.7K Dec 22 03:37 chroma_20251222_033731.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.7K Dec 22 03:38 chroma_20251222_033828.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.7K Dec 22 23:48 chroma_20251222_234837.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.7K Dec 22 23:50 chroma_20251222_235033.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.8K Dec 22 23:51 chroma_20251222_235129.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.8K Dec 22 23:52 chroma_20251222_235256.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.8K Dec 23 00:01 chroma_20251223_000120.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.8K Dec 23 00:26 chroma_20251223_002616.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.7K Dec 23 00:58 chroma_20251223_005834.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.7K Dec 23 12:38 chroma_20251223_123829.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.7K Dec 23 12:40 chroma_20251223_124046.tar.gz
+rag_backup    | drwxrwxrwx    1 root     root         512 Dec 21 23:41 chroma_backup_20251121_210745
+rag_backup    | -rw-r--r--    1 root     root         739 Dec 21 23:41 db_20251221_234112.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         737 Dec 22 03:18 db_20251222_031833.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         737 Dec 22 03:20 db_20251222_032035.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         739 Dec 22 03:30 db_20251222_033044.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         739 Dec 22 03:33 db_20251222_033317.sql.gz
+rag_backup    | -rw-r--r--    1 root     root          20 Dec 22 03:37 db_20251222_033731.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         372 Dec 22 03:38 db_20251222_033828.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         739 Dec 22 23:48 db_20251222_234837.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         737 Dec 22 23:50 db_20251222_235033.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         372 Dec 22 23:51 db_20251222_235129.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         369 Dec 22 23:52 db_20251222_235256.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         371 Dec 23 00:01 db_20251223_000120.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         370 Dec 23 00:26 db_20251223_002616.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         737 Dec 23 00:58 db_20251223_005834.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         370 Dec 23 12:38 db_20251223_123829.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         737 Dec 23 12:40 db_20251223_124046.sql.gz
+rag_backup    | drwxrwxrwx    1 root     root         512 Dec 21 23:41 mds
+rag_backup    | -rw-------    1 root     root         104 Dec 21 23:41 redis_20251221_234112.rdb
+rag_backup    | -rw-------    1 root     root         104 Dec 22 03:18 redis_20251222_031833.rdb
+rag_backup    | -rw-------    1 root     root         104 Dec 22 03:20 redis_20251222_032035.rdb
+rag_backup    | -rw-------    1 root     root         104 Dec 22 03:30 redis_20251222_033044.rdb
+rag_backup    | -rw-------    1 root     root         104 Dec 22 03:33 redis_20251222_033317.rdb
+rag_backup    | -rw-------    1 root     root       14.0K Dec 22 03:37 redis_20251222_033731.rdb
+rag_backup    | -rw-------    1 root     root       59.0K Dec 22 23:48 redis_20251222_234837.rdb
+rag_backup    | -rw-------    1 root     root       59.0K Dec 22 23:50 redis_20251222_235033.rdb
+rag_backup    | -rw-------    1 root     root         103 Dec 22 23:52 redis_20251222_235256.rdb
+rag_backup    | -rw-------    1 root     root         103 Dec 23 00:58 redis_20251223_005834.rdb
+rag_backup    | -rw-------    1 root     root         103 Dec 23 12:40 redis_20251223_124046.rdb
+rag_backup    | Sleeping for 24 hours...
+rag_api       | ✓ NLTK stopwords found
+rag_api       | ✓ NLTK punkt tokenizer found
+rag_api       |
+rag_api       | [2/4] Checking BM25 index...
+rag_api       | ✓ ChromaDB directory found: ./data/chroma
+rag_api       | ✓ BM25 index already exists: ./data/chroma/bm25_index.pkl
+rag_api       |   Index size: 200.0K
+rag_api       |
+rag_api       | [3/4] Initializing Database...
+rag_api       | INFO:__main__:Initializing database...
+rag_api       | INFO:__main__:Database tables created successfully!
+rag_api       | ✓ Database tables initialized
+rag_api       |
+rag_api       | [4/4] Configuration Summary
+rag_api       | -------------------------------------------
+rag_api       | LLM Provider:        groq
+rag_api       | Embedding Model:     BAAI/bge-small-en-v1.5
+rag_api       | ChromaDB Path:       ./data/chroma
+rag_api       | Collection Name:     personal_rag
+rag_api       | Query Rewriting:     true
+rag_api       | Session Backend:     redis
+rag_api       | Uvicorn Workers:     2
+rag_api       | -------------------------------------------
+rag_api       |
+rag_api       | ==========================================
+rag_api       | Starting FastAPI Server
+rag_api       | ==========================================
+rag_api       |
+rag_api       | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+rag_api       | INFO:     Started parent process [1]
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.logging_config | Logging configured: level=INFO, format=colored
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.logging_config | Logging configured: level=INFO, format=colored
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.main | Application started: RAGChatBot (Local $0) v0.3.0
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.main | LLM Provider: groq
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.main | Groq Model: llama-3.1-8b-instant
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.main | Groq API Key: ✓ Set
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.config_validator | ================================================================================
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.config_validator | ✅ Environment configuration validated successfully
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.config_validator | ================================================================================
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.config_validator | Environment: development
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.config_validator | LLM Provider: groq
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.config_validator | Session Backend: redis
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.config_validator | Response Caching: enabled
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.config_validator | Prompt Guard: enabled
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.config_validator | ================================================================================
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.config_validator |
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.main | Application started: RAGChatBot (Local $0) v0.3.0
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.main | LLM Provider: groq
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.main | Groq Model: llama-3.1-8b-instant
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.main | Groq API Key: ✓ Set
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.config_validator | ================================================================================
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.config_validator | ✅ Environment configuration validated successfully
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.config_validator | ================================================================================
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.config_validator | Environment: development
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.config_validator | LLM Provider: groq
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.config_validator | Session Backend: redis
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.config_validator | Response Caching: enabled
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.config_validator | Prompt Guard: enabled
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.config_validator | ================================================================================
+rag_api       | 2025-12-23 12:41:03 | INFO     | app.config_validator |
+rag_prometheus  | ts=2025-12-23T12:41:07.668Z caller=main.go:583 level=info msg="Starting Prometheus Server" mode=server version="(version=2.48.0, branch=HEAD, revision=6d80b30990bc297d95b5c844e118c4011fad8054)"
+rag_prometheus  | ts=2025-12-23T12:41:07.668Z caller=main.go:588 level=info build_context="(go=go1.21.4, platform=linux/amd64, user=root@26117804242c, date=20231116-04:35:21, tags=netgo,builtinassets,stringlabels)"
+rag_prometheus  | ts=2025-12-23T12:41:07.668Z caller=main.go:589 level=info host_details="(Linux 5.15.153.1-microsoft-standard-WSL2 #1 SMP Fri Mar 29 23:14:13 UTC 2024 x86_64 prometheus )"
+rag_prometheus  | ts=2025-12-23T12:41:07.668Z caller=main.go:590 level=info fd_limits="(soft=1048576, hard=1048576)"
+rag_prometheus  | ts=2025-12-23T12:41:07.668Z caller=main.go:591 level=info vm_limits="(soft=unlimited, hard=unlimited)"
+rag_prometheus  | ts=2025-12-23T12:41:07.671Z caller=web.go:566 level=info component=web msg="Start listening for connections" address=0.0.0.0:9090
+rag_prometheus  | ts=2025-12-23T12:41:07.671Z caller=main.go:1024 level=info msg="Starting TSDB ..."
+rag_prometheus  | ts=2025-12-23T12:41:07.673Z caller=tls_config.go:274 level=info component=web msg="Listening on" address=[::]:9090
+rag_prometheus  | ts=2025-12-23T12:41:07.673Z caller=tls_config.go:277 level=info component=web msg="TLS is disabled." http2=false address=[::]:9090
+rag_prometheus  | ts=2025-12-23T12:41:07.675Z caller=head.go:601 level=info component=tsdb msg="Replaying on-disk memory mappable chunks if any"
+rag_prometheus  | ts=2025-12-23T12:41:07.675Z caller=head.go:682 level=info component=tsdb msg="On-disk memory mappable chunks replay completed" duration=13.851µs
+rag_prometheus  | ts=2025-12-23T12:41:07.675Z caller=head.go:690 level=info component=tsdb msg="Replaying WAL, this may take a while"
+rag_prometheus  | ts=2025-12-23T12:41:07.683Z caller=head.go:761 level=info component=tsdb msg="WAL segment loaded" segment=0 maxSegment=1
+rag_prometheus  | ts=2025-12-23T12:41:07.683Z caller=head.go:761 level=info component=tsdb msg="WAL segment loaded" segment=1 maxSegment=1
+rag_prometheus  | ts=2025-12-23T12:41:07.684Z caller=head.go:798 level=info component=tsdb msg="WAL replay completed" checkpoint_replay_duration=25.007µs wal_replay_duration=8.38557ms wbl_replay_duration=318ns total_replay_duration=8.44076ms
+rag_prometheus  | ts=2025-12-23T12:41:07.686Z caller=main.go:1045 level=info fs_type=EXT4_SUPER_MAGIC
+rag_prometheus  | ts=2025-12-23T12:41:07.686Z caller=main.go:1048 level=info msg="TSDB started"
+rag_prometheus  | ts=2025-12-23T12:41:07.686Z caller=main.go:1229 level=info msg="Loading configuration file" filename=/etc/prometheus/prometheus.yml
+rag_prometheus  | ts=2025-12-23T12:41:07.696Z caller=main.go:1266 level=info msg="Completed loading of configuration file" filename=/etc/prometheus/prometheus.yml totalDuration=9.495898ms db_storage=3.777µs remote_storage=2.984µs web_handler=1.638µs query_engine=1.831µs scrape=330.416µs scrape_sd=67.588µs notify=38.54µs notify_sd=12.222µs rules=7.065424ms tracing=13.642µs
+rag_prometheus  | ts=2025-12-23T12:41:07.696Z caller=main.go:1009 level=info msg="Server is ready to receive web requests."
+rag_prometheus  | ts=2025-12-23T12:41:07.696Z caller=manager.go:1012 level=info component="rule manager" msg="Starting rule manager..."
+rag_caddy       | {"level":"info","ts":1766493667.8082466,"msg":"maxprocs: Leaving GOMAXPROCS=8: CPU quota undefined"}
+rag_caddy       | {"level":"info","ts":1766493667.8086283,"msg":"GOMEMLIMIT is updated","package":"github.com/KimMachineGun/automemlimit/memlimit","GOMEMLIMIT":7353486950,"previous":9223372036854775807}
+rag_caddy       | {"level":"info","ts":1766493667.8101633,"msg":"using config from file","file":"/etc/caddy/Caddyfile"}
+rag_caddy       | {"level":"info","ts":1766493667.8116715,"msg":"adapted config to JSON","adapter":"caddyfile"}
+rag_caddy       | {"level":"warn","ts":1766493667.811699,"msg":"Caddyfile input is not formatted; run 'caddy fmt --overwrite' to fix inconsistencies","adapter":"caddyfile","file":"/etc/caddy/Caddyfile","line":2}
+rag_caddy       | {"level":"info","ts":1766493667.8286805,"logger":"admin","msg":"admin endpoint started","address":"localhost:2019","enforce_origin":false,"origins":["//localhost:2019","//[::1]:2019","//127.0.0.1:2019"]}
+rag_caddy       | {"level":"info","ts":1766493667.8295438,"logger":"tls.cache.maintenance","msg":"started background certificate maintenance","cache":"0xc00064ea00"}
+rag_caddy       | {"level":"info","ts":1766493667.8298817,"logger":"http.auto_https","msg":"server is listening only on the HTTPS port but has no TLS connection policies; adding one to enable TLS","server_name":"srv0","https_port":443}
+rag_caddy       | {"level":"info","ts":1766493667.8299253,"logger":"http.auto_https","msg":"enabling automatic HTTP->HTTPS redirects","server_name":"srv0"}
+rag_caddy       | {"level":"info","ts":1766493667.8317854,"logger":"http","msg":"enabling HTTP/3 listener","addr":":443"}
+rag_caddy       | {"level":"info","ts":1766493667.8319058,"msg":"failed to sufficiently increase receive buffer size (was: 208 kiB, wanted: 7168 kiB, got: 416 kiB). See https://github.com/quic-go/quic-go/wiki/UDP-Buffer-Sizes for details."}
+rag_caddy       | {"level":"info","ts":1766493667.8320901,"logger":"http.log","msg":"server running","name":"srv0","protocols":["h1","h2","h3"]}
+rag_caddy       | {"level":"warn","ts":1766493667.8321505,"logger":"http","msg":"HTTP/2 skipped because it requires TLS","network":"tcp","addr":":80"}
+rag_caddy       | {"level":"warn","ts":1766493667.8321557,"logger":"http","msg":"HTTP/3 skipped because it requires TLS","network":"tcp","addr":":80"}
+rag_caddy       | {"level":"info","ts":1766493667.8321579,"logger":"http.log","msg":"server running","name":"remaining_auto_https_redirects","protocols":["h1","h2","h3"]}
+rag_caddy       | {"level":"info","ts":1766493667.832162,"logger":"http","msg":"enabling automatic TLS certificate management","domains":["localhost"]}
+rag_caddy       | {"level":"warn","ts":1766493667.8325791,"logger":"tls","msg":"stapling OCSP","identifiers":["localhost"]}
+rag_caddy       | {"level":"warn","ts":1766493667.8326693,"logger":"pki.ca.local","msg":"installing root certificate (you might be prompted for password)","path":"storage:pki/authorities/local/root.crt"}
+rag_caddy       | {"level":"info","ts":1766493667.8333988,"msg":"warning: \"certutil\" is not available, install \"certutil\" with \"apt install libnss3-tools\" or \"yum install nss-tools\" and try again"}
+rag_caddy       | {"level":"info","ts":1766493667.833424,"msg":"define JAVA_HOME environment variable to use the Java trust"}
+rag_caddy       | {"level":"info","ts":1766493667.8355155,"logger":"tls","msg":"storage cleaning happened too recently; skipping for now","storage":"FileStorage:/data/caddy","instance":"292c6bb6-4a12-41e7-bf92-f3ac2dbd9808","try_again":1766580067.8355036,"try_again_in":86399.999998808}
+rag_caddy       | {"level":"info","ts":1766493667.8357482,"logger":"tls","msg":"finished cleaning storage units"}
+rag_caddy       | {"level":"info","ts":1766493667.8666346,"msg":"certificate installed properly in linux trusts"}
+rag_caddy       | {"level":"info","ts":1766493667.867555,"msg":"autosaved config (load with --resume flag)","file":"/config/caddy/autosave.json"}
+rag_caddy       | {"level":"info","ts":1766493667.8676023,"msg":"serving initial configuration"}
+rag_grafana     | logger=settings t=2025-12-23T12:41:17.587529749Z level=info msg="Starting Grafana" version=10.2.2 commit=161e3cac5075540918e3a39004f2364ad104d5bb branch=HEAD compiled=2023-11-20T12:28:00Z
+rag_grafana     | logger=settings t=2025-12-23T12:41:17.587865046Z level=info msg="Config loaded from" file=/usr/share/grafana/conf/defaults.ini
+rag_grafana     | logger=settings t=2025-12-23T12:41:17.587897437Z level=info msg="Config loaded from" file=/etc/grafana/grafana.ini
+rag_grafana     | logger=settings t=2025-12-23T12:41:17.587901412Z level=info msg="Config overridden from command line" arg="default.paths.data=/var/lib/grafana"
+rag_grafana     | logger=settings t=2025-12-23T12:41:17.587904509Z level=info msg="Config overridden from command line" arg="default.paths.logs=/var/log/grafana"
+rag_grafana     | logger=settings t=2025-12-23T12:41:17.587906859Z level=info msg="Config overridden from command line" arg="default.paths.plugins=/var/lib/grafana/plugins"
+rag_grafana     | logger=settings t=2025-12-23T12:41:17.587909208Z level=info msg="Config overridden from command line" arg="default.paths.provisioning=/etc/grafana/provisioning"
+rag_grafana     | logger=settings t=2025-12-23T12:41:17.587911716Z level=info msg="Config overridden from command line" arg="default.log.mode=console"
+rag_grafana     | logger=settings t=2025-12-23T12:41:17.587914414Z level=info msg="Config overridden from Environment variable" var="GF_PATHS_DATA=/var/lib/grafana"
+rag_grafana     | logger=settings t=2025-12-23T12:41:17.587917742Z level=info msg="Config overridden from Environment variable" var="GF_PATHS_LOGS=/var/log/grafana"
+rag_grafana     | logger=settings t=2025-12-23T12:41:17.58792077Z level=info msg="Config overridden from Environment variable" var="GF_PATHS_PLUGINS=/var/lib/grafana/plugins"
+rag_grafana     | logger=settings t=2025-12-23T12:41:17.587923191Z level=info msg="Config overridden from Environment variable" var="GF_PATHS_PROVISIONING=/etc/grafana/provisioning"
+rag_grafana     | logger=settings t=2025-12-23T12:41:17.587925651Z level=info msg="Config overridden from Environment variable" var="GF_SERVER_ROOT_URL=https://localhost/grafana/"
+rag_grafana     | logger=settings t=2025-12-23T12:41:17.587928182Z level=info msg="Config overridden from Environment variable" var="GF_SERVER_SERVE_FROM_SUB_PATH=true"
+rag_grafana     | logger=settings t=2025-12-23T12:41:17.587932608Z level=info msg="Config overridden from Environment variable" var="GF_SECURITY_ADMIN_USER=admin"
+rag_grafana     | logger=settings t=2025-12-23T12:41:17.587936238Z level=info msg="Config overridden from Environment variable" var="GF_SECURITY_ADMIN_PASSWORD=*********"
+rag_grafana     | logger=settings t=2025-12-23T12:41:17.587938593Z level=info msg="Config overridden from Environment variable" var="GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/dashboards/01-system-overview.json"
+rag_grafana     | logger=settings t=2025-12-23T12:41:17.587941526Z level=info msg="Config overridden from Environment variable" var="GF_AUTH_ANONYMOUS_ENABLED=false"
+rag_grafana     | logger=settings t=2025-12-23T12:41:17.587944375Z level=info msg=Target target=[all]
+rag_grafana     | logger=settings t=2025-12-23T12:41:17.587951274Z level=info msg="Path Home" path=/usr/share/grafana
+rag_grafana     | logger=settings t=2025-12-23T12:41:17.587954829Z level=info msg="Path Data" path=/var/lib/grafana
+rag_grafana     | logger=settings t=2025-12-23T12:41:17.587957589Z level=info msg="Path Logs" path=/var/log/grafana
+rag_grafana     | logger=settings t=2025-12-23T12:41:17.587960087Z level=info msg="Path Plugins" path=/var/lib/grafana/plugins
+rag_grafana     | logger=settings t=2025-12-23T12:41:17.587962486Z level=info msg="Path Provisioning" path=/etc/grafana/provisioning
+rag_grafana     | logger=settings t=2025-12-23T12:41:17.587965269Z level=info msg="App mode production"
+rag_grafana     | logger=sqlstore t=2025-12-23T12:41:17.588282926Z level=info msg="Connecting to DB" dbtype=sqlite3
+rag_grafana     | logger=migrator t=2025-12-23T12:41:17.588936743Z level=info msg="Starting DB migrations"
+rag_grafana     | logger=migrator t=2025-12-23T12:41:17.604200649Z level=info msg="migrations completed" performed=0 skipped=517 duration=676.363µs
+rag_grafana     | logger=secrets t=2025-12-23T12:41:17.605972865Z level=info msg="Envelope encryption state" enabled=true currentprovider=secretKey.v1
+rag_grafana     | logger=local.finder t=2025-12-23T12:41:17.67605897Z level=warn msg="Skipping finding plugins as directory does not exist" path=/usr/share/grafana/plugins-bundled
+rag_grafana     | logger=query_data t=2025-12-23T12:41:17.679609011Z level=info msg="Query Service initialization"
+rag_grafana     | logger=live.push_http t=2025-12-23T12:41:17.684329701Z level=info msg="Live Push Gateway initialization"
+rag_grafana     | logger=infra.usagestats.collector t=2025-12-23T12:41:19.123406696Z level=info msg="registering usage stat providers" usageStatsProvidersLen=2
+rag_grafana     | logger=provisioning.plugins t=2025-12-23T12:41:19.145940746Z level=error msg="Failed to read plugin provisioning files from directory" path=/etc/grafana/provisioning/plugins error="open /etc/grafana/provisioning/plugins: no such file or directory"
+rag_grafana     | logger=provisioning.notifiers t=2025-12-23T12:41:19.146267665Z level=error msg="Can't read alert notification provisioning files from directory" path=/etc/grafana/provisioning/notifiers error="open /etc/grafana/provisioning/notifiers: no such file or directory"
+rag_grafana     | logger=provisioning.alerting t=2025-12-23T12:41:19.146480871Z level=error msg="can't read alerting provisioning files from directory" path=/etc/grafana/provisioning/alerting error="open /etc/grafana/provisioning/alerting: no such file or directory"
+rag_grafana     | logger=provisioning.alerting t=2025-12-23T12:41:19.146503548Z level=info msg="starting to provision alerting"
+rag_grafana     | logger=provisioning.alerting t=2025-12-23T12:41:19.146528465Z level=info msg="finished to provision alerting"
+rag_grafana     | logger=ngalert.state.manager t=2025-12-23T12:41:19.149525838Z level=info msg="Warming state cache for startup"
+rag_grafana     | logger=grafanaStorageLogger t=2025-12-23T12:41:19.152595902Z level=info msg="Storage starting"
+rag_grafana     | logger=http.server t=2025-12-23T12:41:19.167741957Z level=info msg="HTTP Server Listen" address=[::]:3000 protocol=http subUrl=/grafana socket=
+rag_grafana     | logger=grafana.update.checker t=2025-12-23T12:41:19.173834854Z level=error msg="Update check failed" error="failed to get latest.json repo from github.com: Get \"https://raw.githubusercontent.com/grafana/grafana/main/latest.json\": dial tcp: lookup raw.githubusercontent.com on 127.0.0.11:53: server misbehaving" duration=21.145664ms
+rag_grafana     | logger=sqlstore.transactions t=2025-12-23T12:41:19.175902396Z level=info msg="Database locked, sleeping then retrying" error="database is locked" retry=0 code="database is locked"
+rag_grafana     | logger=ngalert.migration t=2025-12-23T12:41:19.220251065Z level=info msg=Starting
+rag_grafana     | logger=ngalert.migration t=2025-12-23T12:41:19.221083905Z level=info msg="No migrations to run"
+rag_grafana     | logger=ngalert.state.manager t=2025-12-23T12:41:19.229695384Z level=info msg="State cache has been initialized" states=0 duration=80.165073ms
+rag_grafana     | logger=ngalert.scheduler t=2025-12-23T12:41:19.22976078Z level=info msg="Starting scheduler" tickInterval=10s
+rag_grafana     | logger=ngalert.multiorg.alertmanager t=2025-12-23T12:41:19.229768588Z level=info msg="Starting MultiOrg Alertmanager"
+rag_api         | {"request_id":"10f053f4-25b1-4ae4-ad2e-48413c71a259","method":"GET","path":"/metrics","status":200,"elapsed_ms":3,"client_ip":"172.20.0.6","content_length":null}
+rag_redis       | 1:M 23 Dec 2025 12:41:37.021 * 1 changes in 60 seconds. Saving...
+rag_redis       | 1:M 23 Dec 2025 12:41:37.021 * Background saving started by pid 59
+rag_redis       | 59:C 23 Dec 2025 12:41:37.026 * DB saved on disk
+rag_redis       | 59:C 23 Dec 2025 12:41:37.026 * Fork CoW for RDB: current 0 MB, peak 0 MB, average 0 MB
+rag_redis       | 1:M 23 Dec 2025 12:41:37.122 * Background saving terminated with success
+rag_api         | {"request_id":"fe12b947-ca5d-469a-960f-e9d49535bc9f","method":"GET","path":"/metrics","status":200,"elapsed_ms":5,"client_ip":"172.20.0.6","content_length":null}
+rag_api         | {"request_id":"9fe859d0-7ffc-4171-8ea1-afe61e74e8e4","method":"GET","path":"/metrics","status":200,"elapsed_ms":3,"client_ip":"172.20.0.6","content_length":null}
+rag_grafana     | logger=infra.usagestats t=2025-12-23T12:42:07.157407035Z level=info msg="Usage stats are ready to report"
+rag_api         | {"request_id":"322c0616-ab61-41c8-8093-ebfe176a92a8","method":"GET","path":"/metrics","status":200,"elapsed_ms":2,"client_ip":"172.20.0.6","content_length":null}
+rag_grafana     | logger=plugin.signature.key_retriever t=2025-12-23T12:42:19.233746142Z level=error msg="Error downloading plugin manifest keys" error="Get \"https://grafana.com/api/plugins/ci/keys\": dial tcp: lookup grafana.com on 127.0.0.11:53: server misbehaving"
+rag_api         | {"request_id":"3d586fde-9310-4f74-8738-49fe51cfa3e6","method":"GET","path":"/metrics","status":200,"elapsed_ms":2,"client_ip":"172.20.0.6","content_length":null}
+rag_redis       | 1:M 23 Dec 2025 12:42:38.003 * 1 changes in 60 seconds. Saving...
+rag_redis       | 1:M 23 Dec 2025 12:42:38.004 * Background saving started by pid 96
+rag_redis       | 96:C 23 Dec 2025 12:42:38.007 * DB saved on disk
+rag_redis       | 96:C 23 Dec 2025 12:42:38.008 * Fork CoW for RDB: current 0 MB, peak 0 MB, average 0 MB
+rag_redis       | 1:M 23 Dec 2025 12:42:38.104 * Background saving terminated with success
+rag_api         | {"request_id":"13fe3afb-11a0-4871-a137-ddab2225ba95","method":"GET","path":"/metrics","status":200,"elapsed_ms":3,"client_ip":"172.20.0.6","content_length":null}
+rag_api         | {"request_id":"82e52c1d-c9b7-475c-ab57-67f8ff7f9c1c","method":"GET","path":"/metrics","status":200,"elapsed_ms":2,"client_ip":"172.20.0.6","content_length":null}
+rag_api         | {"request_id":"9f297f5a-9841-440d-a1bb-d2c038dec2a0","method":"GET","path":"/metrics","status":200,"elapsed_ms":2,"client_ip":"172.20.0.6","content_length":null}
+rag_api         | {"request_id":"8a002789-e062-42a9-9a7b-2b212b4386ae","method":"GET","path":"/metrics","status":200,"elapsed_ms":2,"client_ip":"172.20.0.6","content_length":null}
+rag_redis       | 1:M 23 Dec 2025 12:43:39.045 * 1 changes in 60 seconds. Saving...
+rag_redis       | 1:M 23 Dec 2025 12:43:39.046 * Background saving started by pid 133
+rag_redis       | 133:C 23 Dec 2025 12:43:39.050 * DB saved on disk
+rag_redis       | 133:C 23 Dec 2025 12:43:39.050 * Fork CoW for RDB: current 0 MB, peak 0 MB, average 0 MB
+rag_redis       | 1:M 23 Dec 2025 12:43:39.146 * Background saving terminated with success
+rag_api         | {"request_id":"1f495b39-049d-4bad-9e7d-859dbd948d0c","method":"GET","path":"/metrics","status":200,"elapsed_ms":3,"client_ip":"172.20.0.6","content_length":null}
+rag_api         | {"request_id":"e6a18cce-fcf7-46de-a6fe-b79177e8a6cd","method":"GET","path":"/metrics","status":200,"elapsed_ms":2,"client_ip":"172.20.0.6","content_length":null}
+rag_api         | {"request_id":"7b3fa740-c95f-49cc-8856-0ce9abac79c4","method":"GET","path":"/metrics","status":200,"elapsed_ms":2,"client_ip":"172.20.0.6","content_length":null}
+rag_api         | {"request_id":"4e356ef8-9a29-4102-a48f-50de260bde06","method":"GET","path":"/metrics","status":200,"elapsed_ms":2,"client_ip":"172.20.0.6","content_length":null}
+rag_redis       | 1:M 23 Dec 2025 12:44:40.075 * 1 changes in 60 seconds. Saving...
+rag_redis       | 1:M 23 Dec 2025 12:44:40.076 * Background saving started by pid 171
+rag_redis       | 171:C 23 Dec 2025 12:44:40.083 * DB saved on disk
+rag_redis       | 171:C 23 Dec 2025 12:44:40.083 * Fork CoW for RDB: current 0 MB, peak 0 MB, average 0 MB
+rag_redis       | 1:M 23 Dec 2025 12:44:40.177 * Background saving terminated with success
+rag_api         | {"request_id":"d97e682d-dafe-4a43-b206-775ecdfe71c5","method":"GET","path":"/metrics","status":200,"elapsed_ms":2,"client_ip":"172.20.0.6","content_length":null}
+rag_api         | {"request_id":"d06495e5-ddae-413d-b876-e6d9494e0147","method":"GET","path":"/metrics","status":200,"elapsed_ms":2,"client_ip":"172.20.0.6","content_length":null}
+rag_api         | {"request_id":"2565d4c4-9da4-4328-aff6-0b53d4c3042d","method":"GET","path":"/metrics","status":200,"elapsed_ms":2,"client_ip":"172.20.0.6","content_length":null}
+rag_api         | {"request_id":"ab90324b-d748-466b-b064-1f1103613ec0","method":"GET","path":"/metrics","status":200,"elapsed_ms":2,"client_ip":"172.20.0.6","content_length":null}
+rag_postgres    | 2025-12-23 12:45:37.119 UTC [27] LOG:  checkpoint starting: time
+rag_postgres    | 2025-12-23 12:45:38.035 UTC [27] LOG:  checkpoint complete: wrote 12 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.906 s, sync=0.005 s, total=0.917 s; sync files=7, longest=0.003 s, average=0.001 s; distance=0 kB, estimate=0 kB
+rag_api         | {"request_id":"d44446de-e318-481b-9337-c990ca98be22","method":"GET","path":"/metrics","status":200,"elapsed_ms":3,"client_ip":"172.20.0.6","content_length":null}
+rag_redis       | 1:M 23 Dec 2025 12:45:41.013 * 1 changes in 60 seconds. Saving...
+rag_redis       | 1:M 23 Dec 2025 12:45:41.013 * Background saving started by pid 208
+rag_redis       | 208:C 23 Dec 2025 12:45:41.018 * DB saved on disk
+rag_redis       | 208:C 23 Dec 2025 12:45:41.018 * Fork CoW for RDB: current 0 MB, peak 0 MB, average 0 MB
+rag_redis       | 1:M 23 Dec 2025 12:45:41.114 * Background saving terminated with success
+rag_api         | {"request_id":"feb08691-43ee-4323-9f0e-994f120c52f4","method":"GET","path":"/metrics","status":200,"elapsed_ms":2,"client_ip":"172.20.0.6","content_length":null}
+rag_api         | {"request_id":"15f2b682-04bc-425c-882c-19f3152b85e5","method":"GET","path":"/metrics","status":200,"elapsed_ms":2,"client_ip":"172.20.0.6","content_length":null}
+rag_api         | {"request_id":"2ad02bcc-faf6-4d0a-ba47-0ba2bc26844d","method":"GET","path":"/metrics","status":200,"elapsed_ms":5,"client_ip":"172.20.0.6","content_length":null}
+rag_api         | {"request_id":"c11bf9ee-a422-4a87-9d7e-8758914a1744","method":"GET","path":"/metrics","status":200,"elapsed_ms":3,"client_ip":"172.20.0.6","content_length":null}
+rag_redis       | 1:M 23 Dec 2025 12:46:42.072 * 1 changes in 60 seconds. Saving...
+rag_redis       | 1:M 23 Dec 2025 12:46:42.073 * Background saving started by pid 245
+rag_redis       | 245:C 23 Dec 2025 12:46:42.078 * DB saved on disk
+rag_redis       | 245:C 23 Dec 2025 12:46:42.079 * Fork CoW for RDB: current 0 MB, peak 0 MB, average 0 MB
+rag_redis       | 1:M 23 Dec 2025 12:46:42.174 * Background saving terminated with success
+rag_api         | {"request_id":"0ab7dce4-e9a9-451f-984a-029e23d23ba9","method":"GET","path":"/metrics","status":200,"elapsed_ms":5,"client_ip":"172.20.0.6","content_length":null}
+Gracefully Stopping... press Ctrl+C again to force
+ Container rag_backup  Stopping
+ Container rag_grafana  Stopping
+ Container rag_caddy  Stopping
+
+
+ Container rag_grafana  Stopped
+ Container rag_prometheus  Stopping
+ Container rag_caddy  Stopped
+ Container rag_prometheus  Stopped
+ Container rag_api  Stopping
+ Container rag_backup  Stopped
+ Container rag_api  Stopped
+ Container rag_postgres  Stopping
+ Container rag_redis  Stopping
+
+
+
+
+ Container rag_postgres  Stopped
+ Container rag_redis  Stopped
+
+
+C:\Users\vaish\Personal\Other\Coding\RAG_Personal>docker compose down && docker compose up
+[+] Running 9/9
+ ✔ Container rag_grafana                 Removed                                                             0.1s
+ ✔ Container rag_backup                  Removed                                                             0.1s
+ ✔ Container rag_caddy                   Removed                                                             0.0s
+ ✔ Container rag_prometheus              Removed                                                             0.1s
+ ✔ Container rag_api                     Removed                                                             0.1s
+ ✔ Container rag_redis                   Removed                                                             0.1s
+ ✔ Container rag_postgres                Removed                                                             0.1s
+ ✔ Network personal-rag-system_frontend  Removed                                                             0.6s
+ ✔ Network personal-rag-system_backend   Removed                                                             1.0s
+[+] Running 9/9
+ ✔ Network personal-rag-system_frontend  Created                                                             0.0s
+ ✔ Network personal-rag-system_backend   Created                                                             0.0s
+ ✔ Container rag_redis                   Created                                                             0.1s
+ ✔ Container rag_postgres                Created                                                             0.1s
+ ✔ Container rag_backup                  Created                                                             0.2s
+ ✔ Container rag_api                     Created                                                             0.3s
+ ✔ Container rag_prometheus              Created                                                             0.2s
+ ✔ Container rag_caddy                   Created                                                             0.2s
+ ✔ Container rag_grafana                 Created                                                             0.1s
+Attaching to rag_api, rag_backup, rag_caddy, rag_grafana, rag_postgres, rag_prometheus, rag_redis
+rag_redis  | 1:C 23 Dec 2025 12:47:17.238 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+rag_redis  | 1:C 23 Dec 2025 12:47:17.238 * Redis version=7.4.6, bits=64, commit=00000000, modified=0, pid=1, just started
+rag_redis  | 1:C 23 Dec 2025 12:47:17.238 * Configuration loaded
+rag_redis  | 1:M 23 Dec 2025 12:47:17.238 * monotonic clock: POSIX clock_gettime
+rag_redis  | 1:M 23 Dec 2025 12:47:17.239 * Running mode=standalone, port=6379.
+rag_redis  | 1:M 23 Dec 2025 12:47:17.240 * Server initialized
+rag_redis  | 1:M 23 Dec 2025 12:47:17.240 * Reading RDB base file on AOF loading...
+rag_redis  | 1:M 23 Dec 2025 12:47:17.240 * Loading RDB produced by version 7.4.6
+rag_redis  | 1:M 23 Dec 2025 12:47:17.240 * RDB age 538 seconds
+rag_redis  | 1:M 23 Dec 2025 12:47:17.240 * RDB memory usage when created 0.91 Mb
+rag_redis  | 1:M 23 Dec 2025 12:47:17.240 * RDB is base AOF
+rag_redis  | 1:M 23 Dec 2025 12:47:17.240 * Done loading RDB, keys loaded: 0, keys expired: 0.
+rag_redis  | 1:M 23 Dec 2025 12:47:17.240 * DB loaded from base file appendonly.aof.1.base.rdb: 0.000 seconds
+rag_redis  | 1:M 23 Dec 2025 12:47:17.243 * DB loaded from incr file appendonly.aof.1.incr.aof: 0.003 seconds
+rag_redis  | 1:M 23 Dec 2025 12:47:17.243 * DB loaded from append only file: 0.003 seconds
+rag_redis  | 1:M 23 Dec 2025 12:47:17.243 * Opening AOF incr file appendonly.aof.1.incr.aof on server start
+rag_redis  | 1:M 23 Dec 2025 12:47:17.243 * Ready to accept connections tcp
+rag_postgres  |
+rag_postgres  | PostgreSQL Database directory appears to contain a database; Skipping initialization
+rag_postgres  |
+rag_postgres  | 2025-12-23 12:47:17.413 UTC [1] LOG:  starting PostgreSQL 15.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+rag_postgres  | 2025-12-23 12:47:17.413 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+rag_postgres  | 2025-12-23 12:47:17.413 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+rag_postgres  | 2025-12-23 12:47:17.418 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+rag_postgres  | 2025-12-23 12:47:17.429 UTC [29] LOG:  database system was shut down at 2025-12-23 12:47:11 UTC
+rag_postgres  | 2025-12-23 12:47:17.437 UTC [1] LOG:  database system is ready to accept connections
+rag_backup    | Running daily backup...
+rag_backup    | [INFO] Starting backup for 20251223_124727...
+rag_backup    | [INFO] Backing up Postgres...
+rag_api       | ==========================================
+rag_api       | Personal RAG System - Initialization
+rag_api       | ==========================================
+rag_api       |
+rag_api       | [1/4] Verifying NLTK data...
+rag_backup    | [INFO] Backing up Redis...
+rag_backup    | [INFO] Backing up ChromaDB...
+rag_backup    | [INFO] Cleaning up backups older than 7 days...
+rag_backup    | [SUCCESS] Backup completed: 20251223_124727
+rag_backup    | total 12M
+rag_backup    | -rwxrwxrwx    1 root     root       29.6K Dec 16 20:07 DEPLOYMENT_GUIDE_CONTABO.md
+rag_backup    | -rw-r--r--    1 root     root      724.7K Dec 21 23:41 chroma_20251221_234112.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.7K Dec 22 03:18 chroma_20251222_031833.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.7K Dec 22 03:20 chroma_20251222_032035.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.8K Dec 22 03:30 chroma_20251222_033044.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.7K Dec 22 03:33 chroma_20251222_033317.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.7K Dec 22 03:37 chroma_20251222_033731.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.7K Dec 22 03:38 chroma_20251222_033828.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.7K Dec 22 23:48 chroma_20251222_234837.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.7K Dec 22 23:50 chroma_20251222_235033.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.8K Dec 22 23:51 chroma_20251222_235129.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.8K Dec 22 23:52 chroma_20251222_235256.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.8K Dec 23 00:01 chroma_20251223_000120.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.8K Dec 23 00:26 chroma_20251223_002616.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.7K Dec 23 00:58 chroma_20251223_005834.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.7K Dec 23 12:38 chroma_20251223_123829.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.7K Dec 23 12:40 chroma_20251223_124046.tar.gz
+rag_backup    | -rw-r--r--    1 root     root      724.7K Dec 23 12:47 chroma_20251223_124727.tar.gz
+rag_backup    | drwxrwxrwx    1 root     root         512 Dec 21 23:41 chroma_backup_20251121_210745
+rag_backup    | -rw-r--r--    1 root     root         739 Dec 21 23:41 db_20251221_234112.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         737 Dec 22 03:18 db_20251222_031833.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         737 Dec 22 03:20 db_20251222_032035.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         739 Dec 22 03:30 db_20251222_033044.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         739 Dec 22 03:33 db_20251222_033317.sql.gz
+rag_backup    | -rw-r--r--    1 root     root          20 Dec 22 03:37 db_20251222_033731.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         372 Dec 22 03:38 db_20251222_033828.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         739 Dec 22 23:48 db_20251222_234837.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         737 Dec 22 23:50 db_20251222_235033.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         372 Dec 22 23:51 db_20251222_235129.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         369 Dec 22 23:52 db_20251222_235256.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         371 Dec 23 00:01 db_20251223_000120.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         370 Dec 23 00:26 db_20251223_002616.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         737 Dec 23 00:58 db_20251223_005834.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         370 Dec 23 12:38 db_20251223_123829.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         737 Dec 23 12:40 db_20251223_124046.sql.gz
+rag_backup    | -rw-r--r--    1 root     root         737 Dec 23 12:47 db_20251223_124727.sql.gz
+rag_backup    | drwxrwxrwx    1 root     root         512 Dec 21 23:41 mds
+rag_backup    | -rw-------    1 root     root         104 Dec 21 23:41 redis_20251221_234112.rdb
+rag_backup    | -rw-------    1 root     root         104 Dec 22 03:18 redis_20251222_031833.rdb
+rag_backup    | -rw-------    1 root     root         104 Dec 22 03:20 redis_20251222_032035.rdb
+rag_backup    | -rw-------    1 root     root         104 Dec 22 03:30 redis_20251222_033044.rdb
+rag_backup    | -rw-------    1 root     root         104 Dec 22 03:33 redis_20251222_033317.rdb
+rag_backup    | -rw-------    1 root     root       14.0K Dec 22 03:37 redis_20251222_033731.rdb
+rag_backup    | -rw-------    1 root     root       59.0K Dec 22 23:48 redis_20251222_234837.rdb
+rag_backup    | -rw-------    1 root     root       59.0K Dec 22 23:50 redis_20251222_235033.rdb
+rag_backup    | -rw-------    1 root     root         103 Dec 22 23:52 redis_20251222_235256.rdb
+rag_backup    | -rw-------    1 root     root         103 Dec 23 00:58 redis_20251223_005834.rdb
+rag_backup    | -rw-------    1 root     root         103 Dec 23 12:40 redis_20251223_124046.rdb
+rag_backup    | -rw-------    1 root     root         103 Dec 23 12:47 redis_20251223_124727.rdb
+rag_backup    | Sleeping for 24 hours...
+rag_api       | ✓ NLTK stopwords found
+rag_api       | ✓ NLTK punkt tokenizer found
+rag_api       |
+rag_api       | [2/4] Checking BM25 index...
+rag_api       | ✓ ChromaDB directory found: ./data/chroma
+rag_api       | ✓ BM25 index already exists: ./data/chroma/bm25_index.pkl
+rag_api       |   Index size: 200.0K
+rag_api       |
+rag_api       | [3/4] Initializing Database...
+rag_api       | INFO:__main__:Initializing database...
+rag_api       | INFO:__main__:Database tables created successfully!
+rag_api       | ✓ Database tables initialized
+rag_api       |
+rag_api       | [4/4] Configuration Summary
+rag_api       | -------------------------------------------
+rag_api       | LLM Provider:        groq
+rag_api       | Embedding Model:     BAAI/bge-small-en-v1.5
+rag_api       | ChromaDB Path:       ./data/chroma
+rag_api       | Collection Name:     personal_rag
+rag_api       | Query Rewriting:     true
+rag_api       | Session Backend:     redis
+rag_api       | Uvicorn Workers:     2
+rag_api       | -------------------------------------------
+rag_api       |
+rag_api       | ==========================================
+rag_api       | Starting FastAPI Server
+rag_api       | ==========================================
+rag_api       |
+rag_api       | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+rag_api       | INFO:     Started parent process [1]
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.logging_config | Logging configured: level=INFO, format=colored
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.logging_config | Logging configured: level=INFO, format=colored
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.main | Application started: RAGChatBot (Local $0) v0.3.0
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.main | LLM Provider: groq
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.main | Groq Model: llama-3.1-8b-instant
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.main | Groq API Key: ✓ Set
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.config_validator | ================================================================================
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.config_validator | ✅ Environment configuration validated successfully
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.config_validator | ================================================================================
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.config_validator | Environment: development
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.config_validator | LLM Provider: groq
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.config_validator | Session Backend: redis
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.config_validator | Response Caching: enabled
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.config_validator | Prompt Guard: enabled
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.config_validator | ================================================================================
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.config_validator |
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.main | Application started: RAGChatBot (Local $0) v0.3.0
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.main | LLM Provider: groq
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.main | Groq Model: llama-3.1-8b-instant
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.main | Groq API Key: ✓ Set
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.config_validator | ================================================================================
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.config_validator | ✅ Environment configuration validated successfully
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.config_validator | ================================================================================
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.config_validator | Environment: development
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.config_validator | LLM Provider: groq
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.config_validator | Session Backend: redis
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.config_validator | Response Caching: enabled
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.config_validator | Prompt Guard: enabled
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.config_validator | ================================================================================
+rag_api       | 2025-12-23 12:47:45 | INFO     | app.config_validator |
+rag_caddy     | {"level":"info","ts":1766494068.067115,"msg":"maxprocs: Leaving GOMAXPROCS=8: CPU quota undefined"}
+rag_caddy     | {"level":"info","ts":1766494068.0675087,"msg":"GOMEMLIMIT is updated","package":"github.com/KimMachineGun/automemlimit/memlimit","GOMEMLIMIT":7353486950,"previous":9223372036854775807}
+rag_caddy     | {"level":"info","ts":1766494068.0690382,"msg":"using config from file","file":"/etc/caddy/Caddyfile"}
+rag_caddy     | {"level":"info","ts":1766494068.070484,"msg":"adapted config to JSON","adapter":"caddyfile"}
+rag_caddy     | {"level":"warn","ts":1766494068.070539,"msg":"Caddyfile input is not formatted; run 'caddy fmt --overwrite' to fix inconsistencies","adapter":"caddyfile","file":"/etc/caddy/Caddyfile","line":2}
+
+
+rag_caddy     | {"level":"info","ts":1766494068.0837228,"logger":"admin","msg":"admin endpoint started","address":"localhost:2019","enforce_origin":false,"origins":["//localhost:2019","//[::1]:2019","//127.0.0.1:2019"]}
+rag_prometheus  | ts=2025-12-23T12:47:48.084Z caller=main.go:583 level=info msg="Starting Prometheus Server" mode=server version="(version=2.48.0, branch=HEAD, revision=6d80b30990bc297d95b5c844e118c4011fad8054)"
+
+
+
+
+rag_prometheus  | ts=2025-12-23T12:47:48.084Z caller=main.go:588 level=info build_context="(go=go1.21.4, platform=linux/amd64, user=root@26117804242c, date=20231116-04:35:21, tags=netgo,builtinassets,stringlabels)"
+
+
+rag_caddy       | {"level":"info","ts":1766494068.0841064,"logger":"tls.cache.maintenance","msg":"started backgrou
+rag_prometheus  | ts=2025-12-23T12:47:48.084Z caller=main.go:589 level=info host_details="(Linux 5.15.153.1-microsoft-standard-WSL2 #1 SMP Fri Mar 29 23:14:13 UTC 2024 x86_64 prometheus )"
+rag_caddy       | {"level":"info","ts":1766494068.0848484,"logger":"http.auto_https","msg":"server is listening only on the HTTPS port but has no TLS connection policies; adding one to enable TLS","server_name":"srv0","https_port":443}
+
+
+
+rag_caddy       | {"level":"info","ts":1766494068.0848742,"logger":"http.auto_https","msg":"enabling automatic HTTrag_prometheus  | ts=2025-12-23T12:47:48.084Z caller=main.go:591 level=info vm_limits="(soft=unlimited, hard=unlimited)"
+rag_caddy       | {"level":"warn","ts":1766494068.0853543,"logger":"pki.ca.local","msg":"installing root certificate (you might be prompted for password)","path":"storage:pki/authorities/local/root.crt"}
+
+
+rag_prometheus  | ts=2025-12-23T12:47:48.087Z caller=web.go:566 level=info component=web msg="Start listening for
+
+rag_prometheus  | ts=2025-12-23T12:47:48.088Z caller=main.go:1024 level=info msg="Starting TSDB ..."
+
+rag_caddy       | {"level":"info","ts":1766494068.0859478,"msg":"define JAVA_HOME environment variable to use the Java trust"}
+rag_caddy       | {"level":"info","ts":1766494068.0889833,"logger":"tls","msg":"storage cleaning happened too recently; skipping for now","storage":"FileStorage:/data/caddy","instance":"292c6bb6-4a12-41e7-bf92-f3ac2dbd9808","try_again":1766580468.088979,"try_again_in":86399.999999623}
+rag_prometheus  | ts=2025-12-23T12:47:48.090Z caller=tls_config.go:277 level=info component=web msg="TLS is disabled." http2=false address=[::]:9090
+rag_caddy       | {"level":"info","ts":1766494068.0890856,"logger":"tls","msg":"finished cleaning storage units"}
+
+
+rag_prometheus  | ts=2025-12-23T12:47:48.096Z caller=head.go:601 level=info component=tsdb msg="Replaying on-disk memory mappable chunks if any"
+rag_caddy       | {"level":"info","ts":1766494068.1313324,"msg":"certificate installed properly in linux trusts"}
+v View in Docker Desktop   o View Config   w Enable Watch
+
+
+
+rag_prometheus  | ts=2025-12-23T12:47:48.097Z caller=head.go:682 level=info component=tsdb msg="On-disk memory mappable chunks replay completed" duration=39.468µs
+rag_caddy       | {"level":"info","ts":1766494068.1317363,"logger":"http","msg":"enabling HTTP/3 listener","addr":":443"}
+v View in Docker Desktop   o View Config   w Enable Watch
+
+rag_caddy       | {"level":"info","ts":1766494068.131921,"msg":"failed to sufficiently increase receive buffer size (was: 208 kiB, wanted: 7168 kiB, got: 416 kiB). See https://github.com/quic-go/quic-go/wiki/UDP-Buffer-Sizes for
+rag_prometheus  | ts=2025-12-23T12:47:48.097Z caller=head.go:690 level=info component=tsdb msg="Replaying WAL, thi
+
+
+
+rag_prometheus  | ts=2025-12-23T12:47:48.103Z caller=head.go:761 level=info component=tsdb msg="WAL segment loaded
+
+rag_caddy       | {"level":"warn","ts":1766494068.132188,"logger":"http","msg":"HTTP/2 skipped because it requires
+rag_caddy       | {"level":"warn","ts":1766494068.1321962,"logger":"http","msg":"HTTP/3 skipped because it requires TLS","network":"tcp","addr":":80"}
+rag_prometheus  | ts=2025-12-23T12:47:48.106Z caller=head.go:761 level=info component=tsdb msg="WAL segment loaded" segment=2 maxSegment=2
+
+rag_caddy       | {"level":"info","ts":1766494068.1321995,"logger":"http.log","msg":"server running","name":"remaining_auto_https_redirects","protocols":["h1","h2","h3"]}
+rag_prometheus  | ts=2025-12-23T12:47:48.106Z caller=head.go:798 level=info component=tsdb msg="WAL replay completed" checkpoint_replay_duration=47.675µs wal_replay_duration=9.2385ms wbl_replay_duration=297ns total_replay_duration=9.356293ms
+
+
+rag_caddy       | {"level":"info","ts":1766494068.1322033,"logger":"http","msg":"enabling automatic TLS certificate management","domains":["localhost"]}
+rag_prometheus  | ts=2025-12-23T12:47:48.113Z caller=main.go:1045 level=info fs_type=EXT4_SUPER_MAGIC
+rag_caddy       | {"level":"warn","ts":1766494068.1326115,"logger":"tls","msg":"stapling OCSP","identifiers":["localhost"]}
+rag_prometheus  | ts=2025-12-23T12:47:48.113Z caller=main.go:1048 level=info msg="TSDB started"
+
+
+rag_prometheus  | ts=2025-12-23T12:47:48.113Z caller=main.go:1229 level=info msg="Loading configuration file" file
+rag_caddy       | {"level":"info","ts":1766494068.1328456,"msg":"autosaved config (load with --resume flag)","file":"/config/caddy/autosave.json"}
+
+
+rag_prometheus  | ts=2025-12-23T12:47:48.119Z caller=main.go:1266 level=info msg="Completed loading of configuration file" filename=/etc/prometheus/prometheus.yml totalDuration=6.465704ms db_storage=2.076µs remote_storage=2.602µs web_handler=1.246µs query_engine=2.233µs scrape=297.506µs scrape_sd=59.223µs notify=70.494µs notify_sd=11.394µs
+rag_caddy       | {"level":"info","ts":1766494068.1328683,"msg":"serving initial configuration"}
+rag_prometheus  | ts=2025-12-23T12:47:48.119Z caller=main.go:1009 level=info msg="Server is ready to receive web requests."
+rag_prometheus  | ts=2025-12-23T12:47:48.119Z caller=manager.go:1012 level=info component="rule manager" msg="Starting rule manager..."
+rag_api         | {"request_id":"1d2f2dc2-954e-4f13-9462-622a427bee92","method":"GET","path":"/metrics","status":200,"elapsed_ms":3,"client_ip":"172.20.0.6","content_length":null}
+rag_grafana     | logger=settings t=2025-12-23T12:47:57.992700934Z level=info msg="Starting Grafana" version=10.2.2 commit=161e3cac5075540918e3a39004f2364ad104d5bb branch=HEAD compiled=2023-11-20T12:28:00Z
+rag_grafana     | logger=settings t=2025-12-23T12:47:57.992998231Z level=info msg="Config loaded from" file=/usr/share/grafana/conf/defaults.ini
+rag_grafana     | logger=settings t=2025-12-23T12:47:57.993025925Z level=info msg="Config loaded from" file=/etc/grafana/grafana.ini
+rag_grafana     | logger=settings t=2025-12-23T12:47:57.993032656Z level=info msg="Config overridden from command line" arg="default.paths.data=/var/lib/grafana"
+rag_grafana     | logger=settings t=2025-12-23T12:47:57.993036146Z level=info msg="Config overridden from command line" arg="default.paths.logs=/var/log/grafana"
+rag_grafana     | logger=settings t=2025-12-23T12:47:57.993038249Z level=info msg="Config overridden from command line" arg="default.paths.plugins=/var/lib/grafana/plugins"
+rag_grafana     | logger=settings t=2025-12-23T12:47:57.993040091Z level=info msg="Config overridden from command line" arg="default.paths.provisioning=/etc/grafana/provisioning"
+rag_grafana     | logger=settings t=2025-12-23T12:47:57.993041952Z level=info msg="Config overridden from command line" arg="default.log.mode=console"
+rag_grafana     | logger=settings t=2025-12-23T12:47:57.993044261Z level=info msg="Config overridden from Environment variable" var="GF_PATHS_DATA=/var/lib/grafana"
+rag_grafana     | logger=settings t=2025-12-23T12:47:57.993046258Z level=info msg="Config overridden from Environment variable" var="GF_PATHS_LOGS=/var/log/grafana"
+rag_grafana     | logger=settings t=2025-12-23T12:47:57.993048158Z level=info msg="Config overridden from Environment variable" var="GF_PATHS_PLUGINS=/var/lib/grafana/plugins"
+rag_grafana     | logger=settings t=2025-12-23T12:47:57.993050072Z level=info msg="Config overridden from Environment variable" var="GF_PATHS_PROVISIONING=/etc/grafana/provisioning"
+rag_grafana     | logger=settings t=2025-12-23T12:47:57.993051807Z level=info msg="Config overridden from Environment variable" var="GF_SERVER_ROOT_URL=https://localhost/grafana/"
+rag_grafana     | logger=settings t=2025-12-23T12:47:57.993053586Z level=info msg="Config overridden from Environment variable" var="GF_SERVER_SERVE_FROM_SUB_PATH=true"
+rag_grafana     | logger=settings t=2025-12-23T12:47:57.993055501Z level=info msg="Config overridden from Environment variable" var="GF_SECURITY_ADMIN_USER=admin"
+rag_grafana     | logger=settings t=2025-12-23T12:47:57.993057327Z level=info msg="Config overridden from Environment variable" var="GF_SECURITY_ADMIN_PASSWORD=*********"
+rag_grafana     | logger=settings t=2025-12-23T12:47:57.993059063Z level=info msg="Config overridden from Environment variable" var="GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/dashboards/01-system-overview.json"
+rag_grafana     | logger=settings t=2025-12-23T12:47:57.993061767Z level=info msg="Config overridden from Environment variable" var="GF_AUTH_ANONYMOUS_ENABLED=false"
+rag_grafana     | logger=settings t=2025-12-23T12:47:57.993063905Z level=info msg=Target target=[all]
+rag_grafana     | logger=settings t=2025-12-23T12:47:57.993070604Z level=info msg="Path Home" path=/usr/share/grafana
+rag_grafana     | logger=settings t=2025-12-23T12:47:57.99307293Z level=info msg="Path Data" path=/var/lib/grafana
+rag_grafana     | logger=settings t=2025-12-23T12:47:57.993075619Z level=info msg="Path Logs" path=/var/log/grafana
+rag_grafana     | logger=settings t=2025-12-23T12:47:57.993077533Z level=info msg="Path Plugins" path=/var/lib/grafana/plugins
+rag_grafana     | logger=settings t=2025-12-23T12:47:57.993079511Z level=info msg="Path Provisioning" path=/etc/grafana/provisioning
+rag_grafana     | logger=settings t=2025-12-23T12:47:57.993082643Z level=info msg="App mode production"
+rag_grafana     | logger=sqlstore t=2025-12-23T12:47:57.993368083Z level=info msg="Connecting to DB" dbtype=sqlite3
+rag_grafana     | logger=migrator t=2025-12-23T12:47:57.99434071Z level=info msg="Starting DB migrations"
+rag_grafana     | logger=migrator t=2025-12-23T12:47:58.007946085Z level=info msg="migrations completed" performed=0 skipped=517 duration=729.544µs
+rag_grafana     | logger=secrets t=2025-12-23T12:47:58.011702121Z level=info msg="Envelope encryption state" enabled=true currentprovider=secretKey.v1
+rag_grafana     | logger=local.finder t=2025-12-23T12:47:58.068168986Z level=warn msg="Skipping finding plugins as directory does not exist" path=/usr/share/grafana/plugins-bundled
+rag_grafana     | logger=query_data t=2025-12-23T12:47:58.071336491Z level=info msg="Query Service initialization"
+rag_grafana     | logger=live.push_http t=2025-12-23T12:47:58.080124679Z level=info msg="Live Push Gateway initialization"
+rag_grafana     | logger=infra.usagestats.collector t=2025-12-23T12:47:59.65689124Z level=info msg="registering usage stat providers" usageStatsProvidersLen=2
+rag_grafana     | logger=provisioning.plugins t=2025-12-23T12:47:59.678125192Z level=error msg="Failed to read plugin provisioning files from directory" path=/etc/grafana/provisioning/plugins error="open /etc/grafana/provisioning/plugins: no such file or directory"
+rag_grafana     | logger=provisioning.notifiers t=2025-12-23T12:47:59.678460033Z level=error msg="Can't read alert notification provisioning files from directory" path=/etc/grafana/provisioning/notifiers error="open /etc/grafana/provisioning/notifiers: no such file or directory"
+rag_grafana     | logger=provisioning.alerting t=2025-12-23T12:47:59.67874235Z level=error msg="can't read alerting provisioning files from directory" path=/etc/grafana/provisioning/alerting error="open /etc/grafana/provisioning/alerting: no such file or directory"
+rag_grafana     | logger=provisioning.alerting t=2025-12-23T12:47:59.678771888Z level=info msg="starting to provision alerting"
+rag_grafana     | logger=provisioning.alerting t=2025-12-23T12:47:59.678785033Z level=info msg="finished to provision alerting"
+rag_grafana     | logger=ngalert.state.manager t=2025-12-23T12:47:59.678973754Z level=info msg="Warming state cache for startup"
+rag_grafana     | logger=grafanaStorageLogger t=2025-12-23T12:47:59.679123595Z level=info msg="Storage starting"
+rag_grafana     | logger=http.server t=2025-12-23T12:47:59.683123455Z level=info msg="HTTP Server Listen" address=[::]:3000 protocol=http subUrl=/grafana socket=
+rag_grafana     | logger=grafana.update.checker t=2025-12-23T12:47:59.68860526Z level=error msg="Update check failed" error="failed to get latest.json repo from github.com: Get \"https://raw.githubusercontent.com/grafana/grafana/main/latest.json\": dial tcp: lookup raw.githubusercontent.com on 127.0.0.11:53: server misbehaving" duration=4.86674ms
+rag_grafana     | logger=plugin.signature.key_retriever t=2025-12-23T12:47:59.743977997Z level=error msg="Error downloading plugin manifest keys" error="Get \"https://grafana.com/api/plugins/ci/keys\": dial tcp: lookup grafana.com on 127.0.0.11:53: server misbehaving"
+rag_grafana     | logger=ngalert.migration t=2025-12-23T12:47:59.755417689Z level=info msg=Starting
+rag_grafana     | logger=ngalert.migration t=2025-12-23T12:47:59.756348599Z level=info msg="No migrations to run"
+rag_grafana     | logger=ngalert.state.manager t=2025-12-23T12:47:59.764136823Z level=info msg="State cache has been initialized" states=0 duration=85.159825ms
+rag_grafana     | logger=ngalert.scheduler t=2025-12-23T12:47:59.764202278Z level=info msg="Starting scheduler" tickInterval=10s
+rag_grafana     | logger=ticker t=2025-12-23T12:47:59.764255167Z level=info msg=starting first_tick=2025-12-23T12:48:00Z
+rag_grafana     | logger=ngalert.multiorg.alertmanager t=2025-12-23T12:47:59.764239868Z level=info msg="Starting MultiOrg Alertmanager"
+rag_api         | {"request_id":"2f99e255-1900-4b3a-a871-f5c02d780fb8","method":"GET","path":"/metrics","status":200,"elapsed_ms":2,"client_ip":"172.20.0.6","content_length":null}

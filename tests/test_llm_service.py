@@ -359,3 +359,71 @@ class TestLLMWrapperFunction:
         mock_service.generate.assert_called_once_with(
             prompt="Test prompt", temperature=0.7, max_tokens=1000, model=None
         )
+
+
+@pytest.mark.unit
+@pytest.mark.llm
+class TestRetryExponentials:
+    """Tests for retry decorators."""
+
+    def test_retry_decorator_backoff(self):
+        """Test that synchronous retry decorator backs off correctly."""
+        from app.services.llm import retry_with_exponential_backoff
+
+        mock_func = MagicMock()
+        mock_func.__name__ = "mock_func"  # Required for logger
+        mock_func.side_effect = [Exception("Fail 1"), Exception("Fail 2"), "Success"]
+
+        with patch("time.sleep") as mock_sleep:
+            decorated = retry_with_exponential_backoff(max_retries=3, base_delay=1)(
+                mock_func
+            )
+            result = decorated()
+
+            assert result == "Success"
+            assert mock_func.call_count == 3
+            # check sleep calls: 1s, then 2s
+            assert mock_sleep.call_count == 2
+            mock_sleep.assert_any_call(1)
+            mock_sleep.assert_any_call(2)
+
+    def test_retry_decorator_max_retries_exceeded(self):
+        """Test that decorator raises exception after max retries."""
+        from app.services.llm import retry_with_exponential_backoff
+
+        mock_func = MagicMock()
+        mock_func.__name__ = "mock_func"  # Required for logger
+        mock_func.side_effect = Exception("Persistent Fail")
+
+        with patch("time.sleep"):
+            decorated = retry_with_exponential_backoff(max_retries=2)(mock_func)
+            with pytest.raises(Exception) as exc:
+                decorated()
+            assert "Persistent Fail" in str(exc.value)
+            assert mock_func.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_async_retry_decorator_backoff(self):
+        """Test that async retry decorator backs off correctly."""
+        from app.services.llm import async_retry_with_exponential_backoff
+
+        mock_func = MagicMock()
+        mock_func.__name__ = "mock_func"  # Required for logger
+        mock_func.side_effect = [Exception("Fail 1"), "Success"]
+
+        # Create an async wrapper for the mock because the decorator expects an async func
+        async def async_wrapper(*args, **kwargs):
+            return mock_func(*args, **kwargs)
+
+        # Async wrapper needs a name too
+        async_wrapper.__name__ = "async_wrapper"
+
+        with patch("asyncio.sleep") as mock_sleep:
+            decorated = async_retry_with_exponential_backoff(max_retries=3)(
+                async_wrapper
+            )
+            result = await decorated()
+
+            assert result == "Success"
+            assert mock_func.call_count == 2
+            mock_sleep.assert_called_with(1)

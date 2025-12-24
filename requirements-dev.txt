@@ -16,3 +16,6 @@ freezegun==1.4.0
 
 # Code Quality
 ruff==0.1.13
+
+# Load Testing
+locust>=2.20.0
