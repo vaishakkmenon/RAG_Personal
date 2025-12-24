@@ -2,6 +2,8 @@
 Models package for Personal RAG API.
 """
 
+from .sql_feedback import Feedback
+from .users import User
 from .schemas import (
     IngestRequest,
     IngestResponse,
@@ -27,4 +29,6 @@ __all__ = [
     "FeedbackRequest",
     "FeedbackResponse",
     "RewriteMetadata",
+    "Feedback",
+    "User",
 ]

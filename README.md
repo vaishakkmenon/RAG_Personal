@@ -171,13 +171,18 @@ RAG_Personal/
 │   │   └── dependencies.py      # Shared dependencies
 │   ├── core/                     # Business logic
 │   │   ├── chat_service.py      # Main RAG orchestration
+│   │   ├── auth.py              # JWT authentication
+│   │   └── session_manager.py   # Session management
 │   ├── services/                 # External integrations
 │   │   ├── llm.py               # Groq client
 │   │   └── reranker.py          # Result reranking
-│   ├── retrieval/               # Vector database
-│   │   ├── store.py             # ChromaDB integration
-│   │   ├── negative_inference_helper.py
-│   │   └── adaptive_threshold.py
+│   ├── retrieval/               # Vector database & search
+│   │   ├── vector_store.py      # ChromaDB integration
+│   │   ├── search_engine.py     # Search orchestration
+│   │   ├── ranking.py           # Result ranking
+│   │   ├── bm25_search.py       # Hybrid BM25 search
+│   │   ├── pattern_matcher.py   # Query pattern matching
+│   │   └── query_rewriter.py    # Query rewriting
 │   ├── prompting/               # Prompt engineering
 │   ├── ingest/                  # Document processing
 │   ├── middleware/              # HTTP middleware
@@ -195,8 +200,7 @@ RAG_Personal/
 ├── requirements.txt             # Python dependencies
 ├── .env                         # Environment config (gitignored)
 ├── README.md                    # This file
-├── latest_analysis.md           # Latest codebase analysis
-└── next_steps.md                # Refactoring action plan
+└── PRODUCTION_READINESS_CHECKLIST.md  # Production readiness tracking
 ```
 
 ## 🔧 Configuration
@@ -285,6 +289,18 @@ GET /sample?n=5
 Headers: X-API-Key: your-api-key
 ```
 
+### Authentication (Admin)
+```bash
+# Get JWT token
+POST /auth/token
+Content-Type: application/x-www-form-urlencoded
+Body: username=admin&password=your-password
+
+# Access protected endpoints
+GET /auth/users/me
+Headers: Authorization: Bearer <token>
+```
+
 ## 🔍 Features
 
 ### RAG Pipeline
@@ -315,11 +331,14 @@ Headers: X-API-Key: your-api-key
 - ✅ **Timeout Handling** - Graceful degradation
 
 ### Security
-- ✅ **API Key Authentication** - Bearer token required
+- ✅ **API Key Authentication** - Bearer token required for chat/ingest
+- ✅ **JWT Authentication** - OAuth2 password flow for admin endpoints
+- ✅ **Circuit Breaker** - Groq API resilience with automatic recovery
 - ✅ **CORS Configuration** - Restricts cross-origin requests
 - ✅ **Request Size Limits** - Prevents DoS attacks
 - ✅ **Path Traversal Protection** - Secure file access
 - ✅ **Docker Security** - Read-only filesystem, dropped capabilities
+- ✅ **Graceful Shutdown** - Clean connection cleanup on restart
 
 ### Observability
 - ✅ **Prometheus Metrics** - Request counts, latencies, chunk retrieval
@@ -409,8 +428,9 @@ For questions or issues, refer to the documentation in `docs/`.
 
 **Status**: 🟢 **Production Ready (v1.0)**
 **Version**: 1.0.0
-**Last Updated**: 2025-12-21
+**Last Updated**: 2025-12-24
 **Recent Changes**:
-- **Major Refactoring**: Modularized Ingestion (`loader`, `chunker`, `pipeline`) and Retrieval (`search`, `ranking`) layers.
-- **Ollama Removal**: Standardized on Groq for all environments.
-- **Documentation**: Updated architecture guides and runbooks.
+- **JWT Authentication**: Added OAuth2 password flow for admin endpoints
+- **Circuit Breaker**: Groq API resilience with automatic state transitions
+- **Graceful Shutdown**: Clean connection cleanup on restart
+- **CI Improvements**: Test coverage (60% threshold) and Trivy vulnerability scanning

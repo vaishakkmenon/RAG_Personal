@@ -4,11 +4,13 @@ Document ingestion endpoint for Personal RAG system.
 
 import logging
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from app.ingest import ingest_paths
 from app.models import IngestRequest, IngestResponse
+from app.models import User
 from app.settings import settings
+from app.core.auth import get_current_admin_user
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +18,10 @@ router = APIRouter()
 
 
 @router.post("/ingest", response_model=IngestResponse)
-async def ingest(req: IngestRequest):
+async def ingest(
+    req: IngestRequest,
+    current_user: User = Depends(get_current_admin_user),
+):
     """Ingest documents into the vector store.
 
     Args:

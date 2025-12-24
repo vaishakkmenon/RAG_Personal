@@ -1,7 +1,7 @@
 # Production Readiness Checklist
 
 **Project:** Personal RAG System
-**Last Updated:** 2025-12-23
+**Last Updated:** 2025-12-24
 **Current Status:** ✅ Production Ready (Core Features Complete)
 
 This checklist covers essential and optional items to make your RAG system production-ready, organized by priority and category.
@@ -43,9 +43,12 @@ This checklist covers essential and optional items to make your RAG system produ
   - `secrets/` directory in `.gitignore`
 - ✅ **[HIGH]** Environment-specific secret injection
   - Production uses `/run/secrets/`, Dev uses `.env` fallback
-- ❌ **[MEDIUM]** Application-level JWT authentication
-  - Goal: Custom login page experience
-  - Replace Caddy Basic Auth with internal `/login` endpoint
+- ✅ **[MEDIUM]** Application-level JWT authentication
+  - `app/core/auth.py`: Full JWT implementation with bcrypt password hashing
+  - `app/api/routers/auth.py`: `/auth/token` endpoint for OAuth2 password flow
+  - `app/models/users.py`: User model with admin/superuser support
+  - `scripts/create_admin.py`: Admin user creation script
+  - Token-based access control for admin endpoints
 - ❌ **[MEDIUM]** Admin Dashboard (Frontend)
   - Interface to ingest/upload documents manually
   - View and modify indexed chunks
@@ -114,8 +117,10 @@ This checklist covers essential and optional items to make your RAG system produ
   - Patched with `apt-get upgrade -y` in Dockerfile
 - ❌ **[HIGH]** Container image signing
   - Docker Content Trust (DCT) or Sigstore not implemented
-- ❌ **[MEDIUM]** Image scanning in CI/CD pipeline
-  - Trivy/Snyk not integrated into GitHub Actions
+- ✅ **[MEDIUM]** Image scanning in CI/CD pipeline
+  - `.github/workflows/ci.yml`: Trivy vulnerability scanner integrated
+  - Scans for CRITICAL and HIGH severity vulnerabilities
+  - Ignores unfixed vulnerabilities, fails build on findings
 - ✅ **[MEDIUM]** Minimal base images
   - Using `python:3.12-slim-bookworm` (good balance)
 
@@ -134,18 +139,21 @@ This checklist covers essential and optional items to make your RAG system produ
   - High utilization warnings at >80% usage
 - ❌ **[MEDIUM]** Adaptive rate limiting
   - No pattern detection or exponential backoff for violations
-- ❌ **[MEDIUM]** Circuit breakers for external APIs
-  - No circuit breaker for Groq API failures
+- ✅ **[MEDIUM]** Circuit breakers for external APIs
+  - `app/services/llm.py`: Full circuit breaker implementation for Groq API
+  - States: CLOSED (normal) → OPEN (failing) → HALF_OPEN (testing recovery)
+  - Configurable: failure_threshold=5, recovery_timeout=30s, half_open_max_requests=3
+  - Prometheus metrics: `rag_circuit_breaker_state`, `rag_circuit_breaker_transitions_total`
 - ❌ **[OPTIONAL]** DDoS protection via CDN
   - Cloudflare/AWS Shield not configured
 
 ### Dependency Security
 - ✅ **[CRITICAL]** Dependency scanning
   - `pip-audit` available in dev dependencies
-  - `requirements.lock.txt` generated with pinned versions
+  - Trivy scans container dependencies in CI
 - ✅ **[HIGH]** Pinned dependencies
-  - All dependencies pinned in `requirements.lock.txt`
-  - Dockerfile uses lock file for production builds
+  - All dependencies pinned in `requirements.txt`, `requirements-dev.txt`, `requirements-prod.txt`
+  - Dockerfile uses requirements files for production builds
 - ❌ **[HIGH]** Automated dependency updates
   - Dependabot/Renovate not configured
 - ❌ **[MEDIUM]** License compliance check
@@ -189,12 +197,16 @@ This checklist covers essential and optional items to make your RAG system produ
   - `app/storage/factory.py`: Automatic failover
   - `app/storage/fallback/memory.py`: 16-shard in-memory store
   - Prometheus metrics for fallback operations
-- ❌ **[HIGH]** Circuit breakers for external dependencies
-  - No circuit breaker pattern implemented
-- ⏳ **[MEDIUM]** Graceful shutdown handling
-  - `app/main.py`: Lifespan context manager exists
-  - Placeholder only: "Add cleanup logic here if needed"
-  - No connection draining or in-flight request completion
+- ✅ **[HIGH]** Circuit breakers for external dependencies
+  - `app/services/llm.py`: Circuit breaker for Groq API (see Rate Limiting section)
+  - Automatic state transitions with configurable thresholds
+  - Metrics integration for monitoring circuit state
+- ✅ **[MEDIUM]** Graceful shutdown handling
+  - `app/main.py`: Full lifespan context manager implementation
+  - Closes Redis connection pool (session storage)
+  - Closes PostgreSQL connection pool (feedback database)
+  - Releases ChromaDB client reference
+  - 2-second wait for in-flight requests to complete
 - ❌ **[MEDIUM]** Feature flags
   - No LaunchDarkly/Flagsmith integration
 
@@ -222,12 +234,15 @@ This checklist covers essential and optional items to make your RAG system produ
   - Redis: RDB file copy
   - ChromaDB: Tar+gzip of data directory
   - Retention: 7 days (configurable)
-- ⏳ **[CRITICAL]** Test backup restoration
-  - Backup automation exists
-  - Restoration not tested or documented
-- ❌ **[HIGH]** Disaster recovery plan
-  - No RTO/RPO defined
-  - No step-by-step recovery documentation
+- ✅ **[CRITICAL]** Test backup restoration
+  - `scripts/restore.sh`: Full disaster recovery script (Linux/macOS)
+  - `scripts/restore.ps1`: Windows PowerShell version
+  - Features: dry-run mode, date selection, health checks with retries
+  - Tested RTO: ~48 seconds (verified in commit 14d74cc)
+- ⏳ **[HIGH]** Disaster recovery plan
+  - RTO: ~48 seconds verified
+  - RPO: 24 hours (daily backups)
+  - Step-by-step procedures in `docs/operations_runbook.md`
 - ❌ **[MEDIUM]** Offsite backup storage
   - No S3/cloud replication
 - ❌ **[MEDIUM]** Backup encryption
@@ -386,11 +401,13 @@ This checklist covers essential and optional items to make your RAG system produ
   - 34 test modules in `tests/` directory
   - 410 test functions total
   - Coverage areas: API endpoints, prompt guard, chat service, ingestion, retrieval, security, rate limiting, caching, LLM, sessions
-- ⏳ **[HIGH]** Measure test coverage
-  - `pytest-cov` installed but disabled in pytest.ini
-  - No coverage threshold enforcement
+- ✅ **[HIGH]** Measure test coverage
+  - `pytest-cov` enabled in pytest.ini with 60% threshold
+  - Coverage reports: term-missing format
+  - CI fails if coverage drops below 60%
   ```bash
-  pytest --cov=app --cov-report=html --cov-report=term
+  # Configured in pytest.ini:
+  --cov=app --cov-report=term-missing --cov-fail-under=60
   ```
 - ⏳ **[HIGH]** Integration tests
   - Integration test files exist
@@ -406,8 +423,9 @@ This checklist covers essential and optional items to make your RAG system produ
   - Pipeline stages:
     1. Checkout code
     2. Build test Docker image
-    3. Run unit tests (with API_KEY secret)
+    3. Run unit tests (with API_KEY secret, 60% coverage threshold)
     4. Run Ruff linter
+    5. Run Trivy vulnerability scanner (CRITICAL/HIGH severity)
   - Fallback API_KEY for fork PRs
 - ✅ **[HIGH]** Automated testing on every PR
   - Triggers on push to main and pull requests
@@ -533,13 +551,13 @@ This checklist covers essential and optional items to make your RAG system produ
    - Initialize in `app/main.py`
 5. ✅ **Configure CORS** - Done
 6. ✅ **Add security headers** - Done
-7. ✅ **Scan dependencies** - Done (pip-audit, requirements.lock.txt)
-8. ❌ **Integrate Trivy in CI** (10 min)
-   - Add to GitHub Actions workflow
+7. ✅ **Scan dependencies** - Done (pip-audit, Trivy in CI)
+8. ✅ **Integrate Trivy in CI** - Done
+   - Added to GitHub Actions workflow (CRITICAL/HIGH severity)
 9. ❌ **Set up Loki log aggregation** (1 hour)
    - Add Loki + Promtail to docker-compose
-10. ❌ **Enable coverage reporting** (10 min)
-    - Uncomment in pytest.ini
+10. ✅ **Enable coverage reporting** - Done
+    - Enabled in pytest.ini with 60% threshold
 
 ---
 
@@ -547,19 +565,17 @@ This checklist covers essential and optional items to make your RAG system produ
 
 | Category | Total Items | Completed | Partial | Score |
 |----------|-------------|-----------|---------|-------|
-| Security | 28 | 20 | 2 | 75% |
-| Reliability | 15 | 8 | 5 | 70% |
+| Security | 28 | 23 | 2 | 85% |
+| Reliability | 15 | 11 | 3 | 80% |
 | Performance | 17 | 12 | 2 | 76% |
 | Monitoring | 14 | 9 | 2 | 75% |
-| Testing | 14 | 7 | 5 | 68% |
-| Documentation | 10 | 4 | 3 | 55% |
-| DevOps | 10 | 2 | 4 | 40% |
-| **Overall** | **108** | **62** | **23** | **~70%** |
+| Testing | 14 | 9 | 4 | 75% |
+| Documentation | 10 | 5 | 3 | 60% |
+| DevOps | 10 | 3 | 4 | 50% |
+| **Overall** | **108** | **72** | **20** | **~78%** |
 
-**Critical Items Remaining:** 4
+**Critical Items Remaining:** 2
 - Data encryption at rest
-- Test backup restoration
-- Staging environment
 - Container registry integration
 
 **Production Status:** ✅ Ready for low-traffic personal use
@@ -584,10 +600,10 @@ This checklist covers essential and optional items to make your RAG system produ
 - ✅ Implement backups
 - ❌ Test disaster recovery (moved to Phase 3)
 
-### Phase 3: CI/CD & Testing (Next)
+### Phase 3: CI/CD & Testing ✅ MOSTLY COMPLETE
 - ✅ Basic CI pipeline
-- ❌ Add coverage reporting
-- ❌ Add security scanning to CI
+- ✅ Add coverage reporting (60% threshold)
+- ✅ Add security scanning to CI (Trivy)
 - ❌ Set up staging environment
 - ❌ Add integration tests to CI
 
@@ -630,11 +646,11 @@ This checklist covers essential and optional items to make your RAG system produ
 ## 14. Next Steps
 
 **Immediate Actions (This Week):**
-1. ❌ Enable coverage reporting in pytest.ini
-2. ❌ Add Trivy scanning to GitHub Actions
+1. ✅ Enable coverage reporting in pytest.ini (DONE - 60% threshold)
+2. ✅ Add Trivy scanning to GitHub Actions (DONE)
 3. ✅ Configure Alertmanager for critical alerts (DONE)
-4. ❌ Test backup restoration procedure
-5. ❌ Document disaster recovery steps
+4. ✅ Test backup restoration procedure (DONE - RTO: 48s)
+5. ✅ Document disaster recovery steps (DONE - operations_runbook.md)
 
 **Short Term (Next 2 Weeks):**
 1. ❌ Set up Sentry for error tracking
@@ -648,10 +664,10 @@ This checklist covers essential and optional items to make your RAG system produ
 2. ❌ Add OpenTelemetry tracing
 3. ❌ Conduct load testing
 4. ❌ Complete documentation
-5. ❌ Add circuit breaker for Groq API
+5. ✅ Add circuit breaker for Groq API (DONE)
 
 ---
 
-**Last Updated:** 2025-12-23
+**Last Updated:** 2025-12-24
 **Review Frequency:** Monthly
 **Owner:** Vaishak Menon

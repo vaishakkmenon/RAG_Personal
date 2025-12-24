@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 
 
 class APIKeyMiddleware(BaseHTTPMiddleware):
-    # Public paths that don't require API key authentication
+    # Public paths that don't require API key authentication (Exact match)
     PUBLIC_PATHS = {
         "/health",
         "/health/detailed",
@@ -24,11 +24,22 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         "/docs",
         "/openapi.json",
         "/redoc",
+        "/auth/token",
+        "/auth/users/me",
+        "/ingest",  # Protected by Admin Token
     }
+
+    # Public path prefixes (Allow sub-paths)
+    PUBLIC_PREFIXES = (
+        "/admin",  # Protected by Admin Token
+        "/debug",  # Protected by Admin Token
+    )
 
     async def dispatch(self, request: Request, call_next) -> Response:
         # Skip authentication for public endpoints
-        if request.url.path in self.PUBLIC_PATHS:
+        if request.url.path in self.PUBLIC_PATHS or request.url.path.startswith(
+            self.PUBLIC_PREFIXES
+        ):
             return await call_next(request)
 
         # Validate origin (primary defense)

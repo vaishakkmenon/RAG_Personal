@@ -4,7 +4,7 @@ This document serves as the primary technical reference for the Personal RAG Sys
 
 ## 🏗️ High-Level Architecture
 
-The system is a Retrieval-Augmented Generation (RAG) application built with **FastAPI**. It orchestrates interactions between a user, a vector database (**ChromaDB**), and Large Language Models (**Groq** / **Ollama**).
+The system is a Retrieval-Augmented Generation (RAG) application built with **FastAPI**. It orchestrates interactions between a user, a vector database (**ChromaDB**), and Large Language Models (**Groq**).
 
 ```mermaid
 graph TD
@@ -36,11 +36,12 @@ graph TD
 ### 1. API Layer (`app/api`, `app/main.py`)
 -   **Framework**: FastAPI
 -   **Entry Point**: `app/main.py` initializes the app, middlewares, and routes.
--   **Middleware**:
-    -   `APIKeyMiddleware`: Simple header-based authentication (`X-API-Key`).
+-   **Middleware & Auth**:
+    -   `APIKeyMiddleware`: Protects public routes (`/chat`, etc.) via `X-API-Key`.
+    -   **JWT Authentication**: Protects admin routes (`/admin`, `/ingest`, `/debug`) via Bearer token (OAuth2).
     -   `MaxSizeMiddleware`: Protects against large payloads (default 32KB).
     -   `LoggingMiddleware`: Structured logging for observability.
-    -   `CORSMiddleware`: Allows requests from local frontend (`localhost:3000`).
+    -   `CORSMiddleware`: Allows requests from allowed origins (e.g. `vaishakmenon.com`).
 
 ### 2. Core Logic (`app/core/chat_service.py`)
 The `ChatService` class is the heart of the application. It orchestrates the RAG flow:
@@ -53,18 +54,22 @@ The `ChatService` class is the heart of the application. It orchestrates the RAG
 7.  **Generation**: Constructs a prompt and calls the LLM.
 
 ### 3. Retrieval Engine (`app/retrieval`, `app/ingest`)
--   **Vector Store**: ChromaDB (persistent storage in `./data/chroma`).
+-   **Vector Store**: ChromaDB (persistent storage in `./data/chroma`) via `app/retrieval/vector_store.py`.
 -   **Embeddings**: `sentence-transformers` (Default: `BAAI/bge-small-en-v1.5`).
--   **Negative Inference**: Detects missing entities and reformulates queries (`app/retrieval/negative_inference_helper.py`).
--   **Adaptive Thresholding**: Data-driven entity existence detection using distance gap analysis (`app/retrieval/adaptive_threshold.py`).
--   **Reranker**: Re-scores retrieved chunks using hybrid semantic + lexical scoring.
+-   **Search Engine**: Orchestrates retrieval via `app/retrieval/search_engine.py`.
+-   **BM25 Hybrid Search**: Combines semantic and keyword search via `app/retrieval/bm25_search.py`.
+-   **Ranking**: Result scoring and ranking via `app/retrieval/ranking.py`.
+-   **Query Rewriting**: Query reformulation via `app/retrieval/query_rewriter.py`.
+-   **Pattern Matching**: Query pattern detection via `app/retrieval/pattern_matcher.py`.
 -   **Ingestion**: Scripts in `app/ingest` process Markdown files from `./data/mds`, chunk them, and load them into ChromaDB.
 
 ### 4. LLM Providers (`app/services/llm.py`)
 The system uses a focused approach:
 -   **Groq (Exclusive)**: High-speed inference for production responsiveness.
     -   Model: `llama-3.1-8b-instant` (configurable)
-    -   Legacy local model support (Ollama) has been deprecated to streamline the architecture.
+    -   **Circuit Breaker**: Automatic failure detection and recovery
+    -   States: CLOSED (normal) → OPEN (failing) → HALF_OPEN (testing)
+    -   Prometheus metrics for monitoring circuit state
 
 ## ⚙️ Configuration & Settings
 

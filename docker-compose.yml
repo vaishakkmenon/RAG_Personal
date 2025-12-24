@@ -64,7 +64,12 @@ services:
       - SESSION_QUERIES_PER_HOUR=${SESSION_QUERIES_PER_HOUR:-1000}  # Increased for testing
       - SESSION_TTL_SECONDS=${SESSION_TTL_SECONDS:-21600}
       - SESSION_MAX_HISTORY_TOKENS=${SESSION_MAX_HISTORY_TOKENS:-250}
+      - SESSION_MAX_HISTORY_TOKENS=${SESSION_MAX_HISTORY_TOKENS:-250}
       - SESSION_MAX_HISTORY_TURNS=${SESSION_MAX_HISTORY_TURNS:-5}
+
+      # ============ Admin Authentication ============
+      - ADMIN_USER=${ADMIN_USER:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
 
       # ============ Database Configuration ============
       # Force internal port to 5432 (standard) even if host uses 5433
@@ -640,6 +645,11 @@ services:
 
     # Don't restart test service
     restart: "no"
+
+    # Network access to reach API and Redis
+    networks:
+      - frontend
+      - backend
 
     # Logging configuration
     logging:

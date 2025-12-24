@@ -5,8 +5,11 @@ Quick reference guide for operating and troubleshooting the Personal RAG System 
 ## Table of Contents
 
 - [Quick Commands](#quick-commands)
+- [Authentication](#authentication)
+- [Circuit Breaker](#circuit-breaker)
 - [Failure Modes & Recovery](#failure-modes--recovery)
 - [Health Monitoring](#health-monitoring)
+- [Disaster Recovery](#disaster-recovery)
 - [Common Issues](#common-issues)
 - [Maintenance Procedures](#maintenance-procedures)
 
@@ -16,70 +19,47 @@ Quick reference guide for operating and troubleshooting the Personal RAG System 
 
 ### Deploy Update
 ```bash
-ssh deploy@server
+# Production Deployment
+ssh user@server
 cd ~/RAG_Personal
-git pull
-docker compose build
-docker compose up -d
-docker compose logs -f api
+./scripts/deploy.sh
 ```
 
 ### Rollback to Previous Version
 ```bash
 git log --oneline  # Find previous commit
 git checkout <commit-hash>
-docker compose build
-docker compose up -d
-docker compose logs -f api
+./scripts/deploy.sh
 ```
 
 ### Check Service Status
 ```bash
-docker compose ps
-docker compose logs api --tail=50
-docker compose logs redis --tail=50
+docker compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml logs api --tail=50
 ```
 
 ### Restart Services
 ```bash
 # Restart specific service
-docker compose restart api
+docker compose -f docker-compose.prod.yml restart api
 
-# Restart all services
-docker compose restart
-
-# Full restart (recreate containers)
-docker compose down && docker compose up -d
-```
-
-### Check Logs
-```bash
-# Follow logs
-docker compose logs -f api
-
-# Last 100 lines
-docker compose logs api --tail=100
-
-# Filter for errors
-docker compose logs api | grep ERROR
-
-# With timestamps
-docker compose logs -t api
+# Full restart
+./scripts/deploy.sh
 ```
 
 ### Clear Caches
 ```bash
-# Clear Redis cache
-docker compose exec redis redis-cli FLUSHDB
-
-# Clear fallback cache via API
-curl -X DELETE http://localhost:8000/admin/fallback-cache \
-     -H "X-API-Key: your-api-key"
+# Clear Redis cache (Session & Response Cache)
+docker compose -f docker-compose.prod.yml exec redis redis-cli -a $REDIS_PASSWORD FLUSHDB
 ```
 
-### Backup Now
+### Backup
 ```bash
-./backup.sh
+# Manual Trigger on Server
+./scripts/backup.sh
+
+# Download to Local Machine (Windows)
+.\scripts\sync_backups.ps1
 ```
 
 ### Check Health
@@ -87,14 +67,109 @@ curl -X DELETE http://localhost:8000/admin/fallback-cache \
 # Basic health check
 curl http://localhost:8000/health
 
-# Detailed health check with dependencies
+# Detailed health check (includes Redis, ChromaDB, PostgreSQL)
 curl http://localhost:8000/health/detailed
+```
 
-# Readiness probe
-curl http://localhost:8000/health/ready
+---
 
-# Liveness probe
-curl http://localhost:8000/health/live
+## Authentication
+
+### Overview
+
+The system uses two authentication methods:
+1. **API Key** (`X-API-Key` header) - For chat and public endpoints
+2. **JWT Token** (`Authorization: Bearer` header) - For admin endpoints
+
+### Creating Admin Users
+
+```bash
+# Set the admin password (required)
+export ADMIN_PASSWORD="your-secure-password"
+
+# Create admin user
+docker compose -f docker-compose.prod.yml run --rm api python scripts/create_admin.py
+```
+
+The script creates a user with:
+- Username: `admin`
+- Email: `admin@example.com` (placeholder)
+- Superuser privileges enabled
+
+### Getting a JWT Token
+
+```bash
+# Request token
+curl -X POST http://localhost:8000/auth/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "username=admin&password=your-secure-password"
+
+# Response:
+# {"access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", "token_type": "bearer"}
+```
+
+### Using JWT for Admin Operations
+
+```bash
+# Store token
+TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+# Access admin endpoints
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/admin/stats
+
+# Trigger ingestion
+curl -X POST -H "Authorization: Bearer $TOKEN" http://localhost:8000/ingest
+```
+
+### Token Configuration
+
+Token settings are in `app/core/security_config.py`:
+- **Algorithm**: HS256
+- **Expiration**: 30 minutes (configurable in code)
+- **Secret Key**: Set via `SECRET_KEY` environment variable
+
+---
+
+## Circuit Breaker
+
+### Overview
+
+The Groq API circuit breaker protects the system from cascading failures. It's implemented in `app/services/llm.py`.
+
+### States
+
+| State | Description | Behavior |
+|-------|-------------|----------|
+| **CLOSED** | Normal operation | Requests pass through |
+| **OPEN** | Service failing | Requests rejected immediately (fail fast) |
+| **HALF_OPEN** | Testing recovery | Limited requests allowed to test if service recovered |
+
+### Transitions
+
+- **CLOSED → OPEN**: After 5 consecutive failures
+- **OPEN → HALF_OPEN**: After 30 seconds
+- **HALF_OPEN → CLOSED**: After 3 successful requests
+- **HALF_OPEN → OPEN**: On any failure
+
+### Monitoring
+
+Check circuit breaker status via Prometheus metrics:
+
+```bash
+# Current state (0=CLOSED, 1=OPEN, 2=HALF_OPEN)
+curl -s http://localhost:8000/metrics | grep rag_circuit_breaker_state
+
+# Transition count
+curl -s http://localhost:8000/metrics | grep rag_circuit_breaker_transitions_total
+```
+
+### Manual Intervention
+
+If the circuit breaker is stuck OPEN:
+
+```bash
+# Restart the API service to reset the circuit breaker
+docker compose -f docker-compose.prod.yml restart api
 ```
 
 ---
@@ -104,538 +179,251 @@ curl http://localhost:8000/health/live
 ### Redis Failure
 
 **Symptoms:**
-- Detailed health check shows Redis as "degraded"
-- Warning logs: "FALLBACK ACTIVATED: Using in-memory session store"
-- Sessions don't persist across API restarts
+- "FALLBACK ACTIVATED" in logs
+- Sessions stored in memory (not persisted)
 
-**Impact:**
-- **Severity:** LOW-MEDIUM
-- Sessions work but are stored in-memory only
-- Session data lost on API restart
-- Response caching disabled
-- Application continues to function normally
-
-**Automatic Recovery:**
-- Application automatically falls back to in-memory session storage
-- No manual intervention required for continued operation
-
-**Manual Recovery Steps:**
-1. Check Redis container status:
-   ```bash
-   docker compose ps redis
-   docker compose logs redis
-   ```
-
-2. If Redis is down, restart it:
-   ```bash
-   docker compose restart redis
-   ```
-
-3. If Redis won't start, check:
-   - Disk space: `df -h`
-   - Redis password configuration in `.env`
-   - Redis data volume permissions
-
-4. Test Redis connection:
-   ```bash
-   docker compose exec redis redis-cli -a $REDIS_PASSWORD PING
-   # Should return: PONG
-   ```
-
-5. Restart API to reconnect to Redis:
-   ```bash
-   docker compose restart api
-   ```
-
-6. Verify recovery:
-   ```bash
-   curl http://localhost:8000/health/detailed
-   # Check that redis status is "healthy"
-   ```
-
-**Prevention:**
-- Monitor Redis memory usage
-- Set up Redis persistence (AOF enabled in docker-compose.yml)
-- Regular backups of Redis data
-
----
+**Recovery:**
+```bash
+docker compose -f docker-compose.prod.yml restart redis
+# Sessions will automatically switch back to Redis
+```
 
 ### ChromaDB Failure
 
 **Symptoms:**
-- Detailed health check shows ChromaDB as "degraded"
-- Error logs: "ChromaDB query failed"
-- Retrieval exceptions in chat endpoints
-- Fallback cache being used (if available)
+- Retrieval errors
+- Empty search results
 
-**Impact:**
-- **Severity:** HIGH
-- New queries may fail or return cached results
-- No access to vector database for semantic search
-- Application may return 500 errors for uncached queries
+**Recovery (Data intact):**
+```bash
+docker compose -f docker-compose.prod.yml restart api
+```
 
-**Automatic Recovery:**
-- If query was previously cached, fallback cache provides results
-- Errors logged with full context
-- Graceful error messages returned to users
+**Recovery (Data corrupted):**
+```bash
+# 1. Stop services
+docker compose -f docker-compose.prod.yml stop
 
-**Manual Recovery Steps:**
-1. Check ChromaDB status:
-   ```bash
-   docker compose logs api | grep -i chroma
-   ```
+# 2. Rotate data folder
+mv data/chroma data/chroma_backup_$(date +%Y%m%d)
+mkdir data/chroma
 
-2. Check disk space (ChromaDB needs disk I/O):
-   ```bash
-   df -h
-   ```
+# 3. Restart and Re-ingest
+./scripts/deploy.sh
 
-3. Check ChromaDB directory permissions:
-   ```bash
-   ls -la data/chroma
-   ```
+# 4. Trigger ingestion (requires JWT token)
+curl -X POST -H "Authorization: Bearer $TOKEN" http://localhost:8000/ingest
+```
 
-4. Try restarting the API (ChromaDB is embedded):
-   ```bash
-   docker compose restart api
-   docker compose logs -f api
-   ```
-
-5. If ChromaDB data is corrupted:
-   ```bash
-   # Backup current data
-   cp -r data/chroma data/chroma_backup_$(date +%Y%m%d_%H%M%S)
-
-   # Clear and rebuild
-   curl -X DELETE http://localhost:8000/admin/chromadb \
-        -H "X-API-Key: your-api-key"
-
-   # Re-ingest documents
-   docker compose run --rm test python scripts/ingest.py
-   ```
-
-6. Monitor fallback cache usage:
-   ```bash
-   curl http://localhost:8000/admin/fallback-cache/stats \
-        -H "X-API-Key: your-api-key"
-   ```
-
-**Fallback Cache Details:**
-- Automatically caches successful retrievals
-- LRU cache with 100 query limit
-- 1-hour TTL on cached entries
-- Fuzzy matching for similar queries (80% similarity threshold)
-- View stats: `GET /admin/fallback-cache/stats`
-- Clear cache: `DELETE /admin/fallback-cache`
-
-**Prevention:**
-- Regular backups of `data/chroma` directory
-- Monitor disk space
-- Test ingestion pipeline regularly
-- Keep fallback cache enabled (automatic)
-
----
-
-### LLM API Failure (Groq)
+### Groq API Failure
 
 **Symptoms:**
-- Error logs: "Groq API error"
-- 503 Service Unavailable responses
-- Increased latency or timeouts
+- LLM requests timing out
+- Circuit breaker OPEN
+- HTTP 503 responses
 
-**Impact:**
-- **Severity:** HIGH
-- Service interruptions for chat endpoints
-- Retrieval still functional (search results available)
+**Recovery:**
+1. Check Groq status: https://status.groq.com/
+2. Wait for circuit breaker recovery (30 seconds)
+3. If persistent, restart API to reset circuit breaker
 
-**Automatic Recovery:**
-- Retry with exponential backoff (2 attempts)
-- Prometheus metrics track failure rates
-
-**Manual Recovery Steps:**
-1. Check Groq API status:
-   ```bash
-   # Check if API key is valid
-   curl https://api.groq.com/openai/v1/models \
-        -H "Authorization: Bearer $LLM_GROQ_API_KEY"
-   ```
-
-2. Check application logs:
-   ```bash
-   docker compose logs api | grep -i "groq\|llm"
-   ```
-
-3. Verify Groq API key in `.env`:
-   ```bash
-   grep LLM_GROQ_API_KEY .env
-   ```
-
-4. If using rate-limited Groq tier:
-   - Wait for rate limit to reset
-   - Monitor metrics for usage
-   - Consider upgrading Groq tier
-
-**Prevention:**
-- Monitor Groq API rate limits
-- Consider Groq paid tier for production
-
----
-
-### PostgreSQL Failure (Feedback DB)
+### PostgreSQL Failure
 
 **Symptoms:**
-- Detailed health check shows Postgres as "degraded"
-- Error logs: "Postgres connection failed"
-- Feedback submission (`POST /feedback`) returns 500 error
+- Feedback not being saved
+- `/health/detailed` shows PostgreSQL unhealthy
 
-**Impact:**
-- **Severity:** LOW
-- User feedback cannot be collected or is lost
-- Core chat functionality remains **unaffected**
-- Metric `rag_feedback_total` stops incrementing
-
-**Automatic Recovery:**
-- Application retries connection on next request
-- No persistent connection pool to stall
-
-**Manual Recovery Steps:**
-1. Check Postgres container status:
-   ```bash
-   docker compose ps postgres
-   docker compose logs postgres
-   ```
-
-2. Check disk space (Postgres volume):
-   ```bash
-   df -h
-   ```
-
-3. Restart Postgres:
-   ```bash
-   docker compose restart postgres
-   ```
-
-4. Verify connection:
-   ```bash
-   docker compose exec postgres pg_isready -U rag_user
-   ```
-
----
-
-### Complete System Failure
-
-**Symptoms:**
-- All services down
-- Cannot access API
-- Docker containers not running
-
-**Manual Recovery Steps:**
-1. Check Docker daemon:
-   ```bash
-   sudo systemctl status docker
-   sudo systemctl start docker
-   ```
-
-2. Check disk space:
-   ```bash
-   df -h
-   ```
-
-3. Check Docker logs:
-   ```bash
-   sudo journalctl -u docker -n 100
-   ```
-
-4. Restart all services:
-   ```bash
-   cd ~/RAG_Personal
-   docker compose down
-   docker compose up -d
-   ```
-
-5. Monitor startup:
-   ```bash
-   docker compose logs -f
-   ```
-
-6. Verify health:
-   ```bash
-   curl http://localhost:8000/health/detailed
-   ```
+**Recovery:**
+```bash
+docker compose -f docker-compose.prod.yml restart postgres
+docker compose -f docker-compose.prod.yml restart api
+```
 
 ---
 
 ## Health Monitoring
 
-### Health Check Endpoints
+### Endpoints
 
-1. **Basic Health** - `/health`
-   - Always returns 200 if API is running
-   - Quick check for uptime
-   ```bash
-   curl http://localhost:8000/health
-   ```
+| Endpoint | Purpose | Authentication |
+|----------|---------|----------------|
+| `/health` | Basic status | None |
+| `/health/detailed` | Full component check | None |
+| `/health/ready` | Kubernetes readiness | None |
+| `/health/live` | Kubernetes liveness | None |
+| `/metrics` | Prometheus metrics | Basic Auth (Caddy) |
 
-2. **Detailed Health** - `/health/detailed`
-   - Checks all dependencies (Redis, ChromaDB)
-   - Returns "degraded" if any dependency fails
-   - Best for monitoring dashboards
-   ```bash
-   curl http://localhost:8000/health/detailed
-   ```
-
-3. **Readiness Probe** - `/health/ready`
-   - Kubernetes-style readiness check
-   - Checks if app can serve traffic
-   - Returns "not_ready" if critical dependencies fail
-   ```bash
-   curl http://localhost:8000/health/ready
-   ```
-
-4. **Liveness Probe** - `/health/live`
-   - Kubernetes-style liveness check
-   - Always returns 200 if process is alive
-   - Use for restart decisions
-   ```bash
-   curl http://localhost:8000/health/live
-   ```
-
-### Interpreting Health Status
-
-**Healthy:**
-```json
-{
-  "status": "healthy",
-  "dependencies": {
-    "redis": "healthy",
-    "chromadb": "healthy",
-    "postgres": "healthy",
-    "llm": "not_checked"
-  }
-}
-```
-
-**Degraded (Redis Down):**
-```json
-{
-  "status": "degraded",
-  "dependencies": {
-    "redis": "degraded",
-    "chromadb": "healthy",
-    "llm": "not_checked"
-  }
-}
-```
-- Application functional with in-memory sessions
-- No immediate action required
-
-**Degraded (ChromaDB Down):**
-```json
-{
-  "status": "degraded",
-  "dependencies": {
-    "redis": "healthy",
-    "chromadb": "degraded",
-    "llm": "not_checked"
-  }
-}
-```
-- May return cached results or errors
-- **Action Required:** Investigate ChromaDB
-
-### Prometheus Metrics
-
-Key metrics to monitor:
+### Key Metrics to Monitor
 
 ```bash
-# Request rate
-curl http://localhost:8000/metrics | grep rag_request_total
-
 # Error rate
-curl http://localhost:8000/metrics | grep rag_request_total | grep status="500"
+curl -s http://localhost:8000/metrics | grep http_requests_total | grep status=\"5
 
-# Session counts
-curl http://localhost:8000/metrics | grep session_
+# LLM latency
+curl -s http://localhost:8000/metrics | grep rag_llm_latency_seconds
+
+# Cache hit rate
+curl -s http://localhost:8000/metrics | grep rag_cache_hits_total
+
+# Circuit breaker state
+curl -s http://localhost:8000/metrics | grep rag_circuit_breaker_state
 ```
+
+### Alerting
+
+Alerts are configured in `monitoring/prometheus/alerts.yml`:
+- **HighErrorRate**: >5% 5xx errors for 5 minutes
+- **HighLatency**: P99 > 2 seconds for 5 minutes
+- **InstanceDown**: Unreachable for 1 minute
+- **RedisDown**: Redis unavailable for 1 minute
+- **PostgresDown**: PostgreSQL unavailable for 1 minute
+- **LLMErrorsHigh**: LLM error rate > 5%
+
+---
+
+## Disaster Recovery
+
+### RTO/RPO
+
+- **RTO (Recovery Time Objective)**: ~48 seconds (tested)
+- **RPO (Recovery Point Objective)**: 24 hours (daily backups)
+
+### Backup Schedule
+
+Automated backups run daily via the backup service in docker-compose:
+- PostgreSQL: SQL dump (gzip compressed)
+- Redis: RDB file copy
+- ChromaDB: Tar archive (gzip compressed)
+
+### Restore Procedure
+
+**Linux/macOS:**
+```bash
+# List available backups
+./scripts/restore.sh --list
+
+# Dry run (preview what will be restored)
+./scripts/restore.sh --dry-run 2025-12-24
+
+# Full restore
+./scripts/restore.sh 2025-12-24
+```
+
+**Windows (PowerShell):**
+```powershell
+# List available backups
+.\scripts\restore.ps1 -List
+
+# Dry run
+.\scripts\restore.ps1 -Date 2025-12-24 -DryRun
+
+# Full restore
+.\scripts\restore.ps1 -Date 2025-12-24
+```
+
+### Restore Verification
+
+After restore, verify:
+1. Health check: `curl http://localhost:8000/health/detailed`
+2. Sample query: Test a chat query
+3. Check logs: `docker compose -f docker-compose.prod.yml logs api --tail=20`
 
 ---
 
 ## Common Issues
 
-### Issue: High Memory Usage
+### "Rate limit exceeded" errors
 
-**Symptoms:**
-- Docker stats shows high memory
-- OOM errors in logs
-- Containers restarting
+**Cause:** Groq API rate limits (28 req/min on free tier)
 
-**Solutions:**
-1. Check which service is using memory:
-   ```bash
-   docker stats
-   ```
+**Solution:**
+- Wait for rate limit window to reset
+- Check `/metrics` for `rag_rate_limit_remaining`
+- Consider upgrading Groq tier
 
-2. Clear caches:
-   ```bash
-   docker compose exec redis redis-cli FLUSHDB
-   curl -X DELETE http://localhost:8000/admin/fallback-cache
-   ```
+### "Circuit breaker open" errors
 
-3. Restart high-memory service:
-   ```bash
-   docker compose restart api
-   ```
+**Cause:** Multiple Groq API failures
 
-4. Check for memory leaks:
-   ```bash
-   docker compose logs api | grep -i "memory\|oom"
-   ```
+**Solution:**
+- Wait 30 seconds for HALF_OPEN state
+- Check Groq status page
+- Restart API if persistent: `docker compose -f docker-compose.prod.yml restart api`
 
----
+### Sessions not persisting
 
-### Issue: Slow Response Times
+**Cause:** Redis connection failed, using memory fallback
 
-**Symptoms:**
-- Requests taking >5 seconds
-- Timeout errors
-- Users complaining about latency
+**Solution:**
+```bash
+# Check Redis status
+docker compose -f docker-compose.prod.yml logs redis --tail=20
 
-**Diagnostic Steps:**
-1. Check Groq performance:
-   ```bash
-   docker compose logs api | grep -i "groq latency"
-   ```
+# Restart Redis
+docker compose -f docker-compose.prod.yml restart redis
+```
 
-2. Check ChromaDB query times:
-   ```bash
-   docker compose logs api | grep "Semantic search"
-   ```
+### Slow responses
 
-3. Check Redis latency:
-   ```bash
-   docker compose exec redis redis-cli --latency
-   ```
+**Cause:** Usually reranker model loading on first request
 
-**Solutions:**
-- Ensure Groq API is working
-- Check if cross-encoder is enabled (adds latency)
-- Consider disabling HyDE for faster queries
-- Monitor disk I/O for ChromaDB
-
----
-
-### Issue: Cannot Connect from Frontend
-
-**Symptoms:**
-- CORS errors in browser console
-- 403 Forbidden responses
-- Authentication failures
-
-**Diagnostic Steps:**
-1. Check CORS configuration:
-   ```bash
-   grep ALLOWED_ORIGINS .env
-   ```
-
-2. Check API key:
-   ```bash
-   grep API_KEY .env
-   ```
-
-3. Test with curl:
-   ```bash
-   curl -H "Origin: https://vaishakmenon.com" \
-        -H "X-API-Key: your-key" \
-        http://localhost:8000/chat/simple \
-        -d '{"question":"test"}'
-   ```
-
-**Solutions:**
-- Verify origin is in `ALLOWED_ORIGINS`
-- Check API key matches between frontend and backend
-- Check Cloudflare SSL mode (should be "Full (strict)")
-- Verify middleware order in `app/main.py`
+**Solution:**
+- First request may take 10-30 seconds (model loading)
+- Subsequent requests should be fast
+- Check `/metrics` for latency breakdown
 
 ---
 
 ## Maintenance Procedures
 
-### Regular Maintenance (Weekly)
+### Updating Dependencies
 
-1. **Check Logs for Errors:**
-   ```bash
-   docker compose logs api --since 7d | grep ERROR
-   ```
+```bash
+# Update requirements
+pip-compile requirements.in -o requirements.txt
 
-2. **Review Health Status:**
-   ```bash
-   curl http://localhost:8000/health/detailed
-   ```
+# Rebuild and deploy
+./scripts/deploy.sh --no-cache
+```
 
-3. **Check Disk Usage:**
-   ```bash
-   df -h
-   du -sh data/chroma
-   ```
+### Rotating Secrets
 
-4. **Clean Up Old Docker Images:**
-   ```bash
-   docker system prune -a --volumes --force
-   ```
+```bash
+# 1. Generate new secrets
+openssl rand -hex 32  # API_KEY
+openssl rand -hex 32  # SECRET_KEY (for JWT)
 
-5. **Backup ChromaDB:**
-   ```bash
-   tar -czf backup_chroma_$(date +%Y%m%d).tar.gz data/chroma
-   ```
+# 2. Update .env file
 
-### Monthly Maintenance
+# 3. Restart services
+./scripts/deploy.sh
+```
 
-1. **Review Prometheus Metrics:**
-   - Check average response times
-   - Review error rates
+### Clearing Old Data
 
-2. **Update Dependencies:**
-   ```bash
-   pip-audit  # Check for vulnerabilities
-   pip list --outdated  # Check for updates
-   ```
+```bash
+# Clear response cache (Redis)
+docker compose -f docker-compose.prod.yml exec redis redis-cli -a $REDIS_PASSWORD FLUSHDB
 
-3. **Test Disaster Recovery:**
-   - Practice restoring from backup
-   - Test failover scenarios
-   - Verify monitoring alerts work
+# Clear old backups (keep last 7 days)
+find backups/ -type f -mtime +7 -delete
+```
 
-4. **Review and Rotate Logs:**
-   ```bash
-   docker compose logs api > logs/api_$(date +%Y%m).log
-   ```
+### Graceful Shutdown
 
-### Emergency Contacts
+The system handles graceful shutdown automatically:
+1. Stops accepting new requests
+2. Closes Redis connection pool
+3. Closes PostgreSQL connection pool
+4. Releases ChromaDB client
+5. Waits 2 seconds for in-flight requests
 
-- **System Owner:** [Your contact info]
-- **On-Call:** [On-call rotation]
-- **Groq Support:** [Groq support details]
-- **Infrastructure:** [Cloud provider support]
+To trigger graceful shutdown:
+```bash
+docker compose -f docker-compose.prod.yml stop api
+```
 
 ---
 
-## Appendix: Environment Variables Reference
-
-### Critical Variables
-- `API_KEY` - API authentication (MUST be secure)
-- `REDIS_PASSWORD` - Redis authentication
-- `LLM_GROQ_API_KEY` - Groq API access
-- `ALLOWED_ORIGINS` - CORS allowed origins
-
-### Optional Performance Tuning
-- `RESPONSE_CACHE_ENABLED` - Enable/disable caching (default: true)
-- `SESSION_QUERIES_PER_HOUR` - Rate limiting (default: 20)
-
-### Monitoring
-- `GRAFANA_ADMIN_PASSWORD` - Grafana dashboard access
-- `PROMETHEUS_RETENTION_DAYS` - Metrics retention (default: 15)
-
----
-
-**Last Updated:** 2025-12-21
-**Version:** 1.1
+**Last Updated:** 2025-12-24
+**Version:** 2.0 (Production Ready)

@@ -1,153 +1,133 @@
 # ============================================================================
-# Production Dockerfile - Optimized for Groq-Only Deployment
+# Personal RAG System - Secure Dockerfile (Chainguard/Wolfi)
 # ============================================================================
-# Optimizations:
-#   ✓ Uses requirements-prod.txt (no pandas, matplotlib, ollama)
-#   ✓ Smaller image size (~40% reduction)
-#   ✓ Faster builds (fewer dependencies)
-#   ✓ No test stage (testing done in CI/CD)
-#   ✓ Minimal attack surface
+# Base: Chainguard Python (Wolfi-based, glibc compatible, low/zero CVEs)
 # ============================================================================
 
 # ============================================================================
-# Stage 1: Builder - Install production dependencies
+# Stage 1: Builder - Install dependencies
 # ============================================================================
-FROM python:3.12-slim-bookworm AS builder
+# Use Wolfi Base which is always free and allows manual package installation
+FROM cgr.dev/chainguard/wolfi-base:latest AS builder
 
-# Install build dependencies (minimal set)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    g++ \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create non-root user
-RUN useradd -m -u 65532 -s /bin/bash nonroot
-
-# Set up directories
 USER root
-RUN install -d -o nonroot -g nonroot /opt/venv \
-    && mkdir -p /workspace && chown -R nonroot:nonroot /workspace
-USER nonroot
 
-# Environment setup
-ENV VENV=/opt/venv \
-    PATH="/opt/venv/bin:$PATH" \
-    PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+# Install Python 3.12 and build dependencies manually
+RUN apk update && apk add --no-cache \
+    python-3.12 \
+    py3.12-pip \
+    build-base \
+    git \
+    libffi-dev \
+    openssl-dev
+
+# Set up virtual environment
+ENV VENV=/opt/venv
+RUN python -m venv $VENV
+ENV PATH="$VENV/bin:$PATH"
 
 WORKDIR /workspace
 
-# Create virtualenv
-RUN python -m venv "$VENV"
+# upgrade pip
+RUN pip install --upgrade pip wheel setuptools
 
-# Upgrade system pip to fix CVE-2025-8869 (base image has older pip)
-RUN python -m pip install --upgrade "pip>=25.3"
+# Copy requirements
+COPY requirements.txt requirements.lock.tx[t] ./
 
-# Create cache directories
-RUN mkdir -p /home/nonroot/.cache/huggingface \
-    && chown -R nonroot:nonroot /home/nonroot/.cache
-
-# Install PRODUCTION dependencies ONLY
-# Step 1: Install CPU-only PyTorch first (saves ~8GB vs GPU version)
-COPY --chown=nonroot:nonroot requirements-prod.txt .
-RUN /opt/venv/bin/python -m pip install --upgrade "pip>=25.3" wheel setuptools \
-    && /opt/venv/bin/python -m pip install --no-cache-dir \
+# Install dependencies
+# Note: Wolfi is glibc compatible, so standard wheels (torch cpu) work fine.
+RUN pip install --no-cache-dir \
     torch --index-url https://download.pytorch.org/whl/cpu \
-    && /opt/venv/bin/python -m pip install --no-cache-dir -r requirements-prod.txt
+    && if [ -f requirements.lock.txt ]; then \
+    pip install --no-cache-dir -r requirements.lock.txt; \
+    else \
+    pip install --no-cache-dir -r requirements.txt; \
+    fi
 
-# Verify critical dependencies
-RUN /opt/venv/bin/python -c "import fastapi; import chromadb; import redis; import groq; print('✓ Core dependencies installed')" \
-    || (echo "ERROR: Failed to import core dependencies" && exit 1)
+# Download NLTK data
+ENV NLTK_DATA=/home/nonroot/nltk_data
+RUN mkdir -p $NLTK_DATA \
+    && python -c "import nltk; nltk.download('stopwords', download_dir='$NLTK_DATA'); nltk.download('punkt', download_dir='$NLTK_DATA'); nltk.download('punkt_tab', download_dir='$NLTK_DATA')"
 
-# Verify Groq is available (no Ollama fallback)
-RUN /opt/venv/bin/python -c "import groq; print('✓ Groq client available')" \
-    || (echo "ERROR: Groq client not installed" && exit 1)
-
-# Download NLTK data (stopwords, punkt)
-RUN mkdir -p /home/nonroot/nltk_data \
-    && /opt/venv/bin/python -c "import nltk; nltk.download('stopwords', download_dir='/home/nonroot/nltk_data'); nltk.download('punkt', download_dir='/home/nonroot/nltk_data'); nltk.download('punkt_tab', download_dir='/home/nonroot/nltk_data')" \
-    && chown -R nonroot:nonroot /home/nonroot/nltk_data
-
-# Pre-download BGE embedding model (REQUIRED for semantic search)
-RUN /opt/venv/bin/python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-small-en-v1.5')" \
-    && chown -R nonroot:nonroot /home/nonroot/.cache
-
-# Copy application code
-COPY --chown=nonroot:nonroot app ./app
-
-# Copy scripts
-COPY --chown=nonroot:nonroot scripts ./scripts
-
-# Create data directories
-RUN mkdir -p /workspace/data/chroma /workspace/data/docs
-
-# Make entrypoint executable
-RUN chmod +x /workspace/scripts/docker-entrypoint.sh || true
-
-# Validate app structure
-RUN test -f ./app/main.py || (echo "ERROR: app/main.py not found!" && exit 1)
+# Pre-download embedding model
+# We set HF_HOME to a specific directory to ensure we capture the download
+ENV HF_HOME=/home/nonroot/.cache/huggingface
+RUN mkdir -p $HF_HOME \
+    && python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-small-en-v1.5')" \
+    && chown -R nonroot:nonroot /home/nonroot
 
 # ============================================================================
-# Stage 2: Runtime - Minimal production image
+# Stage 2: Test - Testing environment with dev dependencies
 # ============================================================================
-FROM python:3.12-slim-bookworm AS runtime
+FROM builder AS test
+
+# Install testing and linting tools into the same virtualenv
+RUN pip install --no-cache-dir \
+    pytest==8.4.1 \
+    pytest-cov==4.1.0 \
+    pytest-mock==3.12.0 \
+    faker==22.0.0 \
+    ruff==0.12.9
+
+# Copy test files and configuration
+COPY tests ./tests
+COPY pytest.ini ./
+
+# Verify test structure
+RUN test -d ./tests || (echo "WARNING: tests directory not found" && exit 0)
+
+# Reset entrypoint for test stage
+ENTRYPOINT []
+
+# Default: Run unit tests (not integration tests which need services)
+CMD ["python", "-m", "pytest", "-m", "not integration", "-v", "--tb=short"]
+
+# ============================================================================
+# Stage 3: Runtime
+# ============================================================================
+FROM cgr.dev/chainguard/wolfi-base:latest AS runtime
+
+USER root
+RUN apk update && apk add --no-cache \
+    python-3.12 \
+    py3.12-pip \
+    bash
 
 # Environment configuration
 ENV VENV=/opt/venv \
     PATH="/opt/venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
     LOG_LEVEL=INFO \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    # Production: Groq ONLY (no Ollama fallback)
-    LLM_PROVIDER=groq
-
-# Create non-root user
-RUN useradd -m -u 65532 -s /bin/bash nonroot || true
-
-# Upgrade system pip to fix CVE-2025-8869 (base image has older pip)
-RUN python -m pip install --upgrade "pip>=25.3"
+    HF_HOME=/home/nonroot/.cache/huggingface \
+    NLTK_DATA=/home/nonroot/nltk_data
 
 WORKDIR /workspace
 
-# Copy from builder stage
-COPY --from=builder --chown=nonroot:nonroot /opt/venv /opt/venv
-COPY --from=builder --chown=nonroot:nonroot /workspace/app ./app
-COPY --from=builder --chown=nonroot:nonroot /workspace/scripts ./scripts
+# Copy virtualenv from builder
+COPY --from=builder /opt/venv /opt/venv
+
+# Copy application code
+COPY app ./app
+COPY scripts ./scripts
+
+# Copy NLTK and HF cache
 COPY --from=builder --chown=nonroot:nonroot /home/nonroot/nltk_data /home/nonroot/nltk_data
 COPY --from=builder --chown=nonroot:nonroot /home/nonroot/.cache /home/nonroot/.cache
 
-# Create runtime directories
-RUN mkdir -p /workspace/data/chroma /workspace/data/docs
-
-# Verify application imports (will use in-memory fallback if Redis not available at build time)
-RUN /opt/venv/bin/python -c "from app.main import app; print('✓ Application imports successfully')" \
-    || (echo "ERROR: Failed to import application!" && exit 1)
-
-# Run as non-root user
+# Ensure correctness of permissions
+USER root
+RUN chown -R nonroot:nonroot /workspace \
+    && chmod +x /workspace/scripts/docker-entrypoint.sh || true
 USER nonroot
 
-# Health check
+# Health check (Python-based to ignore shell requirement if we swap base later)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD ["/opt/venv/bin/python", "-c", "import socket; s=socket.socket(); s.settimeout(2); s.connect(('127.0.0.1', 8000))"]
+    CMD ["/opt/venv/bin/python", "-c", "import socket; s=socket.socket(); s.settimeout(2); s.connect(('127.0.0.1', 8000)); print('✅ Health check passed')"]
 
-# Reset entrypoint
+# Default entrypoint/cmd
 ENTRYPOINT []
-
-# Default command: Run uvicorn with 2 workers
 CMD ["/opt/venv/bin/python", "-m", "uvicorn", "app.main:app", \
     "--host", "0.0.0.0", \
     "--port", "8000", \
     "--workers", "2", \
     "--log-level", "info"]
-
-# ============================================================================
-# Build Information
-# ============================================================================
-# Build:   docker build -f Dockerfile.prod -t personal-rag-system:prod .
-# Run:     docker run -p 8000:8000 -e LLM_GROQ_API_KEY=xxx personal-rag-system:prod
-# Compose: docker-compose -f docker-compose.prod.yml up -d
-#
-# Image size: ~2GB (vs ~4GB with Ollama)
-# Dependencies: 24 packages (vs 26 with dev deps)
-# ============================================================================

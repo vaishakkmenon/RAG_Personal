@@ -4,12 +4,13 @@ Debug endpoints for Personal RAG system.
 
 from typing import Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from app.core.auth import get_current_admin_user
 
 from app.retrieval import search, get_sample_chunks
 from app.settings import settings
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_current_admin_user)])
 
 
 @router.get("/search")

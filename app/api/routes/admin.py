@@ -7,13 +7,14 @@ Contains administrative operations like clearing ChromaDB.
 from pathlib import Path
 from typing import Dict, Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from app.core.auth import get_current_admin_user
 
 from app.settings import settings
 from app.retrieval import reset_collection
 from app.retrieval.fallback_cache import get_fallback_cache
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_current_admin_user)])
 
 
 @router.delete("/chromadb")

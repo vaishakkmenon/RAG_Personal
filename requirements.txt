@@ -22,6 +22,9 @@ filelock>=3.20.1  # CVE-2025-68146
 starlette>=0.49.1  # CVE-2025-62727
 urllib3>=2.6.0  # CVE-2025-50182, CVE-2025-66418
 transformers==4.55.2
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+python-jose[cryptography]==3.3.0
 
 # --- Data / utils ---
 tqdm==4.67.1

@@ -64,7 +64,9 @@ The system includes a robust pipeline to process raw files into searchable knowl
 
 ## 🛡️ Security & Observability
 
--   **API Key Authentication**: Protects the API from unauthorized access.
+-   **API Key Authentication**: Protects chat endpoints via `X-API-Key` header.
+-   **JWT Authentication**: Protects admin endpoints via OAuth2 Bearer tokens.
+-   **Circuit Breaker**: Automatic Groq API failure detection and recovery.
 -   **Input Validation**: Prevents malicious inputs and path traversal attacks.
 -   **Prometheus Metrics**: Tracks performance (latency, request counts) to ensure the system is running smoothly.
 -   **Docker Isolation**: Runs in containers with limited privileges for enhanced security.
@@ -113,17 +115,21 @@ curl -X POST http://localhost:8000/chat/simple \
   }'
 ```
 
-### 3. Ingestion
+### 3. Ingestion (Admin)
 
 **Endpoint**: `POST /ingest`
 
-**Description**: Triggers the document ingestion pipeline to process Markdown files and update the vector database.
+**Description**: Triggers the document ingestion pipeline to process Markdown files and update the vector database. Requires JWT authentication.
 
 **Usage**:
 ```bash
+# First, get a JWT token
+curl -X POST http://localhost:8000/auth/token \
+  -d "username=admin&password=your-password"
+
+# Then use the token for ingestion
 curl -X POST http://localhost:8000/ingest \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: your-api-key" \
+  -H "Authorization: Bearer <your-jwt-token>" \
   -d '{
     "paths": ["./data/mds"]
   }'

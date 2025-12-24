@@ -1,43 +1,46 @@
 #!/bin/bash
-
-# ============================================================================
-# Personal RAG System - Deployment Script
-# Usage: ./scripts/deploy.sh [--no-cache]
-# ============================================================================
-
 set -e
 
-echo "🚀 Starting deployment..."
+# Deploy Script for Personal RAG System
+# Usage: ./scripts/deploy.sh
+# Run this on the VPS to update the running application.
 
-# 1. Pull latest changes
-echo "📥 Pulling latest code..."
-git pull origin main || echo "⚠️  Git pull failed or already up to date."
+echo "🚀 Starting Deployment..."
+echo "📅 Date: $(date)"
 
-# 2. Build images
-# If --no-cache is passed, force a full rebuild (good for security updates)
-if [[ "$1" == "--no-cache" ]]; then
-    echo "🏗️  Building images (no cache)..."
-    docker compose build --no-cache
-else
-    echo "🏗️  Building images..."
-    docker compose build
+# 1. Check for .env file
+if [ ! -f .env ]; then
+    echo "❌ Error: .env file missing!"
+    echo "   Please copy .env.prod to .env before deploying."
+    exit 1
 fi
 
-# 3. Restart services
+# 2. Pull latest code
+echo "📥 Pulling latest changes from git..."
+# Check if we are in a git repo
+if [ -d .git ]; then
+    git pull
+else
+    echo "⚠️  Not a git repository. Skipping git pull."
+fi
+
+# 3. Pull/Build Images
+# We prioritize local build for now since we don't have a remote registry set up yet
+echo "🏗️  Building production images..."
+docker compose -f docker-compose.prod.yml build
+
+# 4. Restart Services
 echo "🔄 Restarting services..."
-docker compose down
-docker compose up -d
+# up -d --remove-orphans will recreate containers if image changed
+docker compose -f docker-compose.prod.yml up -d --remove-orphans
 
-# 4. Check health
-echo "🏥 Waiting for API to be healthy..."
-# Simple wait loop (optional, or just trust Docker healthchecks)
-sleep 10
-docker compose ps
-
-# 5. Cleanup
-echo "🧹 Cleaning up unused images..."
+# 5. Prune Docker System (Clean up old images to save space)
+echo "🧹 Cleaning up old images..."
 docker image prune -f
 
-echo "✅ Deployment complete!"
-echo "   - API: https://localhost/docs"
-echo "   - Admin: https://localhost/admin"
+# 6. Verify Deployment
+echo "✅ Deployment complete! Checking health..."
+sleep 5
+docker compose -f docker-compose.prod.yml ps
+
+echo "🌐 API should be available at https://api.vaishakmenon.com"

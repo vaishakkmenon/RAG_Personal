@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.api import create_api_router
+from app.api.routers import auth
 from app.middleware.api_key import APIKeyMiddleware
 from app.middleware.logging import LoggingMiddleware
 from app.middleware.max_size import MaxSizeMiddleware
@@ -153,6 +154,7 @@ Instrumentator().instrument(app).expose(app)
 # Include all API routes
 api_router = create_api_router()
 app.include_router(api_router)
+app.include_router(auth.router)
 
 logger.info(f"Application started: {settings.api.title} v{settings.api.version}")
 logger.info(f"LLM Provider: {settings.llm.provider}")
