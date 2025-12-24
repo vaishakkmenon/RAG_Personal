@@ -24,7 +24,7 @@ urllib3>=2.6.0  # CVE-2025-50182, CVE-2025-66418
 transformers==4.55.2
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
-python-jose[cryptography]==3.3.0
+python-jose[cryptography]==3.4.0  # CVE-2024-33663
 
 # --- Data / utils ---
 tqdm==4.67.1
