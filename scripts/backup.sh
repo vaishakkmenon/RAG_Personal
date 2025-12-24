@@ -18,9 +18,13 @@ else
     export PGPASSWORD="$POSTGRES_PASSWORD"
 fi
 
-if pg_isready -h postgres -U rag_user -d rag_db > /dev/null 2>&1; then
+# Default values if env vars are not set
+PG_USER=${POSTGRES_USER:-rag_user}
+PG_DB=${POSTGRES_DB:-rag_db}
+
+if pg_isready -h postgres -U "$PG_USER" -d "$PG_DB" > /dev/null 2>&1; then
     echo "[INFO] Backing up Postgres..."
-    pg_dump -h postgres -U rag_user -d rag_db | gzip > "$BACKUP_DIR/db_$DATE.sql.gz"
+    pg_dump -h postgres -U "$PG_USER" -d "$PG_DB" | gzip > "$BACKUP_DIR/db_$DATE.sql.gz"
 else
     echo "[WARN] Postgres not available, skipping DB backup."
 fi
