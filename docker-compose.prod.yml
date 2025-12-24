@@ -163,6 +163,10 @@ services:
 
     restart: always
 
+    # Graceful shutdown: Allow time for in-flight requests to complete
+    # Docker sends SIGTERM, waits this period, then sends SIGKILL
+    stop_grace_period: 30s
+
     # Resource limits (ENABLED for production)
     deploy:
       resources:

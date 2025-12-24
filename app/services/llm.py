@@ -3,10 +3,13 @@ LLM service for Personal RAG system.
 
 Handles LLM client interactions with Groq API (cloud, fast, free tier).
 Includes rate limiting for Groq to stay within free tier limits.
+Includes circuit breaker pattern for resilience.
 """
 
 import logging
 import time
+import threading
+from enum import Enum
 from typing import Optional, AsyncIterator
 import asyncio
 from functools import wraps
@@ -24,12 +27,164 @@ try:
     from app.metrics import (
         rag_llm_request_total,
         rag_llm_latency_seconds,
+        rag_circuit_breaker_state,
+        rag_circuit_breaker_transitions_total,
     )
 
     METRICS_ENABLED = True
 except ImportError:
     METRICS_ENABLED = False
     logger.debug("Metrics not available for LLM service")
+
+
+# ============================================================================
+# Circuit Breaker Pattern
+# ============================================================================
+
+
+class CircuitState(Enum):
+    """Circuit breaker states."""
+
+    CLOSED = "closed"  # Normal operation, requests pass through
+    OPEN = "open"  # Failing, requests are rejected immediately
+    HALF_OPEN = "half_open"  # Testing if service has recovered
+
+
+class CircuitBreakerOpen(Exception):
+    """Exception raised when circuit breaker is open."""
+
+    pass
+
+
+class CircuitBreaker:
+    """
+    Circuit breaker pattern implementation for external API resilience.
+
+    States:
+    - CLOSED: Normal operation, requests pass through
+    - OPEN: Service is failing, reject requests immediately (fail fast)
+    - HALF_OPEN: Allow limited requests to test if service recovered
+
+    Transitions:
+    - CLOSED -> OPEN: After `failure_threshold` consecutive failures
+    - OPEN -> HALF_OPEN: After `recovery_timeout` seconds
+    - HALF_OPEN -> CLOSED: After `half_open_successes` successful requests
+    - HALF_OPEN -> OPEN: On any failure
+    """
+
+    def __init__(
+        self,
+        failure_threshold: int = 5,
+        recovery_timeout: float = 30.0,
+        half_open_max_requests: int = 3,
+        name: str = "default",
+    ):
+        """
+        Initialize circuit breaker.
+
+        Args:
+            failure_threshold: Consecutive failures before opening circuit
+            recovery_timeout: Seconds to wait before trying again (OPEN -> HALF_OPEN)
+            half_open_max_requests: Successful requests needed to close circuit
+            name: Name for logging and metrics
+        """
+        self.failure_threshold = failure_threshold
+        self.recovery_timeout = recovery_timeout
+        self.half_open_max_requests = half_open_max_requests
+        self.name = name
+
+        self._state = CircuitState.CLOSED
+        self._failure_count = 0
+        self._success_count = 0
+        self._last_failure_time: Optional[float] = None
+        self._lock = threading.Lock()
+
+        logger.info(
+            f"Circuit breaker '{name}' initialized: "
+            f"threshold={failure_threshold}, timeout={recovery_timeout}s"
+        )
+
+    @property
+    def state(self) -> CircuitState:
+        """Get current circuit state, transitioning if needed."""
+        with self._lock:
+            if self._state == CircuitState.OPEN:
+                # Check if we should transition to HALF_OPEN
+                if self._last_failure_time is not None:
+                    elapsed = time.time() - self._last_failure_time
+                    if elapsed >= self.recovery_timeout:
+                        self._transition_to(CircuitState.HALF_OPEN)
+            return self._state
+
+    def _transition_to(self, new_state: CircuitState) -> None:
+        """Transition to a new state (must hold lock)."""
+        old_state = self._state
+        self._state = new_state
+
+        if new_state == CircuitState.CLOSED:
+            self._failure_count = 0
+            self._success_count = 0
+        elif new_state == CircuitState.HALF_OPEN:
+            self._success_count = 0
+
+        logger.warning(
+            f"Circuit breaker '{self.name}': {old_state.value} -> {new_state.value}"
+        )
+
+        if METRICS_ENABLED:
+            rag_circuit_breaker_state.labels(name=self.name).set(
+                {"closed": 0, "open": 1, "half_open": 0.5}[new_state.value]
+            )
+            rag_circuit_breaker_transitions_total.labels(
+                name=self.name, from_state=old_state.value, to_state=new_state.value
+            ).inc()
+
+    def allow_request(self) -> bool:
+        """Check if request should be allowed through."""
+        current_state = self.state  # This may trigger OPEN -> HALF_OPEN
+
+        if current_state == CircuitState.CLOSED:
+            return True
+        elif current_state == CircuitState.OPEN:
+            return False
+        else:  # HALF_OPEN
+            return True
+
+    def record_success(self) -> None:
+        """Record a successful request."""
+        with self._lock:
+            if self._state == CircuitState.HALF_OPEN:
+                self._success_count += 1
+                if self._success_count >= self.half_open_max_requests:
+                    self._transition_to(CircuitState.CLOSED)
+            elif self._state == CircuitState.CLOSED:
+                # Reset failure count on success
+                self._failure_count = 0
+
+    def record_failure(self) -> None:
+        """Record a failed request."""
+        with self._lock:
+            self._last_failure_time = time.time()
+
+            if self._state == CircuitState.HALF_OPEN:
+                # Any failure in half-open immediately opens circuit
+                self._transition_to(CircuitState.OPEN)
+            elif self._state == CircuitState.CLOSED:
+                self._failure_count += 1
+                if self._failure_count >= self.failure_threshold:
+                    self._transition_to(CircuitState.OPEN)
+
+    def get_stats(self) -> dict:
+        """Get circuit breaker statistics."""
+        with self._lock:
+            return {
+                "state": self._state.value,
+                "failure_count": self._failure_count,
+                "success_count": self._success_count,
+                "last_failure_time": self._last_failure_time,
+                "failure_threshold": self.failure_threshold,
+                "recovery_timeout": self.recovery_timeout,
+            }
 
 
 def retry_with_exponential_backoff(
@@ -131,6 +286,14 @@ class GroqLLMService:
                 requests_per_day=self.llm_settings.groq_requests_per_day,
             )
 
+            # Initialize circuit breaker for resilience
+            self.circuit_breaker = CircuitBreaker(
+                failure_threshold=5,
+                recovery_timeout=30.0,
+                half_open_max_requests=3,
+                name="groq_api",
+            )
+
             logger.info(
                 f"Initialized Groq client with model: {self.model} "
                 f"(tier: {self.llm_settings.groq_tier})"
@@ -183,7 +346,7 @@ class GroqLLMService:
         max_tokens: int,
         model: Optional[str] = None,
     ) -> str:
-        """Generate text using Groq API with rate limiting.
+        """Generate text using Groq API with rate limiting and circuit breaker.
 
         Args:
             prompt: The input prompt
@@ -195,9 +358,20 @@ class GroqLLMService:
             Generated text
 
         Raises:
+            CircuitBreakerOpen: If circuit breaker is open
             Exception: If Groq API call fails
         """
         model_name = model or self.model
+
+        # Check circuit breaker before making request
+        if not self.circuit_breaker.allow_request():
+            logger.warning(
+                f"Circuit breaker OPEN for Groq API - rejecting request. "
+                f"Will retry after {self.circuit_breaker.recovery_timeout}s"
+            )
+            raise CircuitBreakerOpen(
+                "Groq API circuit breaker is open. Service is temporarily unavailable."
+            )
 
         # Wait for rate limiter (blocks if at limit)
         if self.rate_limiter:
@@ -230,6 +404,9 @@ class GroqLLMService:
 
             generated_text = response.choices[0].message.content
 
+            # Record success with circuit breaker
+            self.circuit_breaker.record_success()
+
             # Metrics
             if METRICS_ENABLED:
                 rag_llm_request_total.labels(
@@ -250,6 +427,9 @@ class GroqLLMService:
 
         except Exception as e:
             duration = time.time() - start
+
+            # Record failure with circuit breaker
+            self.circuit_breaker.record_failure()
 
             if METRICS_ENABLED:
                 rag_llm_request_total.labels(
@@ -314,7 +494,7 @@ class GroqLLMService:
         max_tokens: int,
         model: Optional[str] = None,
     ) -> str:
-        """Generate text asynchronously using Groq API with rate limiting.
+        """Generate text asynchronously using Groq API with rate limiting and circuit breaker.
 
         Args:
             prompt: The input prompt
@@ -326,9 +506,20 @@ class GroqLLMService:
             Generated text
 
         Raises:
+            CircuitBreakerOpen: If circuit breaker is open
             Exception: If Groq API call fails
         """
         model_name = model or self.model
+
+        # Check circuit breaker before making request
+        if not self.circuit_breaker.allow_request():
+            logger.warning(
+                f"Circuit breaker OPEN for Groq API - rejecting request. "
+                f"Will retry after {self.circuit_breaker.recovery_timeout}s"
+            )
+            raise CircuitBreakerOpen(
+                "Groq API circuit breaker is open. Service is temporarily unavailable."
+            )
 
         # Wait for rate limiter (blocks if at limit)
         if self.rate_limiter:
@@ -367,6 +558,9 @@ class GroqLLMService:
 
             generated_text = response.choices[0].message.content
 
+            # Record success with circuit breaker
+            self.circuit_breaker.record_success()
+
             # Metrics
             if METRICS_ENABLED:
                 rag_llm_request_total.labels(
@@ -387,6 +581,9 @@ class GroqLLMService:
 
         except Exception as e:
             duration = time.time() - start
+
+            # Record failure with circuit breaker
+            self.circuit_breaker.record_failure()
 
             if METRICS_ENABLED:
                 rag_llm_request_total.labels(
@@ -448,7 +645,7 @@ class GroqLLMService:
         max_tokens: int,
         model: Optional[str] = None,
     ) -> AsyncIterator[str]:
-        """Generate text stream asynchronously using Groq API with rate limiting.
+        """Generate text stream asynchronously using Groq API with rate limiting and circuit breaker.
 
         Args:
             prompt: The input prompt
@@ -458,8 +655,21 @@ class GroqLLMService:
 
         Yields:
             Generated text chunks
+
+        Raises:
+            CircuitBreakerOpen: If circuit breaker is open
         """
         model_name = model or self.model
+
+        # Check circuit breaker before making request
+        if not self.circuit_breaker.allow_request():
+            logger.warning(
+                f"Circuit breaker OPEN for Groq API - rejecting request. "
+                f"Will retry after {self.circuit_breaker.recovery_timeout}s"
+            )
+            raise CircuitBreakerOpen(
+                "Groq API circuit breaker is open. Service is temporarily unavailable."
+            )
 
         # Wait for rate limiter (blocks if at limit)
         if self.rate_limiter:
@@ -506,6 +716,9 @@ class GroqLLMService:
                 if content:
                     yield content
 
+            # Record success with circuit breaker (stream completed successfully)
+            self.circuit_breaker.record_success()
+
             duration = time.time() - start
             logger.info(f"Groq async stream finished in {duration:.2f}s")
 
@@ -516,6 +729,9 @@ class GroqLLMService:
 
         except Exception as e:
             duration = time.time() - start
+
+            # Record failure with circuit breaker
+            self.circuit_breaker.record_failure()
 
             if METRICS_ENABLED:
                 rag_llm_request_total.labels(
@@ -639,4 +855,6 @@ __all__ = [
     "generate_with_llm",
     "async_generate_with_llm",
     "async_generate_stream_with_llm",
+    "CircuitBreakerOpen",
+    "CircuitBreaker",
 ]

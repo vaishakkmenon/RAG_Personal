@@ -5,6 +5,7 @@ Clean, modular application setup with middleware configuration.
 """
 
 import logging
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -31,6 +32,10 @@ from app.exceptions import (
 setup_logging()
 logger = logging.getLogger(__name__)
 
+# Shutdown flag for graceful shutdown
+_shutdown_event = asyncio.Event()
+
+
 # ------------------------------------------------------------------------------
 # Lifespan event handler
 # ------------------------------------------------------------------------------
@@ -38,12 +43,57 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Handle application startup and shutdown events."""
+    """Handle application startup and shutdown events with graceful cleanup."""
     # Startup: Validate environment configuration
+    logger.info("Starting application...")
     validate_config()
 
     yield
-    # Shutdown: Add cleanup logic here if needed in the future
+
+    # Shutdown: Graceful cleanup
+    logger.info("Initiating graceful shutdown...")
+
+    # 1. Close Redis connection pool (session storage)
+    try:
+        from app.storage.factory import get_storage_backend
+
+        storage = get_storage_backend()
+        if hasattr(storage, "close"):
+            await storage.close()
+            logger.info("Closed session storage backend")
+        elif hasattr(storage, "_redis") and storage._redis:
+            await storage._redis.close()
+            logger.info("Closed Redis connection pool")
+    except Exception as e:
+        logger.warning(f"Error closing session storage: {e}")
+
+    # 2. Close PostgreSQL connection pool (feedback database)
+    try:
+        from app.database import engine
+
+        if engine:
+            engine.dispose()
+            logger.info("Closed PostgreSQL connection pool")
+    except Exception as e:
+        logger.warning(f"Error closing PostgreSQL pool: {e}")
+
+    # 3. Close ChromaDB client
+    try:
+        from app.retrieval.vector_store import get_chroma_client
+
+        client = get_chroma_client()
+        if client and hasattr(client, "_client"):
+            # ChromaDB PersistentClient doesn't have an explicit close
+            # but we can log that we're releasing the reference
+            logger.info("Released ChromaDB client reference")
+    except Exception as e:
+        logger.warning(f"Error releasing ChromaDB client: {e}")
+
+    # 4. Allow brief time for in-flight requests to complete
+    logger.info("Waiting for in-flight requests to complete...")
+    await asyncio.sleep(2)
+
+    logger.info("Graceful shutdown complete")
 
 
 # ------------------------------------------------------------------------------

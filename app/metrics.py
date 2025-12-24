@@ -111,6 +111,22 @@ rag_llm_cost_total = Counter(
 )
 
 # ============================================================================
+# CIRCUIT BREAKER METRICS
+# ============================================================================
+
+rag_circuit_breaker_state = Gauge(
+    "rag_circuit_breaker_state",
+    "Circuit breaker state (0=closed, 0.5=half_open, 1=open)",
+    ["name"],  # e.g., "groq_api"
+)
+
+rag_circuit_breaker_transitions_total = Counter(
+    "rag_circuit_breaker_transitions_total",
+    "Total circuit breaker state transitions",
+    ["name", "from_state", "to_state"],  # e.g., "groq_api", "closed", "open"
+)
+
+# ============================================================================
 # PROMPT GUARD METRICS (Security)
 # ============================================================================
 
@@ -298,6 +314,9 @@ __all__ = [
     "rag_llm_latency_seconds",
     "rag_llm_token_usage_total",
     "rag_llm_cost_total",
+    # Circuit Breaker
+    "rag_circuit_breaker_state",
+    "rag_circuit_breaker_transitions_total",
     # Prompt Guard
     "prompt_guard_checks_total",
     "prompt_guard_blocked_total",
