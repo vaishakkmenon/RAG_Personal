@@ -55,14 +55,15 @@ async def lifespan(app: FastAPI):
 
     # 1. Close Redis connection pool (session storage)
     try:
-        from app.storage.factory import get_storage_backend
+        from app.storage.factory import get_session_store
 
-        storage = get_storage_backend()
+        storage = get_session_store()
         if hasattr(storage, "close"):
             await storage.close()
             logger.info("Closed session storage backend")
-        elif hasattr(storage, "_redis") and storage._redis:
-            await storage._redis.close()
+        elif hasattr(storage, "_client") and storage._client:
+            # Redis client with connection pool
+            storage._client.connection_pool.disconnect()
             logger.info("Closed Redis connection pool")
     except Exception as e:
         logger.warning(f"Error closing session storage: {e}")
@@ -79,10 +80,10 @@ async def lifespan(app: FastAPI):
 
     # 3. Close ChromaDB client
     try:
-        from app.retrieval.vector_store import get_chroma_client
+        from app.retrieval.vector_store import get_vector_store
 
-        client = get_chroma_client()
-        if client and hasattr(client, "_client"):
+        vector_store = get_vector_store()
+        if vector_store and hasattr(vector_store, "_client"):
             # ChromaDB PersistentClient doesn't have an explicit close
             # but we can log that we're releasing the reference
             logger.info("Released ChromaDB client reference")

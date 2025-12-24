@@ -366,7 +366,7 @@ services:
     container_name: rag_postgres_exporter
     hostname: postgres-exporter
     environment:
-      - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER:-rag_user}:${POSTGRES_PASSWORD:-postgrespass}@postgres:5432/${POSTGRES_DB:-rag_db}?sslmode=disable
+      - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER:-rag_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-rag_db}?sslmode=disable
     ports:
       - "127.0.0.1:9187:9187"
     depends_on:
