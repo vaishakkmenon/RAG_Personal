@@ -9,6 +9,8 @@ from unittest.mock import patch
 
 
 from app.settings import settings
+from app.core.auth import get_current_admin_user
+from app.models import User
 
 # raise_server_exceptions=False allows us to test 500 error responses
 # without the TestClient raising the exception directly.
@@ -23,55 +25,65 @@ MOCK_TARGET = "app.api.routes.ingest.ingest_paths"
 def test_ingest_happy_path(client, mock_chromadb):
     """Verify successful ingestion triggering."""
 
-    # Mock the return value of the service function
-    mock_result = 42
+    # Mock admin user
+    admin_user = User(username="admin", is_superuser=True)
+    client.app.dependency_overrides[get_current_admin_user] = lambda: admin_user
 
-    with patch(MOCK_TARGET) as mock_ingest:
-        mock_ingest.return_value = mock_result
+    try:
+        # Mock the return value of the service function
+        mock_result = 42
 
-        # Make request
-        response = client.post(
-            "/ingest",
-            headers={"X-API-Key": settings.api_key},
-            json={"paths": ["./data/test.md"]},
-        )
+        with patch(MOCK_TARGET) as mock_ingest:
+            mock_ingest.return_value = mock_result
 
-        # Verify response
-        assert response.status_code == 200
-        data = response.json()
-        assert data["ingested_chunks"] == 42
-        # BM25 stats might differ depending on how mock_chromadb behaves,
-        # checking basic structure is enough or update expectation
-        assert "bm25_stats" in data
+            # Make request
+            response = client.post(
+                "/ingest",
+                headers={"X-API-Key": settings.api_key},
+                json={"paths": ["./data/test.md"]},
+            )
 
-        # Verify service was called with correct arguments
-        mock_ingest.assert_called_once()
-        # You might want to check the args passed if your service takes specific objects
-        # args, _ = mock_ingest.call_args
-        # assert args[0] == ["./data/test.md"]
+            # Verify response
+            assert response.status_code == 200
+            data = response.json()
+            assert data["ingested_chunks"] == 42
+            assert "bm25_stats" in data
+
+            # Verify service was called
+            mock_ingest.assert_called_once()
+    finally:
+        client.app.dependency_overrides = {}
 
 
 def test_ingest_service_failure(client):
     """Verify 500 response when ingestion service fails."""
 
-    with patch(MOCK_TARGET) as mock_ingest:
-        # Simulate an unexpected error in the service
-        mock_ingest.side_effect = Exception("Disk full")
+    # Mock admin user
+    admin_user = User(username="admin", is_superuser=True)
+    client.app.dependency_overrides[get_current_admin_user] = lambda: admin_user
 
-        response = client.post(
-            "/ingest",
-            headers={"X-API-Key": settings.api_key},
-            json={"paths": ["./data/test.md"]},
-        )
+    try:
+        with patch(MOCK_TARGET) as mock_ingest:
+            # Simulate an unexpected error in the service
+            mock_ingest.side_effect = Exception("Disk full")
 
-        # Should return 500 Internal Server Error
-        assert response.status_code == 500
-        # The global exception handler masks the specific error message
-        assert "internal error occurred" in response.json()["detail"]
+            response = client.post(
+                "/ingest",
+                headers={"X-API-Key": settings.api_key},
+                json={"paths": ["./data/test.md"]},
+            )
+
+            # Should return 500 Internal Server Error
+            assert response.status_code == 500
+            assert "internal error occurred" in response.json()["detail"]
+    finally:
+        client.app.dependency_overrides = {}
 
 
 def test_ingest_unauthorized(client):
-    """Verify 401 when API key is missing or invalid."""
+    """Verify 401 when authentication fails."""
+    # Ensure no dependency override is active
+    client.app.dependency_overrides = {}
 
     response = client.post(
         "/ingest", headers={"X-API-Key": "wrong-key"}, json={"paths": []}
