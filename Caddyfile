@@ -1,51 +1,33 @@
 {
-    # Enable automatic HTTPS for localhost
-    # Use internal CA for local development to avoid browser warnings (requires installing root CA)
-    # or just accept self-signed warnings for now.
-    local_certs
+    # Enable admin API for internal use if needed, but restrict it
+    admin off
+
+    # Trust private IP ranges (Docker network)
+    # This allows Caddy to trust headers if we add another layer later (like Cloudflare)
+    servers {
+        trusted_proxies static private_ranges
+    }
 }
 
-localhost {
-    # Protected Admin Routes
-    @admin_routes {
-        path /metrics* /admin* /ingest* /grafana*
+api.vaishakmenon.com {
+    # Proxy to the API service
+    reverse_proxy api:8000 {
+        # Standard proxy headers are set automatically by Caddy usually,
+        # but we ensure they are passed through correctly.
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
     }
 
-    # Protect admin and metrics with Basic Authentication
-    # Default User: admin
-    # Default Pass: admin (Change this hash in production!)
-    # Hash generated with: caddy hash-password --plaintext admin
-    basic_auth @admin_routes {
-        admin $2a$14$1l.IcnWz33s.i/l/g.e.UO.t/4s.g/s.g/s/s/s/s/s/s/s/s
-    }
+    # Enable compression
+    encode gzip
 
-    # Reverse proxy to the API service
-    reverse_proxy api:8000
-
-    # Reverse proxy to Grafana
-    reverse_proxy /grafana* grafana:3000
-
-    # formatting logs
+    # Logging
     log {
-        output stdout
-        format json
-    }
-
-    # Security Headers
-    header {
-        # HSTS (Strict-Transport-Security) - 1 year
-        Strict-Transport-Security "max-age=31536000;"
-
-        # Prevent MIME type sniffing
-        X-Content-Type-Options "nosniff"
-
-        # Prevent clickjacking
-        X-Frame-Options "DENY"
-
-        # XSS Protection (Legacy but good practice)
-        X-XSS-Protection "1; mode=block"
-
-        # Referrer Policy
-        Referrer-Policy "strict-origin-when-cross-origin"
+        output file /var/log/caddy/access.log {
+            roll_size 10mb
+            roll_keep 5
+        }
     }
 }

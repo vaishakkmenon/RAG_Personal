@@ -30,12 +30,13 @@ services:
 
     # Reverse proxy configuration
     # Caddy will automatically obtain and renew SSL certificates from Let's Encrypt
-    command: caddy reverse-proxy --from api.vaishakmenon.com --to api:8000
-
+    # Reverse proxy configuration using Caddyfile
+    # command: caddy reverse-proxy --from api.vaishakmenon.com --to api:8000
     volumes:
-      # Persistent storage for SSL certificates and Caddy config
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+      - ./logs/caddy:/var/log/caddy  # Persist logs
 
     depends_on:
       api:
