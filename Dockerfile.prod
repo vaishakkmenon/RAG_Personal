@@ -71,6 +71,7 @@ RUN pip install --no-cache-dir \
 
 # Copy test files and configuration
 COPY tests ./tests
+COPY app ./app
 COPY pytest.ini ./
 
 # Verify test structure
