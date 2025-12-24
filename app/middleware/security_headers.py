@@ -31,9 +31,13 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         )
 
         # Content Security Policy (CSP)
-        # Block all content loading (scripts, styles, images) since this is a pure API
+        # Allow Swagger UI (unblock scripts/styles/images)
         response.headers["Content-Security-Policy"] = (
-            "default-src 'none'; frame-ancestors 'none'; sandbox"
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "img-src 'self' data: https://fastapi.tiangolo.com; "
+            "connect-src 'self';"
         )
 
         return response
