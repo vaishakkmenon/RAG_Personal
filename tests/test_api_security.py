@@ -1,11 +1,9 @@
-from fastapi.testclient import TestClient
-from app.main import app
 from app.settings import settings
 
-client = TestClient(app)
+# client = TestClient(app) - Removed to use fixture
 
 
-def test_security_headers():
+def test_security_headers(client):
     """Test that security headers are present in responses."""
     # Authenticated request to get 200 OK (or whatever status)
     # The health endpoint might be protected depending on router config, usually it's open but tests showed 401.
@@ -25,7 +23,7 @@ def test_security_headers():
     assert headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
 
 
-def test_cors_valid_origin():
+def test_cors_valid_origin(client):
     """Test CORS with a valid origin."""
     # Mock settings.api.cors_origins to include a specific origin
     # However settings are already loaded. We can check against default allowed origins.
@@ -45,7 +43,7 @@ def test_cors_valid_origin():
     assert response.headers["access-control-allow-origin"] == origin
 
 
-def test_cors_invalid_origin():
+def test_cors_invalid_origin(client):
     """Test CORS with an invalid origin."""
     origin = "http://evil.com"
     headers_dict = {"X-API-Key": settings.api_key}
@@ -66,7 +64,7 @@ def test_cors_invalid_origin():
     assert "access-control-allow-origin" not in response.headers
 
 
-def test_cors_deploy_preview_regex():
+def test_cors_deploy_preview_regex(client):
     """Test CORS with a deploy preview regex match."""
     origin = "https://deploy-preview-123.vaishakmenon.com"
     headers_dict = {"X-API-Key": settings.api_key}
@@ -81,7 +79,7 @@ def test_cors_deploy_preview_regex():
     assert response.headers["access-control-allow-origin"] == origin
 
 
-def test_xss_payload_handling():
+def test_xss_payload_handling(client):
     """Test that XSS payloads in responses are handled safely."""
     xss_payloads = [
         "<script>alert('xss')</script>",
@@ -116,7 +114,7 @@ def test_xss_payload_handling():
             ), "Response contains unescaped event handler"
 
 
-def test_oversized_request_rejected():
+def test_oversized_request_rejected(client):
     """Test that excessively large requests are rejected."""
     # Create a 100KB message (exceeds typical limits)
     huge_message = "x" * 100000
@@ -134,7 +132,7 @@ def test_oversized_request_rejected():
     ], f"Oversized request got status {response.status_code}, expected 413 or 422"
 
 
-def test_rapid_fire_rate_limiting(monkeypatch):
+def test_rapid_fire_rate_limiting(client, monkeypatch):
     """Test that rapid-fire requests trigger rate limiting."""
     # Temporarily set a lower rate limit for testing (15 queries per hour)
     monkeypatch.setattr(settings.session, "queries_per_hour", 15)
