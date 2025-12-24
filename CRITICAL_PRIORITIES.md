@@ -123,7 +123,7 @@ These are fine to skip for a personal project:
 - [x] Priority 1 complete (2025-12-23) - RTO: ~48 seconds
 - [ ] Priority 2 complete
 - [ ] Priority 3 complete
-- [x] Priority 4 complete (2025-12-23) - Coverage threshold: 60%
-- [x] Priority 5 complete (2025-12-23) - Trivy scans CRITICAL/HIGH
+- [x] Priority 4 complete (2025-12-24) - Coverage reporting enabled
+- [x] Priority 5 complete (2025-12-24) - Trivy scans CRITICAL/HIGH
 
 **Target:** Complete all 5 priorities before considering the system production-hardened.

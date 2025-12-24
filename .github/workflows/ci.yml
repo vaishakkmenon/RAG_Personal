@@ -19,11 +19,12 @@ jobs:
 
       # Run unit tests INSIDE the container with API_KEY from Actions secrets.
       # We pass it at runtime (-e), not at build time (safer; nothing baked into the image).
+      # COVERAGE_FILE set to /tmp to avoid read-only filesystem issues
       - name: Run unit tests
         env:
           # Fallback to 'dev' so PRs from forks (which don't get secrets) still pass.
           API_KEY: ${{ secrets.API_KEY != '' && secrets.API_KEY || 'dev' }}
-        run: docker run --rm -e API_KEY="${API_KEY}" ragchatbot:test
+        run: docker run --rm -e API_KEY="${API_KEY}" -e COVERAGE_FILE=/tmp/.coverage -e CHROMA_DIR=/tmp/chroma ragchatbot:test
 
       # Run Ruff inside the same test image (no secret needed here)
       - name: Run linter

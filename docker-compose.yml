@@ -602,6 +602,8 @@ services:
       - PYTHONUNBUFFERED=1
       - API_URL=http://api:8000
       - LOG_LEVEL=DEBUG
+      - COVERAGE_FILE=/tmp/.coverage  # Write coverage to writable tmpfs
+      - CHROMA_DIR=/tmp/chroma  # Use writable tmpfs for ChromaDB in tests
 
     env_file:
       - .env
