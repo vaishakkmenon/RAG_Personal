@@ -66,14 +66,14 @@ This is a focused list of high-impact items for a robust personal production dep
 
 ## Priority 4: Enable Test Coverage Reporting
 
-**Status:** Disabled in pytest.ini
+**Status:** COMPLETE (2025-12-23)
 **Impact:** Low effort, high visibility
 
 **Action Items:**
-- [ ] Uncomment coverage settings in `pytest.ini`
-- [ ] Run: `pytest --cov=app --cov-report=html --cov-report=term`
-- [ ] Review coverage report and identify gaps
-- [ ] Consider adding coverage threshold (e.g., 70% minimum)
+- [x] Uncomment coverage settings in `pytest.ini`
+- [x] Run: `pytest --cov=app --cov-report=html --cov-report=term`
+- [x] Review coverage report and identify gaps
+- [x] Consider adding coverage threshold (e.g., 70% minimum) - Set to 60%
 
 **Files:** `pytest.ini`
 
@@ -81,22 +81,13 @@ This is a focused list of high-impact items for a robust personal production dep
 
 ## Priority 5: Add Trivy to CI Pipeline
 
-**Status:** Manual only
+**Status:** COMPLETE (2025-12-23)
 **Impact:** Low effort, catches vulnerabilities automatically
 
 **Action Items:**
-- [ ] Add Trivy scan step to `.github/workflows/ci.yml`:
-```yaml
-- name: Run Trivy vulnerability scanner
-  uses: aquasecurity/trivy-action@master
-  with:
-    image-ref: 'rag-personal:test'
-    format: 'table'
-    exit-code: '1'
-    severity: 'CRITICAL,HIGH'
-```
-- [ ] Configure to fail on CRITICAL/HIGH vulnerabilities
-- [ ] Add exceptions file for accepted risks if needed
+- [x] Add Trivy scan step to `.github/workflows/ci.yml`
+- [x] Configure to fail on CRITICAL/HIGH vulnerabilities
+- [ ] Add exceptions file for accepted risks if needed (as needed)
 
 **Files:** `.github/workflows/ci.yml`
 
@@ -132,7 +123,7 @@ These are fine to skip for a personal project:
 - [x] Priority 1 complete (2025-12-23) - RTO: ~48 seconds
 - [ ] Priority 2 complete
 - [ ] Priority 3 complete
-- [ ] Priority 4 complete
-- [ ] Priority 5 complete
+- [x] Priority 4 complete (2025-12-23) - Coverage threshold: 60%
+- [x] Priority 5 complete (2025-12-23) - Trivy scans CRITICAL/HIGH
 
 **Target:** Complete all 5 priorities before considering the system production-hardened.

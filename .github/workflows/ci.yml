@@ -28,3 +28,14 @@ jobs:
       # Run Ruff inside the same test image (no secret needed here)
       - name: Run linter
         run: docker run --rm ragchatbot:test /opt/venv/bin/ruff check .
+
+      # Scan for vulnerabilities with Trivy
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'ragchatbot:test'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
