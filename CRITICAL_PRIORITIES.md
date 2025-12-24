@@ -9,20 +9,20 @@ This is a focused list of high-impact items for a robust personal production dep
 
 ## Priority 1: Test Backup Restoration
 
-**Status:** Not done
+**Status:** COMPLETE (2025-12-23)
 **Impact:** Critical - backups are useless without verified restoration
 
 **Action Items:**
-- [ ] Document restoration procedure for each service:
+- [x] Document restoration procedure for each service:
   - PostgreSQL: `psql < backup.sql`
   - Redis: Copy RDB file to data directory
   - ChromaDB: Extract tar.gz to data directory
-- [ ] Perform test restoration to a fresh environment
-- [ ] Verify data integrity after restoration
-- [ ] Document RTO (Recovery Time Objective) - target time to restore
-- [ ] Document RPO (Recovery Point Objective) - acceptable data loss window
+- [x] Perform test restoration to a fresh environment
+- [x] Verify data integrity after restoration
+- [x] Document RTO (Recovery Time Objective) - ~48 seconds
+- [ ] Document RPO (Recovery Point Objective) - 24 hours (daily backups)
 
-**Files:** `scripts/backup.sh`
+**Files:** `scripts/backup.sh`, `scripts/restore.sh`, `scripts/restore.ps1`
 
 ---
 
@@ -129,7 +129,7 @@ These are fine to skip for a personal project:
 
 ## Completion Tracking
 
-- [ ] Priority 1 complete
+- [x] Priority 1 complete (2025-12-23) - RTO: ~48 seconds
 - [ ] Priority 2 complete
 - [ ] Priority 3 complete
 - [ ] Priority 4 complete
