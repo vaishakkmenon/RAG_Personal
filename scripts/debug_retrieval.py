@@ -37,8 +37,12 @@ def debug_search(query):
 
     print(f"Found {len(results)} results:")
     for i, res in enumerate(results):
-        print(f"{i+1}. {res['metadata'].get('source')} (Score: {res['score']})")
-        print(f"   Snippet: {res['content'][:100]}...")
+        score = res.get("cross_encoder_score")
+        if score is None:
+            score = res.get("distance", "N/A")
+
+        print(f"{i+1}. {res['metadata'].get('source')} (Score: {score})")
+        print(f"   Snippet: {res.get('text', '')[:100]}...")
 
 
 def main():
