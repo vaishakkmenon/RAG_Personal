@@ -536,8 +536,9 @@ class ChatService:
 
         # Stream Generation
         # Metadata first
+        sources = self.retrieval.build_chat_sources(formatted_chunks)
         metadata = {
-            "sources": self.retrieval.build_chat_sources(formatted_chunks),
+            "sources": [s.model_dump() for s in sources],
             "grounded": True,
             "session_id": session.session_id,
             "rewrite_metadata": rewrite_metadata.model_dump()
