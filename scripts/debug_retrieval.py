@@ -19,10 +19,10 @@ def check_document_presence(filename):
     found = False
     count = 0
     for doc in all_docs:
-        if filename in doc.metadata.get("source", ""):
+        if filename in doc["metadata"].get("source", ""):
             if not found:
                 print(f"Found at least one chunk for {filename}")
-                pprint(doc.metadata)
+                pprint(doc["metadata"])
                 found = True
             count += 1
 
