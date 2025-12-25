@@ -92,7 +92,7 @@ def main():
 
     check_bm25_presence(engine, target_file)
 
-    query = "I have earned the following certifications: * Certified Kubernetes Administrator (CKA) [1], earned on June 26, 2024, and valid through June 26, 2026 * AWS Certified Cloud Practitioner [2], earned on May 26, 2025, and valid through May 26, 2028 * AWS Certified AI Practitioner [2], earned on [date not specified], and [expiration date not specified]"
+    query = "What certifications have I earned?"
     debug_pipeline(query)
 
 
