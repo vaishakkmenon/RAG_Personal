@@ -119,13 +119,27 @@ def _clean_answer(answer: str, question: str) -> str:
                 cleaned = cleaned[0].upper() + cleaned[1:]
                 return cleaned
 
-    # New: Strip trailing citation markers (e.g., [1][2], Sources: [1])
-    # The frontend has a dedicated component for this, so duplicate text is redundant.
-    # Regex matches: Optional "Sources:" prefix + sequence of [N] blocks at end of string
-    citation_pattern = (
-        r"\s*(?:(?:Sources?|References?)\s*:\s*)?(?:\[\d+\](?:\s*,\s*|\s+)?)+$"
-    )
-    answer = re.sub(citation_pattern, "", answer, flags=re.IGNORECASE).strip()
+    # New: Aggressive strip of trailing citation/source blocks
+    # Matches:
+    # 1. Standard: [1], [1][2], Sources: [1]
+    # 2. Detailed: [1] filename.md \n ## Heading
+
+    # Strategy: Find the start of the source list and cut everything after
+    # 1. Simple inline markers at very end
+    answer = re.sub(
+        r"\s*(?:(?:Sources?|References?)\s*:\s*)?(?:\[\d+\](?:\s*,\s*|\s+)?)+$",
+        "",
+        answer,
+        flags=re.IGNORECASE,
+    ).strip()
+
+    # 2. Detailed Source Lists (multiline with content)
+    # Pattern looks for Newline + Start of line + [N] + space + text...
+    # This aggressive pattern assumes no valid answer text starts a new line with [N]
+    detailed_pattern = r"\n+\s*(?:Sources?:?)?\s*\[\d+\].*$"
+    answer = re.sub(
+        detailed_pattern, "", answer, flags=re.IGNORECASE | re.DOTALL
+    ).strip()
 
     return answer
 
