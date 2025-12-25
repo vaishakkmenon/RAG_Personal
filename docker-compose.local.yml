@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # Essential Services (Always Start)
+  # ==========================================
+  caddy:
+    volumes:
+      - ./Caddyfile.local:/etc/caddy/Caddyfile:ro
+    ports:
+      - "80:80"
+      - "443:443"
+
+  # ==========================================
+  # Optional Services (Disabled by default)
+  # ==========================================
+  # These will only start if you use: --profile ops
+
+  prometheus:
+    profiles: ["ops"]
+
+  alertmanager:
+    profiles: ["ops"]
+
+  grafana:
+    profiles: ["ops"]
+
+  redis-exporter:
+    profiles: ["ops"]
+
+  postgres-exporter:
+    profiles: ["ops"]
+
+  backup:
+    profiles: ["ops"]

@@ -1,0 +1,34 @@
+{
+    # Enable admin API for internal use if needed, but restrict it
+    admin off
+
+    # Trust private IP ranges (Docker network)
+    servers {
+        trusted_proxies static private_ranges
+    }
+}
+
+localhost {
+    # Proxy to the API service
+    reverse_proxy api:8000 {
+        # Pass headers similar to production
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # Enable compression
+    encode gzip
+
+    # Use internal self-signed certificate (prevents ACME errors)
+    tls internal
+
+    # Logging
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 10mb
+            roll_keep 5
+        }
+    }
+}

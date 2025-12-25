@@ -42,6 +42,10 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         ):
             return await call_next(request)
 
+        # Allow OPTIONS requests (CORS preflight)
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
         # Validate origin (primary defense)
         origin = request.headers.get("origin") or request.headers.get("referer", "")
         if origin:
