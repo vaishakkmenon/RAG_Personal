@@ -212,7 +212,12 @@ class SearchEngine:
         merged = reciprocal_rank_fusion(
             [bm25_results, semantic_results], k=settings.bm25.rrf_k, query=query
         )
-        return merged[:k]
+
+        # Apply Loose Diversity Constraint on Candidates
+        # Ensure that the retrieval_k items sent to the reranker are not dominated by one file
+        # (e.g., preventing 10 CKA chunks from pushing out the Resume).
+        # We use a looser limit (e.g., 3-5) than the final result to give Reranker some choice.
+        return diversify_sources(merged, k, max_per_source=5)
 
     def _cache_results(self, query: str, results: List[dict]):
         try:
