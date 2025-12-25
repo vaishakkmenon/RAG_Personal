@@ -1,6 +1,5 @@
 import sys
 import os
-from pprint import pprint
 
 # Add project root to path
 sys.path.append(os.getcwd())
@@ -10,55 +9,89 @@ from app.retrieval.search_engine import get_search_engine
 from app.logging_config import setup_logging
 
 
-def check_document_presence(filename):
-    print(f"Checking for presence of {filename}...")
-    vs = get_vector_store()
+def check_bm25_presence(engine, target_file):
+    print(f"\n--- Checking BM25 Index for {target_file} ---")
+    if not engine.bm25_index:
+        print("BM25 index is NOT loaded in search engine.")
+        return
 
-    # This might be slow if many docs, but okay for debugging
-    all_docs = vs.get_all_documents()
-    found = False
-    count = 0
-    for doc in all_docs:
-        if filename in doc["metadata"].get("source", ""):
-            if not found:
-                print(f"Found at least one chunk for {filename}")
-                pprint(doc["metadata"])
-                found = True
-            count += 1
+    # Check if file is in BM25 documents (using simple string match for now)
+    # BM25Index typically stores a list of docs. We need to check their metadata/content source.
+    # The actual implementation of BM25Index might vary, assuming it has .documents with metadata
+    found_count = 0
+    if hasattr(engine.bm25_index, "corpus"):
+        # Some implementations store corpus
+        pass
 
-    print(f"Total chunks found for {filename}: {count}")
-    return found
+    # Let's try to search specifically for a unique string in that file
+    # "dc53d66c1c1d46a18e76f862c9a07bdb" is the credential ID
+    unique_term = "dc53d66c1c1d46a18e76f862c9a07bdb"
+    print(f"Executing BM25 specific search for unique term: {unique_term}")
+    results = engine.bm25_index.search(unique_term, k=5)
+
+    if results:
+        print(f"Found {len(results)} matches in BM25 for unique term:")
+        for res in results:
+            src = res["metadata"].get("source", "unknown")
+            print(f"  - {src} (Score: {res['score']})")
+            if target_file in src:
+                found_count += 1
+    else:
+        print("No matches found in BM25 for unique term.")
+
+    if found_count > 0:
+        print(f"SUCCESS: {target_file} appears to be in BM25 index.")
+    else:
+        print(f"WARNING: {target_file} might be missing from BM25 index.")
 
 
-def debug_search(query):
-    print(f"\nRunning search for query: '{query}'")
+def debug_pipeline(query):
+    print("\n--- Debugging Search Pipeline ---")
+    print(f"Query: '{query}'")
+
     engine = get_search_engine()
-    results = engine.search(query, k=10)
+    vector_store = get_vector_store()
 
-    print(f"Found {len(results)} results:")
-    for i, res in enumerate(results):
-        score = res.get("cross_encoder_score")
-        if score is None:
-            score = res.get("distance", "N/A")
+    # 1. Semantic Search Only
+    print("\n[1] Semantic Search (Vector Only) - Top 10")
+    semantic_results = vector_store.search(query, k=10, max_distance=0.8)
+    for i, res in enumerate(semantic_results):
+        print(f"  {i+1}. {res['metadata'].get('source')} (Dist: {res['distance']})")
 
-        print(f"{i+1}. {res['metadata'].get('source')} (Score: {score})")
-        print(f"   Snippet: {res.get('text', '')[:100]}...")
+    # 2. BM25 Search Only
+    if engine.bm25_index:
+        print("\n[2] Keyword Search (BM25 Only) - Top 10")
+        bm25_results = engine.bm25_index.search(query, k=10)
+        for i, res in enumerate(bm25_results):
+            print(f"  {i+1}. {res['metadata'].get('source')} (Score: {res['score']})")
+    else:
+        print("\n[2] BM25 not available")
+
+    # 3. Hybrid Search (Pre-Rerank)
+    print("\n[3] Hybrid Search (Before Reranking) - Top 10")
+    # Access private method to see candidates
+    hybrid_results = engine._hybrid_search(query, k=10, max_distance=0.8)
+    for i, res in enumerate(hybrid_results):
+        score = res.get("score", "N/A")  # RRF score is 'score' usually
+        print(f"  {i+1}. {res['metadata'].get('source')} (Fusion Score: {score})")
+
+    # 4. Final Reranked
+    print("\n[4] Final Reranked - Top 5")
+    final_results = engine.search(query, k=5)
+    for i, res in enumerate(final_results):
+        score = res.get("cross_encoder_score", res.get("distance", "N/A"))
+        print(f"  {i+1}. {res['metadata'].get('source')} (Final Score: {score})")
 
 
 def main():
     setup_logging()
-
     target_file = "certificate--aws-ai-practitioner--2025-06-01.md"
+    engine = get_search_engine()
 
-    # 1. Check if file is in store
-    if not check_document_presence(target_file):
-        print(f"WARNING: {target_file} NOT found in vector store.")
-    else:
-        print(f"SUCCESS: {target_file} is in vector store.")
+    check_bm25_presence(engine, target_file)
 
-    # 2. Run the user's query
     query = "I have earned the following certifications: * Certified Kubernetes Administrator (CKA) [1], earned on June 26, 2024, and valid through June 26, 2026 * AWS Certified Cloud Practitioner [2], earned on May 26, 2025, and valid through May 26, 2028 * AWS Certified AI Practitioner [2], earned on [date not specified], and [expiration date not specified]"
-    debug_search(query)
+    debug_pipeline(query)
 
 
 if __name__ == "__main__":
