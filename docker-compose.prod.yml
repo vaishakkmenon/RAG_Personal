@@ -98,6 +98,10 @@ services:
       - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.1}
       - LLM_MAX_TOKENS=${LLM_MAX_TOKENS:-1000}
 
+      # ============ Retrieval Settings ============
+      - TOP_K=${TOP_K:-5}
+      - MAX_DISTANCE=${MAX_DISTANCE:-0.8}
+
       # ============ Session Management (Redis) ============
       - SESSION_STORAGE_BACKEND=redis
       - SESSION_REDIS_URL=redis://redis:6379/0

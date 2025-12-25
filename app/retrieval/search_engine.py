@@ -148,7 +148,12 @@ class SearchEngine:
                 logger.error(f"Reranking failed: {e}")
                 results = results[:final_k]
 
-        return results[:final_k]
+        # Final Stage: Strict Diversity for Breadth
+        # Since we are limited to TOP_K (small context), enforce max 1 chunk per source
+        # to ensure we capture diverse information (e.g., all 4 certs instead of 2 certs + resume redundancy)
+        results = diversify_sources(results, final_k, max_per_source=1)
+
+        return results
 
     def rerank(
         self, query: str, chunks: List[dict], top_k: Optional[int] = None
