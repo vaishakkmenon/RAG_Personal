@@ -74,8 +74,14 @@ if [ -d "$CHROMA_DB_PATH" ] && [ "$(ls -A $CHROMA_DB_PATH 2>/dev/null)" ]; then
     fi
 else
     echo "⚠ ChromaDB directory empty or not found: $CHROMA_DB_PATH"
-    echo "  BM25 index will be built after documents are ingested"
-    echo "  Run: python scripts/build_bm25_index.py"
+    echo "  Starting automatic ingestion..."
+
+    if python -m scripts.ingest; then
+        echo "✓ Automatic ingestion completed successfully"
+    else
+        echo "✗ Automatic ingestion failed"
+        # We don't exit here to allow debugging, but specific error logged above
+    fi
 fi
 
 # ============================================================================
