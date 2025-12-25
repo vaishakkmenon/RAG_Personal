@@ -184,7 +184,7 @@ class SearchEngine:
         )
 
         merged = reciprocal_rank_fusion(
-            [bm25_results, semantic_results], k=settings.bm25.rrf_k
+            [bm25_results, semantic_results], k=settings.bm25.rrf_k, query=query
         )
         return merged[:k]
 

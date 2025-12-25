@@ -239,16 +239,45 @@ class BM25Index:
             return False
 
 
+# Boosting Configuration
+CERT_KEYWORDS = {
+    "certification",
+    "certified",
+    "certificate",
+    "credential",
+    "cka",
+    "aws",
+}
+
+
+def get_doc_type_boost(query: str, doc_type: str) -> float:
+    """Return boost multiplier based on query-document type match."""
+    if not query:
+        return 1.0
+
+    query_lower = query.lower()
+
+    if any(kw in query_lower for kw in CERT_KEYWORDS):
+        if doc_type == "certificate":
+            return 1.5  # 50% boost for detailed certificates
+        elif doc_type == "resume":
+            return 0.7  # 30% penalty for summary resume
+
+    return 1.0
+
+
 def reciprocal_rank_fusion(
-    results_list: List[List[Dict[str, Any]]], k: int = 60
+    results_list: List[List[Dict[str, Any]]], k: int = 60, query: Optional[str] = None
 ) -> List[Dict[str, Any]]:
     """Merge multiple ranked result lists using Reciprocal Rank Fusion (RRF).
 
     RRF formula: score(doc) = sum(1 / (k + rank(doc, list_i))) for all lists
+    Modified to include query-aware boosting.
 
     Args:
         results_list: List of result lists (e.g., [bm25_results, semantic_results])
-        k: RRF constant (default 60, standard value from literature)
+        k: RRF constant (default 60)
+        query: Original user query (used for boosting)
 
     Returns:
         Merged and reranked results
@@ -262,7 +291,13 @@ def reciprocal_rank_fusion(
             doc_id = doc["id"]
 
             # RRF score contribution from this ranking
-            rrf_score = 1.0 / (k + rank)
+            base_score = 1.0 / (k + rank)
+
+            # Apply boosting
+            doc_type = doc.get("metadata", {}).get("doc_type", "unknown")
+            boost = get_doc_type_boost(query, doc_type) if query else 1.0
+
+            rrf_score = base_score * boost
 
             # Accumulate score
             if doc_id in doc_scores:
