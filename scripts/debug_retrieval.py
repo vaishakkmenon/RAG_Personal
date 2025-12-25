@@ -83,6 +83,9 @@ def debug_pipeline(query):
     for i, res in enumerate(final_results):
         score = res.get("cross_encoder_score", res.get("distance", "N/A"))
         print(f"  {i+1}. {res['metadata'].get('source')} (Final Score: {score})")
+        # Print snippet to verify content
+        content = res.get("page_content", "")[:300].replace("\n", " ")
+        print(f"     Snippet: {content}...")
 
 
 def main():
