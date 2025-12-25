@@ -167,7 +167,7 @@ class PromptBuilder:
                 "QUESTION:",
                 question_section,
                 "CRITICAL REMINDER: Use ONLY the context above. If the answer is not in the context, say 'I don't know. It isn't mentioned in the provided documents.' NEVER use external knowledge or make assumptions.",
-                "IMPORTANT: Answer using inline citations [1], [2]. Do NOT output the source text or a reference list.",
+                "CRITICAL: Support your factual claims with inline citations like [1]. Place citations immediately after the relevant information. Ensure every distinct claim is attributed, but avoid excessive repetition within a single sentence. Do NOT output the source text or a reference list at the end.",
                 "ANSWER:",
             ]
 
