@@ -16,7 +16,10 @@ from typing import Any, Dict, List, Optional
 
 from app.settings import settings
 from app.retrieval.vector_store import get_vector_store
-from app.retrieval.ranking import apply_boosting_rules
+from app.retrieval.ranking import apply_boosting_rules, diversify_sources
+
+# ... (omitting unchanged imports)
+
 
 logger = logging.getLogger(__name__)
 
@@ -186,7 +189,10 @@ class SearchEngine:
         merged = reciprocal_rank_fusion(
             [bm25_results, semantic_results], k=settings.bm25.rrf_k, query=query
         )
-        return merged[:k]
+
+        # Apply diversity constraint before returning top K
+        diversified = diversify_sources(merged, k)
+        return diversified
 
     def _cache_results(self, query: str, results: List[dict]):
         try:

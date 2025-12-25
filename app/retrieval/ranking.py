@@ -130,3 +130,36 @@ def apply_boosting_rules(query: str, chunks: List[dict]) -> List[dict]:
     )
 
     return chunks
+
+
+def diversify_sources(
+    chunks: List[dict], top_k: int, max_per_source: int = 2
+) -> List[dict]:
+    """Ensure no single source dominates the results.
+
+    Enforces that top-K results include at most N chunks per source file.
+    This prevents documents like master_profile from consuming multiple slots.
+
+    Args:
+        chunks: List of retrieved chunks
+        top_k: Target number of chunks to return
+        max_per_source: Max chunks allowed per source file
+
+    Returns:
+        Filtered lists of chunks
+    """
+    source_counts = {}
+    diversified = []
+
+    for chunk in chunks:
+        metadata = chunk.get("metadata", {})
+        source = metadata.get("source", "unknown")
+
+        if source_counts.get(source, 0) < max_per_source:
+            diversified.append(chunk)
+            source_counts[source] = source_counts.get(source, 0) + 1
+
+        if len(diversified) >= top_k:
+            break
+
+    return diversified
