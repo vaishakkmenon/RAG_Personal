@@ -33,7 +33,8 @@ def check_bm25_presence(engine, target_file):
         print(f"Found {len(results)} matches in BM25 for unique term:")
         for res in results:
             src = res["metadata"].get("source", "unknown")
-            print(f"  - {src} (Score: {res['score']})")
+            score = res.get("bm25_score", "N/A")
+            print(f"  - {src} (Score: {score})")
             if target_file in src:
                 found_count += 1
     else:
@@ -63,7 +64,8 @@ def debug_pipeline(query):
         print("\n[2] Keyword Search (BM25 Only) - Top 10")
         bm25_results = engine.bm25_index.search(query, k=10)
         for i, res in enumerate(bm25_results):
-            print(f"  {i+1}. {res['metadata'].get('source')} (Score: {res['score']})")
+            score = res.get("bm25_score", "N/A")
+            print(f"  {i+1}. {res['metadata'].get('source')} (Score: {score})")
     else:
         print("\n[2] BM25 not available")
 
@@ -72,7 +74,7 @@ def debug_pipeline(query):
     # Access private method to see candidates
     hybrid_results = engine._hybrid_search(query, k=10, max_distance=0.8)
     for i, res in enumerate(hybrid_results):
-        score = res.get("score", "N/A")  # RRF score is 'score' usually
+        score = res.get("rrf_score", res.get("score", "N/A"))
         print(f"  {i+1}. {res['metadata'].get('source')} (Fusion Score: {score})")
 
     # 4. Final Reranked
