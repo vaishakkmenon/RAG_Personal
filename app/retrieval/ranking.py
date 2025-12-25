@@ -10,6 +10,64 @@ from typing import List
 logger = logging.getLogger(__name__)
 
 
+# --- Keyword Constants ---
+ACADEMIC_KEYWORDS = [
+    "credit",
+    "credits",
+    "gpa",
+    "grade",
+    "course",
+    "courses",
+    "semester",
+    "term",
+    "degree",
+    "undergraduate",
+    "graduate",
+    "transcript",
+    "academic",
+    "university",
+    "college",
+]
+CERT_KEYWORDS = ["certification", "certified", "certificate", "cka", "aws"]
+WORK_KEYWORDS = [
+    "work",
+    "job",
+    "experience",
+    "company",
+    "role",
+    "position",
+    "employment",
+]
+AGGREGATION_KEYWORDS = [
+    "total",
+    "overall",
+    "how many",
+    "all of",
+    "summary",
+    "statistics",
+    "combined",
+]
+SUMMARY_KEYWORDS = [
+    "summary",
+    "statistics",
+    "overall",
+    "gpa",
+    "total",
+    "performance",
+]
+
+
+def detect_query_intent(query: str) -> dict:
+    """Analyze query to determine user intent."""
+    query_lower = query.lower()
+    return {
+        "is_academic": any(k in query_lower for k in ACADEMIC_KEYWORDS),
+        "is_cert": any(k in query_lower for k in CERT_KEYWORDS),
+        "is_work": any(k in query_lower for k in WORK_KEYWORDS),
+        "needs_summary": any(k in query_lower for k in AGGREGATION_KEYWORDS),
+    }
+
+
 def apply_boosting_rules(query: str, chunks: List[dict]) -> List[dict]:
     """Boost chunks from specific documents based on query intent.
 
@@ -29,59 +87,12 @@ def apply_boosting_rules(query: str, chunks: List[dict]) -> List[dict]:
     if not chunks:
         return []
 
-    query_lower = query.lower()
-
-    # --- Step 1: Detect Intent & Keywords ---
-
-    academic_keywords = [
-        "credit",
-        "credits",
-        "gpa",
-        "grade",
-        "course",
-        "courses",
-        "semester",
-        "term",
-        "degree",
-        "undergraduate",
-        "graduate",
-        "transcript",
-        "academic",
-        "university",
-        "college",
-    ]
-    cert_keywords = ["certification", "certified", "certificate", "cka", "aws"]
-    work_keywords = [
-        "work",
-        "job",
-        "experience",
-        "company",
-        "role",
-        "position",
-        "employment",
-    ]
-    aggregation_keywords = [
-        "total",
-        "overall",
-        "how many",
-        "all of",
-        "summary",
-        "statistics",
-        "combined",
-    ]
-    summary_keywords = [
-        "summary",
-        "statistics",
-        "overall",
-        "gpa",
-        "total",
-        "performance",
-    ]
-
-    is_academic = any(k in query_lower for k in academic_keywords)
-    is_cert = any(k in query_lower for k in cert_keywords)
-    is_work = any(k in query_lower for k in work_keywords)
-    needs_summary = any(k in query_lower for k in aggregation_keywords)
+    # Detect Intent
+    intent = detect_query_intent(query)
+    is_academic = intent["is_academic"]
+    is_cert = intent["is_cert"]
+    is_work = intent["is_work"]
+    needs_summary = intent["needs_summary"]
 
     # --- Step 2: Apply Boosts ---
 
@@ -114,7 +125,7 @@ def apply_boosting_rules(query: str, chunks: List[dict]) -> List[dict]:
             )
 
         # 2b. Section Summary Boosting (Multiplicative)
-        if needs_summary and any(k in section_name for k in summary_keywords):
+        if needs_summary and any(k in section_name for k in SUMMARY_KEYWORDS):
             # Apply on top of existing boost
             current_distance = chunk["distance"]
             chunk["distance"] = current_distance * 0.8

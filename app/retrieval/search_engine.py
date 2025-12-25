@@ -16,10 +16,11 @@ from typing import Any, Dict, List, Optional
 
 from app.settings import settings
 from app.retrieval.vector_store import get_vector_store
-from app.retrieval.ranking import apply_boosting_rules, diversify_sources
-
-# ... (omitting unchanged imports)
-
+from app.retrieval.ranking import (
+    apply_boosting_rules,
+    diversify_sources,
+    detect_query_intent,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -139,19 +140,36 @@ class SearchEngine:
                 )
 
                 cross_encoder = get_cross_encoder_reranker()
+                # Rerank a larger pool (e.g., 20) to allow diversity filter to find unique sources
+                # If we only rerank top_k (5), diversity filtering might drop duplicates and leave us with < 5 results
+                rerank_pool_size = max(20, final_k * 4)
                 results = cross_encoder.rerank(
                     query=search_query,
                     chunks=results,
-                    top_k=settings.cross_encoder.top_k,
+                    top_k=rerank_pool_size,
                 )
             except Exception as e:
                 logger.error(f"Reranking failed: {e}")
                 results = results[:final_k]
 
-        # Final Stage: Strict Diversity for Breadth
-        # Since we are limited to TOP_K (small context), enforce max 1 chunk per source
-        # to ensure we capture diverse information (e.g., all 4 certs instead of 2 certs + resume redundancy)
-        results = diversify_sources(results, final_k, max_per_source=1)
+        # Final Stage: Adaptive Diversity
+        # If query is about certifications, enforce strict breadth (max 1 per source)
+        # to ensure all certs are shown.
+        # Otherwise, allow full depth (max=k) for deep-dive analysis (e.g., GPA, transcript).
+
+        intent = detect_query_intent(query)
+        if intent.get("is_cert"):
+            max_per_source = 1
+            logger.info(
+                "Applying STRICT diversity (1 per source) for certificate query"
+            )
+        else:
+            max_per_source = final_k  # Effectively no limit
+            logger.info(
+                f"Applying RELAXED diversity ({max_per_source} per source) for general query"
+            )
+
+        results = diversify_sources(results, final_k, max_per_source=max_per_source)
 
         return results
 
@@ -194,10 +212,7 @@ class SearchEngine:
         merged = reciprocal_rank_fusion(
             [bm25_results, semantic_results], k=settings.bm25.rrf_k, query=query
         )
-
-        # Apply diversity constraint before returning top K
-        diversified = diversify_sources(merged, k)
-        return diversified
+        return merged[:k]
 
     def _cache_results(self, query: str, results: List[dict]):
         try:
