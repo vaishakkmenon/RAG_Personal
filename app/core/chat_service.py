@@ -116,9 +116,17 @@ def _clean_answer(answer: str, question: str) -> str:
             q_lower = question.lower().strip()
             if any(q_lower.startswith(word) for word in ("which", "what", "list")):
                 cleaned = parts[1].strip()
-                if cleaned:
-                    cleaned = cleaned[0].upper() + cleaned[1:]
+                cleaned = cleaned[0].upper() + cleaned[1:]
                 return cleaned
+
+    # New: Strip trailing citation markers (e.g., [1][2], Sources: [1])
+    # The frontend has a dedicated component for this, so duplicate text is redundant.
+    # Regex matches: Optional "Sources:" prefix + sequence of [N] blocks at end of string
+    citation_pattern = (
+        r"\s*(?:(?:Sources?|References?)\s*:\s*)?(?:\[\d+\](?:\s*,\s*|\s+)?)+$"
+    )
+    answer = re.sub(citation_pattern, "", answer, flags=re.IGNORECASE).strip()
+
     return answer
 
 
@@ -510,7 +518,12 @@ class ChatService:
         formatted_chunks = ctx.formatted_chunks
 
         # Distance check for streaming (refusal)
-        if chunks and chunks[0].get("distance", 0) > params["null_threshold"]:
+        # Handle case where distance might be None or missing
+        top_distance = chunks[0].get("distance") if chunks else 0.0
+        if top_distance is None:
+            top_distance = 0.0
+
+        if top_distance > params["null_threshold"]:
             msg = "I don't know. I couldn't find sufficiently relevant information in my documents to answer this question confidently."
             yield self._sse_metadata([], False, session.session_id)
             yield self._sse_token(msg)
