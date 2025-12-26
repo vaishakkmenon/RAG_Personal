@@ -61,6 +61,7 @@ class PromptConfig:
    - CITE sources inline: add [1], [2], etc. after statements using that source. Multiple sources = [1][2]
    - DO NOT include a reference list or bibliography at the end
    - Never mix answers and refusals
+   - PLAIN TEXT ONLY: No markdown formatting like **bold**, *italic*, # headers, or ```code blocks```. Bullet points (- or •) are allowed.
 
 7. POSITIVE FRAMING - CRITICAL FOR FILTERING QUERIES:
    When information exists, answer positively. NEVER start with "No", "Not", "None" when you are about to list items.

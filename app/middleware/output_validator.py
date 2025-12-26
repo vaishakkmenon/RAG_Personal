@@ -5,9 +5,11 @@ This module provides output validation functions to detect and handle:
 - System prompt leakage in LLM responses
 - Internal terminology exposure (RAG implementation details)
 - Response sanitization before returning to users
+- Stripping trailing reference/citation sections
 """
 
 import logging
+import re
 from typing import Tuple, Optional
 
 logger = logging.getLogger(__name__)
@@ -86,6 +88,108 @@ INTERNAL_TERMINOLOGY = [
     "metadata filter",
     "doc_type",
 ]
+
+# Markdown patterns to strip (but keep bullet points)
+MARKDOWN_PATTERNS = [
+    # Bold: **text** or __text__
+    (r"\*\*([^*]+)\*\*", r"\1"),
+    (r"__([^_]+)__", r"\1"),
+    # Italic: *text* or _text_ (but not bullet points at start of line)
+    (r"(?<!\n)(?<!^)\*([^*\n]+)\*(?!\*)", r"\1"),
+    (r"(?<!\n)(?<!^)_([^_\n]+)_(?!_)", r"\1"),
+    # Headers: # Header, ## Header, etc.
+    (r"^#{1,6}\s+", "", re.MULTILINE),
+    # Code blocks: ```code``` or `code`
+    (r"```[\s\S]*?```", lambda m: m.group(0).replace("```", "").strip()),
+    (r"`([^`]+)`", r"\1"),
+    # Links: [text](url) -> text
+    (r"\[([^\]]+)\]\([^)]+\)", r"\1"),
+]
+
+
+# Patterns for trailing reference sections that should be stripped
+# These are added by LLMs despite being told not to
+TRAILING_REFERENCE_PATTERNS = [
+    # "References:" or "Reference:" section at end
+    r"\n\s*references?\s*:\s*\n.*$",
+    # "Sources:" section at end
+    r"\n\s*sources?\s*:\s*\n.*$",
+    # "Bibliography:" section at end
+    r"\n\s*bibliography\s*:\s*\n.*$",
+    # "Citations:" section at end
+    r"\n\s*citations?\s*:\s*\n.*$",
+    # Standalone citation list at end (e.g., "\n[1] file.md\n[2] file2.md")
+    r"\n\s*\[\d+\]\s+[^\[\]]+\.md[^\[]*$",
+]
+
+
+def strip_trailing_references(response: str) -> str:
+    """
+    Remove trailing reference/citation sections from LLM responses.
+
+    LLMs sometimes add "References:", "Sources:", or citation lists at the end
+    despite being instructed not to. This function strips those sections.
+
+    Args:
+        response: The LLM-generated response text
+
+    Returns:
+        Response with trailing reference sections removed
+    """
+    if not response:
+        return response
+
+    original = response
+
+    for pattern in TRAILING_REFERENCE_PATTERNS:
+        response = re.sub(pattern, "", response, flags=re.IGNORECASE | re.DOTALL)
+
+    # Also handle case where response ends with just "References:" or similar
+    response = re.sub(
+        r"\n\s*(references?|sources?|bibliography|citations?)\s*:?\s*$",
+        "",
+        response,
+        flags=re.IGNORECASE,
+    )
+
+    if response != original:
+        logger.info("Stripped trailing reference section from response")
+
+    return response.rstrip()
+
+
+def strip_markdown(response: str) -> str:
+    """
+    Remove markdown formatting from LLM responses while preserving bullet points.
+
+    Strips: **bold**, *italic*, # headers, ```code```, `inline code`, [links](url)
+    Preserves: Bullet points (- item, * item at start of line)
+
+    Args:
+        response: The LLM-generated response text
+
+    Returns:
+        Response with markdown formatting removed
+    """
+    if not response:
+        return response
+
+    original = response
+
+    for pattern_tuple in MARKDOWN_PATTERNS:
+        pattern = pattern_tuple[0]
+        replacement = pattern_tuple[1]
+        flags = pattern_tuple[2] if len(pattern_tuple) > 2 else 0
+
+        if callable(replacement):
+            response = re.sub(pattern, replacement, response, flags=flags)
+        else:
+            response = re.sub(pattern, replacement, response, flags=flags)
+
+    if response != original:
+        logger.info("Stripped markdown formatting from response")
+
+    return response
 
 
 def detect_prompt_leakage(response: str) -> Tuple[bool, Optional[str]]:
@@ -181,6 +285,12 @@ def sanitize_response(response: str, strict: bool = False) -> Tuple[str, bool]:
         return response, False
 
     had_issues = False
+
+    # First, strip any trailing reference sections
+    response = strip_trailing_references(response)
+
+    # Strip markdown formatting (but keep bullet points)
+    response = strip_markdown(response)
 
     # Check for system prompt leakage (always critical)
     leaked, fragment = detect_prompt_leakage(response)

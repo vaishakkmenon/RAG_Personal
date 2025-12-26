@@ -31,7 +31,7 @@ from app.services.llm import generate_with_llm
 from app.services.response_cache import get_response_cache
 from app.settings import settings
 from app.storage import Session
-from app.middleware.output_validator import detect_prompt_leakage
+from app.middleware.output_validator import sanitize_response
 
 logger = logging.getLogger(__name__)
 
@@ -120,36 +120,27 @@ def _clean_answer(answer: str, question: str) -> str:
                 cleaned = cleaned[0].upper() + cleaned[1:]
                 return cleaned
 
-    # New: Aggressive strip of trailing citation/source blocks
-    # Matches:
-    # 1. Standard: [1], [1][2], Sources: [1]
-    # 2. Detailed: [1] filename.md \n ## Heading
+    # Apply comprehensive output sanitization:
+    # - Strips trailing "References:", "Sources:", citation lists
+    # - Checks for prompt leakage
+    # - Handles internal terminology warnings
+    answer, had_issues = sanitize_response(answer, strict=True)
 
-    # Strategy: Find the start of the source list and cut everything after
-    # 1. Simple inline markers at very end
-    answer = re.sub(
-        r"\s*(?:(?:Sources?|References?)\s*:\s*)?(?:\[\d+\](?:\s*,\s*|\s+)?)+$",
-        "",
-        answer,
-        flags=re.IGNORECASE,
-    ).strip()
-
-    # 2. Detailed Source Lists (multiline with content)
-    # Pattern looks for Newline + Start of line + [N] + space + text...
-    # This aggressive pattern assumes no valid answer text starts a new line with [N]
-    detailed_pattern = r"\n+\s*(?:Sources?:?)?\s*\[\d+\].*$"
-    answer = re.sub(
-        detailed_pattern, "", answer, flags=re.IGNORECASE | re.DOTALL
-    ).strip()
-
-    # 3. Output security validation - check for prompt leakage
-    leaked, fragment = detect_prompt_leakage(answer)
-    if leaked:
+    # If sanitize_response returned a fallback due to prompt leakage, use it
+    if had_issues and "encountered an issue" in answer:
         logger.warning("Prompt leakage detected in response, returning safe fallback")
         return (
             "I can help answer questions about Vaishak's professional background. "
             "Could you please rephrase your question?"
         )
+
+    # Additional cleanup: Strip inline citation references at very end of answer
+    # e.g., "...graduated in 2024 [1][2]" -> "...graduated in 2024"
+    answer = re.sub(
+        r"\s*(?:\[\d+\](?:\s*,?\s*)?)+\s*$",
+        "",
+        answer,
+    ).strip()
 
     return answer
 
