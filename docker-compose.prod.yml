@@ -266,6 +266,7 @@ services:
       # Production optimizations
       - --maxclients 10000             # Higher connection limit
       - --protected-mode yes           # Security
+      - --requirepass ${REDIS_PASSWORD}
 
     # Bind to localhost only - Redis should not be accessible from outside the host
     ports:
@@ -278,6 +279,8 @@ services:
       test:
         - CMD
         - redis-cli
+        - -a
+        - ${REDIS_PASSWORD}
         - --raw
         - incr
         - ping
