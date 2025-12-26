@@ -441,6 +441,13 @@ class PromptGuardSettings(BaseModel):
             r"(?i)\bwhat\s+(database|model)\s+do\s+you\s+use\b",
             r"(?i)\bhow\s+do\s+you\s+work\b",
             r"(?i)\bhow\s+are\s+you\s+trained\b",
+            # Document/source probing (returns confusing chunk info)
+            r"(?i)\bwhat\s+(documents?|sources?|files?|data)\s+(do\s+you|are|have)\b",
+            r"(?i)\b(list|show|display)\s+(the\s+)?(your\s+)?(documents?|sources?|files?)\b",
+            r"(?i)\b(documents?|sources?|files?)\s+(do\s+)?you\s+(have|use|access|know)\b",
+            r"(?i)\bwhat\s+(information|info)\s+do\s+you\s+have\b",
+            r"(?i)\bknowledge\s*base\b",
+            r"(?i)\bwhat\s+are\s+(the\s+)?(your\s+)?(documents?|sources?|files?)\b",
         ],
         description="Regex patterns to block (case-insensitive, includes PII and leakage)",
     )
