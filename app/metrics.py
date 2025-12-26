@@ -173,6 +173,31 @@ prompt_guard_context_size_chars = Histogram(
 )
 
 # ============================================================================
+# SECURITY EVENT METRICS
+# ============================================================================
+
+security_events_total = Counter(
+    "rag_security_events_total",
+    "Total security events detected",
+    ["event_type", "severity"],
+    # event_type: "jailbreak_attempt", "prompt_leakage", "input_validation_failed",
+    #             "pii_redacted", "internal_term_leaked"
+    # severity: "critical", "high", "medium", "low"
+)
+
+security_input_validation_total = Counter(
+    "rag_security_input_validation_total",
+    "Input validation results",
+    ["result"],  # "passed", "failed_length", "failed_complexity", "failed_characters"
+)
+
+security_output_validation_total = Counter(
+    "rag_security_output_validation_total",
+    "Output validation results",
+    ["result"],  # "passed", "prompt_leakage_blocked", "internal_term_flagged"
+)
+
+# ============================================================================
 # SESSION MANAGEMENT METRICS
 # ============================================================================
 
@@ -325,6 +350,10 @@ __all__ = [
     "prompt_guard_errors_total",
     "prompt_guard_retries_total",
     "prompt_guard_context_size_chars",
+    # Security Events
+    "security_events_total",
+    "security_input_validation_total",
+    "security_output_validation_total",
     # Sessions
     "rag_sessions_active",
     "rag_session_operations_total",

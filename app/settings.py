@@ -407,9 +407,40 @@ class PromptGuardSettings(BaseModel):
             r"(?i)\b(credit\s+card|cc\s+num(ber)?|cvv|cvc)\b",
             r"(?i)\b(api\s+key|private\s+key|secret\s+key)\b",
             r"(?i)\b(passport\s+num(ber)?|driver'?s\s+license)\b",
-            # Jailbreaks
+            # Jailbreaks - existing
             r"(?i)\b(dan\s+mode|do\s+anything\s+now|jailbreak)\b",
             r"(?i)\b(act\s+as\s+an\s+unrestricted)\b",
+            # Role-playing / persona switching
+            r"(?i)\bpretend\s+(you\s+are|to\s+be)\b",
+            r"(?i)\bact\s+as\s+",
+            r"(?i)\byou\s+are\s+now\s+(a|an)\b",
+            r"(?i)\b(roleplay|role\s*play)\b",
+            r"(?i)\bimagine\s+you\s+are\b",
+            r"(?i)\bsimulate\b",
+            # Encoding attacks
+            r"(?i)\bbase64\b",
+            r"(?i)\bdecode\s+this\b",
+            r"(?i)\bROT13\b",
+            r"(?i)\btranslate\s+from\b",
+            # System access attempts
+            r"(?i)^system\s*:",
+            r"(?i)\boverride.*filter\b",
+            r"(?i)\bdeveloper\s+mode\b",
+            r"(?i)\badmin\s+(access|mode)\b",
+            r"(?i)\bdebug\s+mode\b",
+            # Prompt extraction
+            r"(?i)\brepeat\s+your\s+(system|instructions|prompt)\b",
+            r"(?i)\bshow\s+(me\s+)?your\s+prompt\b",
+            r"(?i)\bwhat\s+are\s+you\s+told\s+to\b",
+            r"(?i)\breveal\s+your\s+(rules|instructions)\b",
+            # Code execution attempts
+            r"```\s*(python|javascript|bash|sh|shell)",
+            r"(?i)\beval\s*\(",
+            r"(?i)\bexec\s*\(",
+            # Meta-questions about RAG implementation
+            r"(?i)\bwhat\s+(database|model)\s+do\s+you\s+use\b",
+            r"(?i)\bhow\s+do\s+you\s+work\b",
+            r"(?i)\bhow\s+are\s+you\s+trained\b",
         ],
         description="Regex patterns to block (case-insensitive, includes PII and leakage)",
     )

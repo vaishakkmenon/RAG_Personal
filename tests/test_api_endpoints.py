@@ -132,8 +132,13 @@ class TestChatSimpleEndpoint:
             headers=auth_headers,
         )
 
-        assert response.status_code == 400
-        assert "could not be processed" in response.json()["detail"]
+        # Blocked requests return 200 with a redirect message (not 400 error)
+        assert response.status_code == 200
+        data = response.json()
+        assert (
+            "could not be processed" in data.get("detail", "")
+            or "rephrase" in data.get("answer", "").lower()
+        )
 
     @patch("app.api.routes.chat.search")
     @patch("app.api.routes.chat.generate_with_llm")

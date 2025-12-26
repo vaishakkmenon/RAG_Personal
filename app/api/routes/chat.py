@@ -4,6 +4,7 @@ Chat endpoint for Personal RAG system.
 
 import time
 import logging
+import uuid
 from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -18,9 +19,16 @@ from app.services.prompt_guard import get_prompt_guard
 from app.prompting import create_default_prompt_builder
 from app.settings import settings
 from app.exceptions import LLMException, RetrievalException, RAGException
+from app.middleware.input_validator import validate_and_sanitize
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+# Standard response for blocked jailbreak attempts (returns 200 to not reveal detection)
+JAILBREAK_REDIRECT_MESSAGE = (
+    "I'm designed to answer questions about Vaishak's professional background, "
+    "education, and projects. Could you rephrase your question to focus on those topics?"
+)
 
 # Import end-to-end metrics
 try:
@@ -176,9 +184,24 @@ def simple_chat(
     endpoint = "/chat/simple"
 
     try:
+        # Step 0a: Validate and sanitize input
+        sanitized_question, is_valid, error_message = validate_and_sanitize(
+            request.question
+        )
+        if not is_valid:
+            logger.warning(f"Input validation failed: {error_message}")
+            return ChatResponse(
+                answer=JAILBREAK_REDIRECT_MESSAGE,
+                sources=[],
+                grounded=False,
+                session_id=str(uuid.uuid4()),
+            )
+        # Use sanitized question from here on
+        request.question = sanitized_question
+
         logger.info(f"Simple chat - Question: {request.question}")
 
-        # Step 0: Check for prompt injection
+        # Step 0b: Check for prompt injection
         # Note: simple_chat doesn't support sessions, so no conversation history
         guard = get_prompt_guard()
         guard_result = guard.check_input(
@@ -187,9 +210,12 @@ def simple_chat(
         )
         if guard_result["blocked"]:
             logger.warning(f"Prompt injection blocked: {guard_result['label']}")
-            raise HTTPException(
-                status_code=400,
-                detail="Your request could not be processed. Please rephrase your question.",
+            # Return 200 with generic redirect to not reveal detection
+            return ChatResponse(
+                answer=JAILBREAK_REDIRECT_MESSAGE,
+                sources=[],
+                grounded=False,
+                session_id=str(uuid.uuid4()),
             )
 
         # Step 1: Simple search - no filters, no routing
@@ -253,8 +279,6 @@ def simple_chat(
         grounded = len(chunks) > 0
 
         # Generate session_id if not provided (simple endpoint doesn't use sessions but needs to return one)
-        import uuid
-
         session_id = request.session_id or str(uuid.uuid4())
 
         response = ChatResponse(
@@ -454,6 +478,21 @@ def chat(
     endpoint = "/chat"
 
     try:
+        # Step 0: Validate and sanitize input FIRST (before cache check)
+        sanitized_question, is_valid, error_message = validate_and_sanitize(
+            request.question
+        )
+        if not is_valid:
+            logger.warning(f"Input validation failed: {error_message}")
+            return ChatResponse(
+                answer=JAILBREAK_REDIRECT_MESSAGE,
+                sources=[],
+                grounded=False,
+                session_id=request.session_id or str(uuid.uuid4()),
+            )
+        # Use sanitized question from here on
+        request.question = sanitized_question
+
         # OPTIMIZATION: Check response cache FIRST before expensive operations
         # This allows cached responses to skip prompt guard checks entirely
         # Note: We don't have session context yet, so we check without session_id
@@ -513,9 +552,12 @@ def chat(
         )
         if guard_result["blocked"]:
             logger.warning(f"Prompt injection blocked: {guard_result['label']}")
-            raise HTTPException(
-                status_code=400,
-                detail="Your request could not be processed. Please rephrase your question.",
+            # Return 200 with generic redirect to not reveal detection
+            return ChatResponse(
+                answer=JAILBREAK_REDIRECT_MESSAGE,
+                sources=[],
+                grounded=False,
+                session_id=request.session_id or str(uuid.uuid4()),
             )
 
         # Construct options and pass skip_route_cache=True to avoid double-checking cache

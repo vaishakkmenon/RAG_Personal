@@ -31,6 +31,7 @@ from app.services.llm import generate_with_llm
 from app.services.response_cache import get_response_cache
 from app.settings import settings
 from app.storage import Session
+from app.middleware.output_validator import detect_prompt_leakage
 
 logger = logging.getLogger(__name__)
 
@@ -140,6 +141,15 @@ def _clean_answer(answer: str, question: str) -> str:
     answer = re.sub(
         detailed_pattern, "", answer, flags=re.IGNORECASE | re.DOTALL
     ).strip()
+
+    # 3. Output security validation - check for prompt leakage
+    leaked, fragment = detect_prompt_leakage(answer)
+    if leaked:
+        logger.warning("Prompt leakage detected in response, returning safe fallback")
+        return (
+            "I can help answer questions about Vaishak's professional background. "
+            "Could you please rephrase your question?"
+        )
 
     return answer
 
