@@ -185,6 +185,10 @@ class BM25Index:
                 doc["bm25_score"] = float(scores[idx])
                 # Add distance field for compatibility (BM25 doesn't use distance)
                 doc["distance"] = None
+                # Extract source from metadata to top level (for consistency with vector store)
+                metadata = doc.get("metadata", {})
+                if "source" not in doc and isinstance(metadata, dict):
+                    doc["source"] = metadata.get("source", "unknown")
                 results.append(doc)
 
         logger.info(f"BM25 search for '{query}': {len(results)} results")
