@@ -400,6 +400,7 @@ services:
             -e "s|\$${SMTP_USERNAME}|$$SMTP_USERNAME|g" \
             -e "s|\$${SMTP_PASSWORD}|$$SMTP_PASSWORD|g" \
             -e "s|\$${ALERT_EMAIL}|$$ALERT_EMAIL|g" \
+            -e "s|\$${DISCORD_WEBHOOK_URL}|$$DISCORD_WEBHOOK_URL|g" \
             /etc/alertmanager/alertmanager.yml.template > /tmp/alertmanager.yml && \
         exec /bin/alertmanager --config.file=/tmp/alertmanager.yml --storage.path=/alertmanager
     environment:
@@ -407,6 +408,7 @@ services:
       - SMTP_USERNAME=${SMTP_USERNAME}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - ALERT_EMAIL=${ALERT_EMAIL}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
     restart: always
     security_opt:
       - no-new-privileges:true

@@ -12,15 +12,29 @@ route:
   repeat_interval: 4h
   receiver: 'email-notifications'
   routes:
+    # Critical alerts → Discord + Email
     - match:
         severity: critical
-      receiver: 'email-notifications'
+      receiver: 'discord-and-email'
       repeat_interval: 1h
+    # Warnings → Email only
+    - match:
+        severity: warning
+      receiver: 'email-notifications'
+      repeat_interval: 4h
 
 receivers:
   - name: 'email-notifications'
     email_configs:
       - to: '${ALERT_EMAIL}'
+        send_resolved: true
+
+  - name: 'discord-and-email'
+    email_configs:
+      - to: '${ALERT_EMAIL}'
+        send_resolved: true
+    webhook_configs:
+      - url: '${DISCORD_WEBHOOK_URL}'
         send_resolved: true
 
 inhibit_rules:
