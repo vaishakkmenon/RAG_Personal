@@ -28,10 +28,20 @@ LEAKED_SYSTEM_FRAGMENTS = [
     "you are a helpful",
     "your system instructions",
     "your instructions are",
-    "critical rules:",
-    "privacy rules:",
+    "my instructions are",
+    "i am instructed to",
+    "critical rules",  # Without colon to catch "critical rules include:"
+    "privacy rules",
     "response format:",
-    "context:",  # This one needs careful handling - only flag if appears standalone
+    # System behavior descriptions (meta-responses)
+    "the system is trained",
+    "the system uses",
+    "the system's primary",
+    "context fidelity",
+    "field inference",
+    "filtering workflow",
+    "context documents",
+    "trained on a set of",
     # Implementation-specific
     "build_groq_prompt",
     "get_system_prompt",

@@ -203,6 +203,36 @@ class TestPromptLeakageDetection:
         leaked, fragment = detect_prompt_leakage(response)
         assert leaked is True
 
+    def test_detects_critical_rules_variations(self):
+        """Response mentioning 'critical rules' in various forms should be detected."""
+        # This catches the actual leak: "The system's critical rules include:"
+        response = "The system's critical rules include: reading all context..."
+        leaked, fragment = detect_prompt_leakage(response)
+        assert leaked is True
+        assert "critical rules" in fragment.lower()
+
+    def test_detects_system_description(self):
+        """Response describing 'the system' technically should be detected."""
+        test_cases = [
+            "The system is trained on a set of context documents...",
+            "The system uses this information to generate answers...",
+            "The system's primary function is to synthesize information...",
+        ]
+        for response in test_cases:
+            leaked, fragment = detect_prompt_leakage(response)
+            assert leaked is True, f"Failed to detect: {response}"
+
+    def test_detects_internal_workflow(self):
+        """Response mentioning internal workflow terms should be detected."""
+        test_cases = [
+            "Using context fidelity, I only provide supported answers",
+            "My field inference allows me to find related topics",
+            "The filtering workflow ensures accurate results",
+        ]
+        for response in test_cases:
+            leaked, fragment = detect_prompt_leakage(response)
+            assert leaked is True, f"Failed to detect: {response}"
+
     def test_empty_response(self):
         """Empty response should not trigger detection."""
         leaked, fragment = detect_prompt_leakage("")
