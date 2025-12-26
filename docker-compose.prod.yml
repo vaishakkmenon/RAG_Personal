@@ -379,6 +379,20 @@ services:
       - rag_network
 
   # ==========================================================================
+  # Discord Webhook Adapter - Converts Alertmanager format to Discord format
+  # ==========================================================================
+  alertmanager-discord:
+    image: benjojo/alertmanager-discord:latest
+    container_name: rag_alertmanager_discord_prod
+    environment:
+      - DISCORD_WEBHOOK=${DISCORD_WEBHOOK_URL}
+    restart: always
+    networks:
+      - rag_network
+    security_opt:
+      - no-new-privileges:true
+
+  # ==========================================================================
   # Alertmanager Service - Alert notifications (Production)
   # ==========================================================================
   alertmanager:

@@ -487,6 +487,20 @@ services:
         labels: "service=prometheus,env=development"
 
   # ==========================================================================
+  # Discord Webhook Adapter - Converts Alertmanager format to Discord format
+  # ==========================================================================
+  alertmanager-discord:
+    image: benjojo/alertmanager-discord:latest
+    container_name: rag_alertmanager_discord
+    environment:
+      - DISCORD_WEBHOOK=${DISCORD_WEBHOOK_URL}
+    restart: unless-stopped
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+
+  # ==========================================================================
   # Alertmanager Service - Alert notifications
   # ==========================================================================
   alertmanager:
