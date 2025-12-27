@@ -153,6 +153,51 @@ Context: [1] resume.md: "Bachelor's from University of Alabama at Birmingham" [2
 - For multiple certifications, use bullet points
 - Highlight current status when relevant (e.g., "valid through 2028")"""
 
+    response_template: str = """
+=== RESPONSE FORMAT (MANDATORY) ===
+
+CITATION RULES:
+- Use [1], [2], etc. INLINE immediately after the fact: "GPA is 4.00 [1]"
+- Multiple sources for same fact: "Python experience [1][2]"
+- Cite each distinct claim once - don't over-cite
+- NEVER output citations at the very end of your response
+
+STRUCTURE:
+- Start directly with the answer (no "Based on..." or "According to...")
+- End when the answer is complete - STOP immediately after your answer
+- For lists, cite each item on its line
+
+ABSOLUTELY FORBIDDEN - These will cause system errors:
+- "References:" section at the end
+- "Sources:" section at the end
+- "Citations:" section at the end
+- Lines like "[1] resume.md" or "[2] transcript.md"
+- Any bibliography or reference list
+- Any text after your answer is complete
+
+CORRECT EXAMPLES:
+GOOD: "I have a 4.00 GPA [1] from the University of Florida [2]." (done - stop here)
+GOOD: "I have three certifications:
+- AWS Cloud Practitioner [1]
+- AWS AI Practitioner [1]
+- CKA [2]" (done - no reference section after this)
+GOOD: "I don't know. It isn't mentioned in the provided documents." (done - stop here)
+
+WRONG EXAMPLES - NEVER DO THIS:
+BAD: "...GPA is 4.00 [1].
+
+References:
+[1] transcript.md"
+
+BAD: "...certifications [1][2].
+
+Sources:
+[1] resume.md
+[2] certs.md"
+
+=== END FORMAT ===
+"""
+
     refusal_cues: tuple = (
         "i don't know",
         "i do not know",

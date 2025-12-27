@@ -118,6 +118,7 @@ def _clean_answer(answer: str, question: str) -> str:
             if any(q_lower.startswith(word) for word in ("which", "what", "list")):
                 cleaned = parts[1].strip()
                 cleaned = cleaned[0].upper() + cleaned[1:]
+                logger.info("Cleaned 'No, I have X but...' pattern from response")
                 return cleaned
 
     # Apply comprehensive output sanitization:
@@ -136,11 +137,15 @@ def _clean_answer(answer: str, question: str) -> str:
 
     # Additional cleanup: Strip inline citation references at very end of answer
     # e.g., "...graduated in 2024 [1][2]" -> "...graduated in 2024"
+    original_answer = answer
     answer = re.sub(
         r"\s*(?:\[\d+\](?:\s*,?\s*)?)+\s*$",
         "",
         answer,
     ).strip()
+
+    if answer != original_answer:
+        logger.info("Stripped trailing citation references from response")
 
     return answer
 
