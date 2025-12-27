@@ -31,7 +31,6 @@ from app.services.llm import generate_with_llm
 from app.services.response_cache import get_response_cache
 from app.settings import settings
 from app.storage import Session
-from app.middleware.output_validator import sanitize_response
 
 logger = logging.getLogger(__name__)
 
@@ -110,39 +109,43 @@ def _clean_answer(answer: str, question: str) -> str:
     if not answer:
         return answer
 
-    # Fix pattern: "No, I have X but..." -> "I have X"
-    if answer.startswith("No, ") and " but " in answer:
-        parts = answer.split(" but ", 1)
-        if len(parts) == 2:
-            q_lower = question.lower().strip()
-            if any(q_lower.startswith(word) for word in ("which", "what", "list")):
-                cleaned = parts[1].strip()
-                cleaned = cleaned[0].upper() + cleaned[1:]
-                return cleaned
-
-    # Apply comprehensive output sanitization:
-    # - Strips trailing "References:", "Sources:", citation lists
-    # - Checks for prompt leakage
-    # - Handles internal terminology warnings
-    answer, had_issues = sanitize_response(answer, strict=True)
-
-    # If sanitize_response returned a fallback due to prompt leakage, use it
-    if had_issues and "encountered an issue" in answer:
-        logger.warning("Prompt leakage detected in response, returning safe fallback")
-        return (
-            "I can help answer questions about Vaishak's professional background. "
-            "Could you please rephrase your question?"
-        )
-
-    # Additional cleanup: Strip inline citation references at very end of answer
-    # e.g., "...graduated in 2024 [1][2]" -> "...graduated in 2024"
-    answer = re.sub(
-        r"\s*(?:\[\d+\](?:\s*,?\s*)?)+\s*$",
-        "",
-        answer,
-    ).strip()
-
+    # === TEMPORARILY DISABLED FOR RAW OUTPUT TESTING ===
+    # To re-enable, uncomment the code below and remove "return answer"
     return answer
+
+    # Fix pattern: "No, I have X but..." -> "I have X"
+    # if answer.startswith("No, ") and " but " in answer:
+    #     parts = answer.split(" but ", 1)
+    #     if len(parts) == 2:
+    #         q_lower = question.lower().strip()
+    #         if any(q_lower.startswith(word) for word in ("which", "what", "list")):
+    #             cleaned = parts[1].strip()
+    #             cleaned = cleaned[0].upper() + cleaned[1:]
+    #             return cleaned
+
+    # # Apply comprehensive output sanitization:
+    # # - Strips trailing "References:", "Sources:", citation lists
+    # # - Checks for prompt leakage
+    # # - Handles internal terminology warnings
+    # answer, had_issues = sanitize_response(answer, strict=True)
+
+    # # If sanitize_response returned a fallback due to prompt leakage, use it
+    # if had_issues and "encountered an issue" in answer:
+    #     logger.warning("Prompt leakage detected in response, returning safe fallback")
+    #     return (
+    #         "I can help answer questions about Vaishak's professional background. "
+    #         "Could you please rephrase your question?"
+    #     )
+
+    # # Additional cleanup: Strip inline citation references at very end of answer
+    # # e.g., "...graduated in 2024 [1][2]" -> "...graduated in 2024"
+    # answer = re.sub(
+    #     r"\s*(?:\[\d+\](?:\s*,?\s*)?)+\s*$",
+    #     "",
+    #     answer,
+    # ).strip()
+
+    # return answer
 
 
 class ChatService:
