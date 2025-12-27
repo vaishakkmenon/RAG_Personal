@@ -14,6 +14,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from app.settings import settings
 from app.models import ChatSource, RewriteMetadata
 from app.retrieval import rewrite_query
+from app.retrieval.ranking import dedupe_by_text
 
 logger = logging.getLogger(__name__)
 
@@ -146,6 +147,9 @@ class RetrievalOrchestrator:
         # Merge if context chunks found
         if context_chunks:
             chunks = self._merge_and_dedupe_chunks(chunks, context_chunks)
+
+        # Text-based deduplication (removes semantically similar chunks)
+        chunks = dedupe_by_text(chunks)
 
         # 4. Reranking
         if chunks:

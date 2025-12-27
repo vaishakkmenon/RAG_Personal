@@ -9,6 +9,7 @@ Encapsulates logic for:
 """
 
 import logging
+import re
 from typing import List, Dict, Tuple, Optional
 
 from app.settings import settings
@@ -92,6 +93,25 @@ class QueryValidator:
         farewells = {"bye", "goodbye", "see you", "later", "farewell"}
         if any(farewell in q for farewell in farewells):
             return True, "Goodbye! Feel free to come back if you have more questions."
+
+        # Contact Info - Exact single-word matches
+        if q in {"email", "contact", "reach", "linkedin", "contact info"}:
+            return (
+                True,
+                "You can reach Vaishak at vaishakkmenon@gmail.com or connect on LinkedIn.",
+            )
+
+        # Contact Info - Specific "How to" patterns (anchored)
+        contact_patterns = [
+            r"^how (can|do) i (reach|contact) (you|him)",
+            r"^what is (your|his) (email|contact)",
+            r"^send (you|him) an email",
+        ]
+        if any(re.search(p, q) for p in contact_patterns):
+            return (
+                True,
+                "You can reach Vaishak at vaishakkmenon@gmail.com or connect on LinkedIn.",
+            )
 
         return False, ""
 

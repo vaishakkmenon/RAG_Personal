@@ -5,9 +5,40 @@ Handles domain-specific logic for boosting search results based on query intent.
 """
 
 import logging
+from difflib import SequenceMatcher
 from typing import List
 
 logger = logging.getLogger(__name__)
+
+
+def dedupe_by_text(chunks: List[dict], threshold: float = 0.85) -> List[dict]:
+    """Remove chunks with >85% text similarity to earlier chunks.
+
+    Prevents the LLM from receiving near-identical content that can cause
+    repetitive responses.
+
+    Args:
+        chunks: List of retrieved chunks
+        threshold: Similarity ratio above which chunks are considered duplicates
+
+    Returns:
+        Filtered list with duplicates removed
+    """
+    if not chunks:
+        return []
+
+    unique = [chunks[0]]
+    for chunk in chunks[1:]:
+        chunk_text = chunk.get("text", "")
+        is_dup = any(
+            SequenceMatcher(None, chunk_text, u.get("text", "")).ratio() > threshold
+            for u in unique
+        )
+        if not is_dup:
+            unique.append(chunk)
+
+    logger.debug(f"Text deduplication: {len(chunks)} -> {len(unique)} chunks")
+    return unique
 
 
 # --- Keyword Constants ---
