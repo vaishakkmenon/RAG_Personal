@@ -2,8 +2,16 @@
 set -e
 
 # Deploy Script for Personal RAG System
-# Usage: ./scripts/deploy.sh
+# Usage: ./scripts/deploy.sh [--fresh]
 # Run this on the VPS to update the running application.
+# Options:
+#   --fresh    Build with --no-cache for a completely fresh install
+
+FRESH_BUILD=""
+if [ "$1" = "--fresh" ]; then
+    FRESH_BUILD="--no-cache"
+    echo "🆕 Fresh build requested (--no-cache)"
+fi
 
 echo "🚀 Starting Deployment..."
 echo "📅 Date: $(date)"
@@ -27,7 +35,7 @@ fi
 # 3. Pull/Build Images
 # We prioritize local build for now since we don't have a remote registry set up yet
 echo "🏗️  Building production images..."
-docker compose -f docker-compose.prod.yml build
+docker compose -f docker-compose.prod.yml build $FRESH_BUILD
 
 # 4. Restart Services
 echo "🔄 Restarting services..."
