@@ -167,7 +167,7 @@ class PromptBuilder:
                 "QUESTION:",
                 question_section,
                 "CRITICAL REMINDER: Use ONLY the context above. If the answer is not in the context, say 'I don't know. It isn't mentioned in the provided documents.' NEVER use external knowledge or make assumptions.",
-                "CRITICAL: Support your factual claims with inline citations like [1]. Place citations immediately after the relevant information. Ensure every distinct claim is attributed, but avoid excessive repetition within a single sentence. Do NOT output the source text or a reference list at the end.",
+                "MANDATORY: Every factual statement MUST have an inline citation [1], [2], etc. Example: 'I have a 4.00 GPA [1] from UF [2].' Do NOT skip citations. Do NOT add a reference list at the end.",
                 "ANSWER:",
             ]
 
