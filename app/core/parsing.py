@@ -205,6 +205,83 @@ def strip_thinking_tags(text: str) -> str:
     return result.strip()
 
 
+class StreamingMarkdownStripper:
+    """Strips markdown formatting from streaming text.
+
+    Removes:
+    - **bold** and __bold__ → bold
+    - *italic* and _italic_ → italic
+    - ## headers → headers
+    - Preserves [N] citations
+
+    Uses buffering to handle split tokens like * arriving separately.
+    """
+
+    def __init__(self):
+        self._buffer = ""
+
+    def process(self, token: str) -> str:
+        """Process token and return cleaned text."""
+        self._buffer += token
+        return self._extract_clean_output()
+
+    def flush(self) -> str:
+        """Flush remaining buffer at end of stream."""
+        result = self._strip_markdown(self._buffer)
+        self._buffer = ""
+        return result
+
+    def _extract_clean_output(self) -> str:
+        """Extract text that's safe to emit (complete markdown patterns stripped)."""
+        # Check for incomplete patterns at the end that need more tokens
+        # We buffer if we see potential start of markdown that isn't complete yet
+
+        # Check for trailing * or _ that might be start of formatting
+        if self._buffer.endswith("*") or self._buffer.endswith("_"):
+            # Could be start of bold/italic - wait for more
+            if len(self._buffer) > 1:
+                safe = self._buffer[:-1]
+                self._buffer = self._buffer[-1:]
+                return self._strip_markdown(safe)
+            return ""
+
+        # Check for trailing # that might be header
+        if self._buffer.endswith("#"):
+            if len(self._buffer) > 1:
+                safe = self._buffer[:-1]
+                self._buffer = self._buffer[-1:]
+                return self._strip_markdown(safe)
+            return ""
+
+        # No incomplete patterns - process everything
+        result = self._strip_markdown(self._buffer)
+        self._buffer = ""
+        return result
+
+    def _strip_markdown(self, text: str) -> str:
+        """Strip markdown formatting from text."""
+        if not text:
+            return text
+
+        # Remove **bold** and __bold__
+        text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
+        text = re.sub(r"__([^_]+)__", r"\1", text)
+
+        # Remove *italic* and _italic_ (but not inside words)
+        # Be careful not to match _in_variable_names
+        text = re.sub(r"(?<!\w)\*([^*]+)\*(?!\w)", r"\1", text)
+        text = re.sub(r"(?<!\w)_([^_]+)_(?!\w)", r"\1", text)
+
+        # Remove ## headers at start of lines
+        text = re.sub(r"^#{1,6}\s*", "", text, flags=re.MULTILINE)
+
+        # Remove - bullets at start of lines, but keep the content
+        # Convert "- item" to just "item" (let numbered lists remain)
+        text = re.sub(r"^\s*-\s+", "", text, flags=re.MULTILINE)
+
+        return text
+
+
 class StreamingCitationRemapper:
     """Remaps citations to sequential order during streaming.
 
@@ -295,6 +372,28 @@ class StreamingCitationRemapper:
             return f"[{self._source_map[orig_num]}]"
 
         return re.sub(r"\[(\d+)\]", replace_citation, text)
+
+
+def strip_markdown(text: str) -> str:
+    """Strip markdown formatting from text (non-streaming version)."""
+    if not text:
+        return text
+
+    # Remove **bold** and __bold__
+    text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
+    text = re.sub(r"__([^_]+)__", r"\1", text)
+
+    # Remove *italic* and _italic_ (but not inside words)
+    text = re.sub(r"(?<!\w)\*([^*]+)\*(?!\w)", r"\1", text)
+    text = re.sub(r"(?<!\w)_([^_]+)_(?!\w)", r"\1", text)
+
+    # Remove ## headers at start of lines
+    text = re.sub(r"^#{1,6}\s*", "", text, flags=re.MULTILINE)
+
+    # Remove - bullets at start of lines
+    text = re.sub(r"^\s*-\s+", "", text, flags=re.MULTILINE)
+
+    return text
 
 
 @dataclass

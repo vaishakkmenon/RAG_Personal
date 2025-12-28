@@ -36,7 +36,9 @@ from app.core.parsing import (
     ReasoningEffort,
     parse_reasoning_effort,
     renumber_citations,
+    strip_markdown,
     StreamingCitationRemapper,
+    StreamingMarkdownStripper,
 )
 
 logger = logging.getLogger(__name__)
@@ -463,7 +465,8 @@ class ChatService:
         answer = _clean_answer(answer, question)
         answer = _filter_pii(answer)
 
-        # Renumber citations and reorder sources based on usage order
+        # Strip markdown and renumber citations
+        answer = strip_markdown(answer)
         remap_result = renumber_citations(answer)
         answer = remap_result.text
 
@@ -609,10 +612,19 @@ class ChatService:
 
         full_answer = []
         full_thinking = []
+        # Chain processors: markdown strip → citation remap
+        markdown_stripper = StreamingMarkdownStripper()
         citation_remapper = StreamingCitationRemapper()
         reasoning_effort: ReasoningEffort = params.get(
             "reasoning_effort", ReasoningEffort.NONE
         )
+
+        def process_token(token: str) -> str:
+            """Chain: strip markdown → remap citations."""
+            cleaned = markdown_stripper.process(token)
+            if cleaned:
+                return citation_remapper.process(cleaned)
+            return ""
 
         try:
             # Use thinking-aware streaming when reasoning is enabled
@@ -629,15 +641,15 @@ class ChatService:
                 ):
                     if chunk.content:
                         if chunk.type == ChunkType.THINKING:
-                            # Stream thinking process (no citation remapping needed)
+                            # Stream thinking process (no processing needed)
                             full_thinking.append(chunk.content)
                             yield self._sse_thinking(chunk.content)
                         else:
-                            # Stream answer tokens with citation remapping
+                            # Stream answer tokens with markdown strip + citation remap
                             full_answer.append(chunk.content)
-                            remapped = citation_remapper.process(chunk.content)
-                            if remapped:
-                                yield self._sse_token(remapped)
+                            processed = process_token(chunk.content)
+                            if processed:
+                                yield self._sse_token(processed)
             else:
                 # Standard streaming - reasoning_effort=NONE means no thinking
                 from app.services.llm import async_generate_stream_with_llm
@@ -651,12 +663,17 @@ class ChatService:
                 ):
                     if token:
                         full_answer.append(token)
-                        # Remap citations in real-time (like Perplexity)
-                        remapped = citation_remapper.process(token)
-                        if remapped:
-                            yield self._sse_token(remapped)
+                        # Strip markdown + remap citations in real-time
+                        processed = process_token(token)
+                        if processed:
+                            yield self._sse_token(processed)
 
-            # Flush any remaining buffered content
+            # Flush any remaining buffered content from both processors
+            remaining_md = markdown_stripper.flush()
+            if remaining_md:
+                remaining_citations = citation_remapper.process(remaining_md)
+                if remaining_citations:
+                    yield self._sse_token(remaining_citations)
             final_content = citation_remapper.flush()
             if final_content:
                 yield self._sse_token(final_content)
