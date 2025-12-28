@@ -97,7 +97,7 @@ class DeepInfraProvider(LLMProvider):
             "reasoning_effort": reasoning_effort.value,  # Use enum value directly
         }
 
-        logger.debug(
+        logger.info(
             f"DeepInfra request: model={target_model}, reasoning_effort={reasoning_effort.value}"
         )
 
@@ -179,7 +179,7 @@ class DeepInfraProvider(LLMProvider):
             "reasoning_effort": reasoning_effort.value,  # Use enum value directly
         }
 
-        logger.debug(
+        logger.info(
             f"DeepInfra stream: model={target_model}, reasoning_effort={reasoning_effort.value}"
         )
 
@@ -319,7 +319,7 @@ class DeepInfraProvider(LLMProvider):
             "reasoning_effort": reasoning_effort.value,  # Use enum value directly
         }
 
-        logger.debug(
+        logger.info(
             f"DeepInfra thinking stream: model={target_model}, reasoning_effort={reasoning_effort.value}"
         )
 

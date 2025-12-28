@@ -31,7 +31,12 @@ from app.services.llm import generate_with_llm
 from app.services.response_cache import get_response_cache
 from app.settings import settings
 from app.storage import Session
-from app.core.parsing import ChunkType, ReasoningEffort, parse_reasoning_effort
+from app.core.parsing import (
+    ChunkType,
+    ReasoningEffort,
+    parse_reasoning_effort,
+    renumber_citations,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -457,6 +462,20 @@ class ChatService:
         answer = _clean_answer(answer, question)
         answer = _filter_pii(answer)
 
+        # Renumber citations and reorder sources based on usage order
+        remap_result = renumber_citations(answer)
+        answer = remap_result.text
+
+        # Reorder sources based on citation order in response
+        if remap_result.used_indices:
+            reordered_chunks = []
+            for orig_idx in remap_result.used_indices:
+                # Sources are 0-indexed in list, citations are 1-indexed
+                source_idx = orig_idx - 1
+                if 0 <= source_idx < len(formatted_chunks):
+                    reordered_chunks.append(formatted_chunks[source_idx])
+            formatted_chunks = reordered_chunks
+
         if self.prompt_builder.is_refusal(answer):
             return self._create_response(
                 answer, [], False, session, rewrite_metadata, params=params
@@ -639,10 +658,30 @@ class ChatService:
         if full_thinking:
             yield "event: thinking_done\ndata: \n\n"
 
-        yield "event: done\ndata: \n\n"
-
-        # Post-process
+        # Post-process answer and compute citation remapping
         answer = "".join(full_answer).strip()
+        remap_result = renumber_citations(answer)
+
+        # Send citation_map event so frontend can reorder sources and fix citation numbers
+        # used_indices contains original source indices in order of first use
+        if remap_result.used_indices:
+            # Reorder sources based on citation order in response
+            reordered_sources = []
+            for orig_idx in remap_result.used_indices:
+                # Sources are 0-indexed, citations are 1-indexed
+                source_idx = orig_idx - 1
+                if 0 <= source_idx < len(sources):
+                    reordered_sources.append(sources[source_idx].model_dump())
+
+            citation_map_event = {
+                "citation_map": {
+                    str(k): v for k, v in remap_result.citation_map.items()
+                },
+                "reordered_sources": reordered_sources,
+            }
+            yield f"event: citation_map\ndata: {json.dumps(citation_map_event)}\n\n"
+
+        yield "event: done\ndata: \n\n"
         try:
             session.add_turn("user", question)
             session.add_turn("assistant", answer)

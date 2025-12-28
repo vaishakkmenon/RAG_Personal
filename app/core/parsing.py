@@ -13,7 +13,7 @@ import logging
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -203,3 +203,59 @@ def strip_thinking_tags(text: str) -> str:
         result = re.sub(pattern, "", result, flags=re.DOTALL | re.IGNORECASE)
 
     return result.strip()
+
+
+@dataclass
+class CitationRemapResult:
+    """Result of citation remapping."""
+
+    text: str  # Text with renumbered citations
+    citation_map: Dict[int, int]  # Original -> New number mapping
+    used_indices: List[int]  # Original indices in order of first appearance
+
+
+def renumber_citations(text: str) -> CitationRemapResult:
+    """Renumber citations based on order of first appearance.
+
+    Transforms citations like [1], [5], [3] to [1], [2], [3] based on
+    the order they first appear in the text.
+
+    Args:
+        text: Text containing citations like [1], [2], etc.
+
+    Returns:
+        CitationRemapResult with remapped text and mapping info
+    """
+    if not text:
+        return CitationRemapResult(text="", citation_map={}, used_indices=[])
+
+    # Find all citations in order of appearance
+    citation_pattern = r"\[(\d+)\]"
+    matches = list(re.finditer(citation_pattern, text))
+
+    if not matches:
+        return CitationRemapResult(text=text, citation_map={}, used_indices=[])
+
+    # Build mapping: original number -> new sequential number
+    seen_originals: List[int] = []
+    for match in matches:
+        orig_num = int(match.group(1))
+        if orig_num not in seen_originals:
+            seen_originals.append(orig_num)
+
+    # Create mapping: {original: new_sequential}
+    citation_map = {orig: idx + 1 for idx, orig in enumerate(seen_originals)}
+
+    # Replace citations in text
+    def replace_citation(match):
+        orig_num = int(match.group(1))
+        new_num = citation_map.get(orig_num, orig_num)
+        return f"[{new_num}]"
+
+    remapped_text = re.sub(citation_pattern, replace_citation, text)
+
+    return CitationRemapResult(
+        text=remapped_text,
+        citation_map=citation_map,
+        used_indices=seen_originals,
+    )
