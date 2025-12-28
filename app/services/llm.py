@@ -736,7 +736,7 @@ def generate_with_llm(
     temperature: Optional[float] = None,
     max_tokens: Optional[int] = None,
     model: Optional[str] = None,
-    reasoning_effort: ReasoningEffort = ReasoningEffort.OFF,
+    reasoning_effort: ReasoningEffort = ReasoningEffort.NONE,
 ) -> str:
     """Synchronous convenience function for generating text with LLM.
 
@@ -747,7 +747,7 @@ def generate_with_llm(
         temperature: Sampling temperature
         max_tokens: Maximum number of tokens to generate
         model: Optional model override
-        reasoning_effort: Control reasoning depth (OFF for fastest RAG responses)
+        reasoning_effort: Control reasoning depth (NONE for fastest RAG responses)
 
     Returns:
         Generated text response
@@ -801,7 +801,7 @@ async def async_generate_with_llm(
     temperature: Optional[float] = None,
     max_tokens: Optional[int] = None,
     model: Optional[str] = None,
-    reasoning_effort: ReasoningEffort = ReasoningEffort.OFF,
+    reasoning_effort: ReasoningEffort = ReasoningEffort.NONE,
 ) -> str:
     """Async convenience function for generating text with LLM.
 
@@ -810,7 +810,7 @@ async def async_generate_with_llm(
         temperature: Sampling temperature
         max_tokens: Maximum number of tokens to generate
         model: Optional model override
-        reasoning_effort: Control reasoning depth (OFF for fastest RAG responses)
+        reasoning_effort: Control reasoning depth (NONE for fastest RAG responses)
 
     Returns:
         Generated text response
@@ -830,7 +830,7 @@ async def async_generate_stream_with_llm(
     temperature: Optional[float] = None,
     max_tokens: Optional[int] = None,
     model: Optional[str] = None,
-    reasoning_effort: ReasoningEffort = ReasoningEffort.OFF,
+    reasoning_effort: ReasoningEffort = ReasoningEffort.NONE,
 ) -> AsyncIterator[str]:
     """Async convenience function for streaming text with LLM.
 
@@ -839,7 +839,7 @@ async def async_generate_stream_with_llm(
         temperature: Sampling temperature
         max_tokens: Maximum number of tokens to generate
         model: Optional model override
-        reasoning_effort: Control reasoning depth (OFF for fastest RAG responses)
+        reasoning_effort: Control reasoning depth (NONE for fastest RAG responses)
 
     Yields:
         Generated text chunks
@@ -860,7 +860,7 @@ async def async_generate_stream_with_thinking(
     temperature: Optional[float] = None,
     max_tokens: Optional[int] = None,
     model: Optional[str] = None,
-    reasoning_effort: ReasoningEffort = ReasoningEffort.OFF,
+    reasoning_effort: ReasoningEffort = ReasoningEffort.NONE,
 ) -> AsyncIterator[StreamChunk]:
     """Async convenience function for streaming with thinking process separated.
 
