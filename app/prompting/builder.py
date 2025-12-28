@@ -2,13 +2,19 @@
 Prompt Builder - XML-based prompt construction (Version 2.0)
 
 Simplified to use XML structure for better instruction following.
+Version 2.1: Added model-based prompt selection (Qwen vs Llama).
 Backup of original: builder.py.backup
 """
 
 import logging
 from typing import Any, Dict, List, Optional
 
-from app.prompting.config import PromptConfig, PromptResult, SYSTEM_PROMPT_XML
+from app.prompting.config import (
+    PromptConfig,
+    PromptResult,
+    get_system_prompt_for_model,
+    get_model_family,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -68,15 +74,19 @@ def build_xml_prompt(
     query: str,
     chunks: List[Dict[str, Any]],
     conversation_history: Optional[List[Dict[str, str]]] = None,
+    model: Optional[str] = None,
 ) -> str:
     """Build prompt using XML structure with history support.
 
-    This is the new builder function per the optimization plan.
+    Automatically selects the appropriate system prompt based on the model family:
+    - Qwen models: Uses SYSTEM_PROMPT_QWEN with anti-code-bias instructions
+    - Llama/other models: Uses SYSTEM_PROMPT_XML (default)
 
     Args:
         query: User's question
         chunks: Retrieved context chunks
         conversation_history: Optional list of previous conversation turns
+        model: Optional model name for prompt selection (e.g., "Qwen/Qwen3-32B")
 
     Returns:
         Formatted XML prompt string
@@ -86,7 +96,14 @@ def build_xml_prompt(
         _format_history_xml(conversation_history) if conversation_history else ""
     )
 
-    return SYSTEM_PROMPT_XML.format(
+    # Select prompt based on model family
+    system_prompt = get_system_prompt_for_model(model)
+    family = get_model_family(model)
+
+    if family != "unknown":
+        logger.debug(f"Using {family} prompt template for model: {model}")
+
+    return system_prompt.format(
         chunks=formatted_context.strip(), history=formatted_history, query=query.strip()
     )
 
@@ -108,23 +125,29 @@ class PromptBuilder:
         context_chunks: List[Dict[str, Any]],
         keywords: Optional[List[str]] = None,
         conversation_history: Optional[List[Dict[str, str]]] = None,
+        model: Optional[str] = None,
     ) -> PromptResult:
         """Build a prompt with the given question and context chunks.
 
-        Now uses simplified XML structure.
+        Uses model-based prompt selection:
+        - Qwen models: Uses Qwen-optimized prompt with anti-code-bias
+        - Llama/other models: Uses default XML prompt
 
         Args:
             question: The user's question
             context_chunks: Retrieved context chunks
             keywords: Optional list of keywords (currently ignored in XML mode)
-            conversation_history: Optional conversation history (currently ignored in XML mode)
+            conversation_history: Optional conversation history
+            model: Optional model name for prompt selection (e.g., "Qwen/Qwen3-32B")
 
         Returns:
             PromptResult with the constructed prompt
         """
         try:
-            # Use new XML-based prompt builder with history support
-            prompt = build_xml_prompt(question, context_chunks, conversation_history)
+            # Use model-aware XML-based prompt builder with history support
+            prompt = build_xml_prompt(
+                question, context_chunks, conversation_history, model=model
+            )
 
             # Format context for result (used by chat_service for sources)
             context = _format_context_xml(context_chunks)

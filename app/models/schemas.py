@@ -55,6 +55,19 @@ class ChatRequest(BaseModel):
         pattern="^[a-zA-Z0-9_-]+$",  # Only alphanumeric, dash, underscore
     )
 
+    model: Optional[str] = Field(
+        default=None,
+        description="LLM model to use for generation. Options: 'groq' (llama-3.1-8b), 'deepinfra' (Qwen3-32B), or full model name.",
+        json_schema_extra={"example": "deepinfra"},
+    )
+
+    show_thinking: Optional[bool] = Field(
+        default=False,
+        description="Enable thinking process display for supported models (e.g., Qwen). "
+        "When enabled, streaming responses include 'event: thinking' events.",
+        json_schema_extra={"example": True},
+    )
+
     @field_validator("question")
     @classmethod
     def strip_and_validate(cls, v: str) -> str:
@@ -216,6 +229,15 @@ class ChatResponse(BaseModel):
     rewrite_metadata: Optional[RewriteMetadata] = Field(
         default=None,
         description="Query rewriting metadata (if query was rewritten by pattern matching)",
+    )
+
+    thinking: Optional[str] = Field(
+        default=None,
+        description="Model's thinking process (for models like Qwen that support reasoning). "
+        "Can be displayed in a collapsible section in the frontend.",
+        json_schema_extra={
+            "example": "Let me analyze the context... I found the GPA information in the transcript..."
+        },
     )
 
 

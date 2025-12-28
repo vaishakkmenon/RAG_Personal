@@ -1,11 +1,9 @@
 """
 LLM service for Personal RAG system.
 
-Handles LLM client interactions with multiple providers (Groq, DeepInfra).
-Includes rate limiting and circuit breaker pattern for resilience.
-
-Version 2.0: Uses provider abstraction for multi-provider support.
-Version 2.1: Added streaming with thinking support for frontend display.
+Handles LLM client interactions with Groq API (cloud, fast, free tier).
+Includes rate limiting for Groq to stay within free tier limits.
+Includes circuit breaker pattern for resilience.
 """
 
 import logging
@@ -16,16 +14,13 @@ from typing import Optional, AsyncIterator
 import asyncio
 from functools import wraps
 
+from groq import Groq, AsyncGroq
+from groq.types.chat import ChatCompletion
+
 from app.settings import settings
 from app.services.rate_limiter import RateLimiter
-from app.llm import get_provider, get_llm_provider, resolve_model, LLMProvider
-from app.core.parsing import StreamChunk, ChunkType
 
 logger = logging.getLogger(__name__)
-
-
-# Cache for dynamically created providers
-_dynamic_providers: dict = {}
 
 # Optional metrics import
 try:
@@ -192,6 +187,32 @@ class CircuitBreaker:
             }
 
 
+def retry_with_exponential_backoff(
+    max_retries=3, base_delay=1, max_delay=10, exponential_base=2
+):
+    """Retry decorator with exponential backoff for synchronous functions"""
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    if attempt == max_retries - 1:
+                        raise
+                    delay = min(base_delay * (exponential_base**attempt), max_delay)
+                    logger.warning(
+                        f"Attempt {attempt + 1}/{max_retries} failed in {func.__name__}: {e}. "
+                        f"Retrying in {delay}s..."
+                    )
+                    time.sleep(delay)
+
+        return wrapper
+
+    return decorator
+
+
 def async_retry_with_exponential_backoff(
     max_retries=3, base_delay=1, max_delay=10, exponential_base=2
 ):
@@ -218,75 +239,81 @@ def async_retry_with_exponential_backoff(
     return decorator
 
 
-class LLMService:
-    """Service for interacting with LLM providers (Groq, DeepInfra, etc.)."""
+class GroqLLMService:
+    """Service for interacting with Groq LLM API."""
 
-    def __init__(self):
-        """Initialize LLM service with configured provider."""
-        self.llm_settings = settings.llm
-        self.provider: LLMProvider = get_provider()
-
-        # Initialize rate limiter (for Groq tier management)
-        # Note: DeepInfra has different rate limits, but we use conservative defaults
-        self.rate_limiter = RateLimiter(
-            requests_per_minute=self.llm_settings.groq_requests_per_minute,
-            requests_per_day=self.llm_settings.groq_requests_per_day,
-        )
-
-        # Initialize circuit breaker for resilience
-        self.circuit_breaker = CircuitBreaker(
-            failure_threshold=5,
-            recovery_timeout=30.0,
-            half_open_max_requests=3,
-            name=f"{self.provider.provider_name}_api",
-        )
-
-        logger.info(
-            f"Initialized LLM service - Provider: {self.provider.provider_name}, "
-            f"Model: {self.provider.default_model}"
-        )
-
-    def _get_provider_for_model(self, model: Optional[str]) -> tuple[LLMProvider, str]:
-        """Get the appropriate provider for a model name.
-
-        Supports model shorthand names (e.g., "groq", "qwen", "deepinfra")
-        and automatically selects the correct provider.
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: Optional[str] = None,
+    ):
+        """Initialize Groq LLM service.
 
         Args:
-            model: Model name, shorthand, or None for default
-
-        Returns:
-            Tuple of (provider, resolved_model_name)
+            api_key: Groq API key (defaults to settings)
+            model: Default model name (defaults to settings)
         """
-        if not model:
-            return self.provider, self.provider.default_model
+        # LLM settings
+        self.llm_settings = settings.llm
 
-        # Resolve model shorthand to provider and full model name
-        provider_name, resolved_model = resolve_model(model)
+        # Validate that provider is groq
+        if self.llm_settings.provider != "groq":
+            raise ValueError(
+                f"GroqLLMService only supports provider='groq', got '{self.llm_settings.provider}'"
+            )
 
-        # Check if we need a different provider than the default
-        if provider_name != self.provider.provider_name:
-            # Get or create the alternate provider
-            global _dynamic_providers
-            if provider_name not in _dynamic_providers:
-                logger.info(f"Creating dynamic provider for: {provider_name}")
-                _dynamic_providers[provider_name] = get_llm_provider(provider_name)
-            provider = _dynamic_providers[provider_name]
-        else:
-            provider = self.provider
+        # Groq settings
+        self.api_key = api_key or self.llm_settings.groq_api_key
+        self.model = model or self.llm_settings.groq_model
 
-        # Use resolved model name or provider default
-        final_model = resolved_model or provider.default_model
-        return provider, final_model
+        if not self.api_key:
+            raise ValueError(
+                "Groq API key is required. Set LLM_GROQ_API_KEY environment variable."
+            )
 
-    async def async_generate(
+        # Initialize Groq clients
+        try:
+            self.groq_client = Groq(api_key=self.api_key)
+            self.async_groq_client = AsyncGroq(api_key=self.api_key)
+
+            # Initialize rate limiter based on configured Groq tier
+            # Tier limits (from settings):
+            # - Free: 30 rpm, 14,400 rpd (8B) or 1,000 rpd (70B)
+            # - Developer: 300-1000 rpm, 50,000-500,000 rpd
+            # - Enterprise: Custom limits
+            self.rate_limiter = RateLimiter(
+                requests_per_minute=self.llm_settings.groq_requests_per_minute,
+                requests_per_day=self.llm_settings.groq_requests_per_day,
+            )
+
+            # Initialize circuit breaker for resilience
+            self.circuit_breaker = CircuitBreaker(
+                failure_threshold=5,
+                recovery_timeout=30.0,
+                half_open_max_requests=3,
+                name="groq_api",
+            )
+
+            logger.info(
+                f"Initialized Groq client with model: {self.model} "
+                f"(tier: {self.llm_settings.groq_tier})"
+            )
+            logger.info(
+                f"Rate limiter: {self.llm_settings.groq_requests_per_minute} req/min, "
+                f"{self.llm_settings.groq_requests_per_day} req/day"
+            )
+        except Exception as e:
+            logger.error(f"Failed to initialize Groq client: {e}")
+            raise
+
+    def generate(
         self,
         prompt: str,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         model: Optional[str] = None,
     ) -> str:
-        """Generate text asynchronously using configured provider.
+        """Generate text using Groq API.
 
         Args:
             prompt: The input prompt to generate text from
@@ -298,63 +325,61 @@ class LLMService:
             Generated text response
 
         Raises:
-            Exception: If provider API call fails
+            Exception: If Groq API call fails
         """
         # Use settings defaults if not provided
-        temp = temperature if temperature is not None else self.llm_settings.temperature
-        tokens = max_tokens if max_tokens is not None else self.llm_settings.max_tokens
+        temperature = (
+            temperature if temperature is not None else self.llm_settings.temperature
+        )
+        max_tokens = (
+            max_tokens if max_tokens is not None else self.llm_settings.max_tokens
+        )
 
-        return await self._generate_with_provider(prompt, temp, tokens, model)
+        logger.debug("Generating with Groq")
+        return self._generate_with_groq(prompt, temperature, max_tokens, model)
 
-    @async_retry_with_exponential_backoff(max_retries=2)
-    async def _generate_with_provider(
+    @retry_with_exponential_backoff(max_retries=2)
+    def _generate_with_groq(
         self,
         prompt: str,
         temperature: float,
         max_tokens: int,
         model: Optional[str] = None,
     ) -> str:
-        """Generate text using provider with rate limiting and circuit breaker.
-
-        Supports dynamic provider switching based on model name (e.g., "qwen" -> DeepInfra).
+        """Generate text using Groq API with rate limiting and circuit breaker.
 
         Args:
             prompt: The input prompt
             temperature: Sampling temperature
             max_tokens: Maximum tokens to generate
-            model: Optional model override (supports shorthand like "groq", "qwen", "deepinfra")
+            model: Optional model override
 
         Returns:
             Generated text
 
         Raises:
             CircuitBreakerOpen: If circuit breaker is open
-            Exception: If provider API call fails
+            Exception: If Groq API call fails
         """
-        # Get the appropriate provider for this model
-        provider, model_name = self._get_provider_for_model(model)
-        provider_name = provider.provider_name
+        model_name = model or self.model
 
         # Check circuit breaker before making request
         if not self.circuit_breaker.allow_request():
             logger.warning(
-                f"Circuit breaker OPEN for {provider_name} API - rejecting request. "
+                f"Circuit breaker OPEN for Groq API - rejecting request. "
                 f"Will retry after {self.circuit_breaker.recovery_timeout}s"
             )
             raise CircuitBreakerOpen(
-                f"{provider_name} API circuit breaker is open. Service is temporarily unavailable."
+                "Groq API circuit breaker is open. Service is temporarily unavailable."
             )
 
         # Wait for rate limiter (blocks if at limit)
         if self.rate_limiter:
             logger.debug("Waiting for rate limiter...")
-            loop = asyncio.get_event_loop()
-            acquired = await loop.run_in_executor(
-                None, lambda: self.rate_limiter.acquire(timeout=60)
-            )
+            acquired = self.rate_limiter.acquire(timeout=60)
             if not acquired:
                 raise Exception(
-                    f"Rate limiter timeout - {provider_name} request quota exceeded. Please try again later."
+                    "Rate limiter timeout - Groq request quota exceeded. Please try again later."
                 )
 
             # Log rate limit status
@@ -368,14 +393,16 @@ class LLMService:
 
         start = time.time()
         try:
-            logger.debug(f"Calling {provider_name} API with model: {model_name}")
+            logger.debug(f"Calling Groq API with model: {model_name}")
 
-            generated_text = await provider.generate(
-                prompt=prompt,
+            response: ChatCompletion = self.groq_client.chat.completions.create(
                 model=model_name,
+                messages=[{"role": "user", "content": prompt}],
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
+
+            generated_text = response.choices[0].message.content
 
             # Record success with circuit breaker
             self.circuit_breaker.record_success()
@@ -383,17 +410,17 @@ class LLMService:
             # Metrics
             if METRICS_ENABLED:
                 rag_llm_request_total.labels(
-                    status="success", model=f"{provider_name}:{model_name}"
+                    status="success", model=f"groq:{model_name}"
                 ).inc()
 
             duration = time.time() - start
             logger.info(
-                f"{provider_name} generation successful: {len(generated_text)} chars in {duration:.2f}s"
+                f"Groq generation successful: {len(generated_text)} chars in {duration:.2f}s"
             )
 
             if METRICS_ENABLED:
                 rag_llm_latency_seconds.labels(
-                    status="success", model=f"{provider_name}:{model_name}"
+                    status="success", model=f"groq:{model_name}"
                 ).observe(duration)
 
             return generated_text
@@ -406,99 +433,105 @@ class LLMService:
 
             if METRICS_ENABLED:
                 rag_llm_request_total.labels(
-                    status="error", model=f"{provider_name}:{model_name}"
+                    status="error", model=f"groq:{model_name}"
                 ).inc()
                 rag_llm_latency_seconds.labels(
-                    status="error", model=f"{provider_name}:{model_name}"
+                    status="error", model=f"groq:{model_name}"
                 ).observe(duration)
 
             # Check for specific error types
             error_msg = str(e)
             if "rate_limit" in error_msg.lower():
-                logger.warning(f"{provider_name} rate limit exceeded: {e}")
+                logger.warning(f"Groq rate limit exceeded: {e}")
             elif (
                 "api_key" in error_msg.lower() or "authentication" in error_msg.lower()
             ):
-                logger.error(f"{provider_name} authentication error: {e}")
+                logger.error(f"Groq authentication error: {e}")
             else:
-                logger.error(f"{provider_name} API error: {e}")
+                logger.error(f"Groq API error: {e}")
 
             raise
 
-    async def async_generate_stream(
+    async def async_generate(
         self,
         prompt: str,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         model: Optional[str] = None,
-    ) -> AsyncIterator[str]:
-        """Generate text stream asynchronously using configured provider.
+    ) -> str:
+        """Generate text asynchronously using Groq API.
 
         Args:
-            prompt: The input prompt
+            prompt: The input prompt to generate text from
             temperature: Sampling temperature (None uses default from settings)
             max_tokens: Maximum number of tokens to generate (None uses default)
             model: Optional override for the model name
 
-        Yields:
-            Generated text chunks
+        Returns:
+            Generated text response
+
+        Raises:
+            Exception: If Groq API call fails
         """
         # Use settings defaults if not provided
-        temp = temperature if temperature is not None else self.llm_settings.temperature
-        tokens = max_tokens if max_tokens is not None else self.llm_settings.max_tokens
+        temperature = (
+            temperature if temperature is not None else self.llm_settings.temperature
+        )
+        max_tokens = (
+            max_tokens if max_tokens is not None else self.llm_settings.max_tokens
+        )
 
-        async for chunk in self._generate_stream_with_provider(
-            prompt, temp, tokens, model
-        ):
-            yield chunk
+        logger.debug("Generating with Groq (async)")
+        return await self._generate_with_groq_async(
+            prompt, temperature, max_tokens, model
+        )
 
-    async def _generate_stream_with_provider(
+    @async_retry_with_exponential_backoff(max_retries=2)
+    async def _generate_with_groq_async(
         self,
         prompt: str,
         temperature: float,
         max_tokens: int,
         model: Optional[str] = None,
-    ) -> AsyncIterator[str]:
-        """Generate text stream using provider with rate limiting and circuit breaker.
-
-        Supports dynamic provider switching based on model name.
+    ) -> str:
+        """Generate text asynchronously using Groq API with rate limiting and circuit breaker.
 
         Args:
             prompt: The input prompt
             temperature: Sampling temperature
             max_tokens: Maximum tokens to generate
-            model: Optional model override (supports shorthand like "groq", "qwen", "deepinfra")
+            model: Optional model override
 
-        Yields:
-            Generated text chunks
+        Returns:
+            Generated text
 
         Raises:
             CircuitBreakerOpen: If circuit breaker is open
+            Exception: If Groq API call fails
         """
-        # Get the appropriate provider for this model
-        provider, model_name = self._get_provider_for_model(model)
-        provider_name = provider.provider_name
+        model_name = model or self.model
 
         # Check circuit breaker before making request
         if not self.circuit_breaker.allow_request():
             logger.warning(
-                f"Circuit breaker OPEN for {provider_name} API - rejecting request. "
+                f"Circuit breaker OPEN for Groq API - rejecting request. "
                 f"Will retry after {self.circuit_breaker.recovery_timeout}s"
             )
             raise CircuitBreakerOpen(
-                f"{provider_name} API circuit breaker is open. Service is temporarily unavailable."
+                "Groq API circuit breaker is open. Service is temporarily unavailable."
             )
 
         # Wait for rate limiter (blocks if at limit)
         if self.rate_limiter:
             logger.debug("Waiting for rate limiter...")
+            # Run synchronous rate limiter in executor to not block
             loop = asyncio.get_event_loop()
             acquired = await loop.run_in_executor(
                 None, lambda: self.rate_limiter.acquire(timeout=60)
             )
             if not acquired:
                 raise Exception(
-                    f"Rate limiter timeout - {provider_name} request quota exceeded. Please try again later."
+                    "Rate limiter timeout - Groq request quota exceeded. Please try again later."
                 )
 
             # Log rate limit status
@@ -512,31 +545,186 @@ class LLMService:
 
         start = time.time()
         try:
-            logger.debug(f"Calling {provider_name} API stream with model: {model_name}")
+            logger.debug(f"Calling Groq API async with model: {model_name}")
+
+            response: ChatCompletion = (
+                await self.async_groq_client.chat.completions.create(
+                    model=model_name,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+            )
+
+            generated_text = response.choices[0].message.content
+
+            # Record success with circuit breaker
+            self.circuit_breaker.record_success()
+
+            # Metrics
+            if METRICS_ENABLED:
+                rag_llm_request_total.labels(
+                    status="success", model=f"groq:{model_name}"
+                ).inc()
+
+            duration = time.time() - start
+            logger.info(
+                f"Groq async generation successful: {len(generated_text)} chars in {duration:.2f}s"
+            )
+
+            if METRICS_ENABLED:
+                rag_llm_latency_seconds.labels(
+                    status="success", model=f"groq:{model_name}"
+                ).observe(duration)
+
+            return generated_text
+
+        except Exception as e:
+            duration = time.time() - start
+
+            # Record failure with circuit breaker
+            self.circuit_breaker.record_failure()
+
+            if METRICS_ENABLED:
+                rag_llm_request_total.labels(
+                    status="error", model=f"groq:{model_name}"
+                ).inc()
+                rag_llm_latency_seconds.labels(
+                    status="error", model=f"groq:{model_name}"
+                ).observe(duration)
+
+            # Check for specific error types
+            error_msg = str(e)
+            if "rate_limit" in error_msg.lower():
+                logger.warning(f"Groq rate limit exceeded: {e}")
+            elif (
+                "api_key" in error_msg.lower() or "authentication" in error_msg.lower()
+            ):
+                logger.error(f"Groq authentication error: {e}")
+            else:
+                logger.error(f"Groq API error: {e}")
+
+            raise
+
+    async def async_generate_stream(
+        self,
+        prompt: str,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        model: Optional[str] = None,
+    ) -> AsyncIterator[str]:
+        """Generate text stream asynchronously using Groq API.
+
+        Args:
+            prompt: The input prompt
+            temperature: Sampling temperature (None uses default from settings)
+            max_tokens: Maximum number of tokens to generate (None uses default)
+            model: Optional override for the model name
+
+        Yields:
+            Generated text chunks
+        """
+        # Use settings defaults if not provided
+        temperature = (
+            temperature if temperature is not None else self.llm_settings.temperature
+        )
+        max_tokens = (
+            max_tokens if max_tokens is not None else self.llm_settings.max_tokens
+        )
+
+        logger.debug("Generating with Groq (async stream)")
+        async for chunk in self._generate_with_groq_async_stream(
+            prompt, temperature, max_tokens, model
+        ):
+            yield chunk
+
+    async def _generate_with_groq_async_stream(
+        self,
+        prompt: str,
+        temperature: float,
+        max_tokens: int,
+        model: Optional[str] = None,
+    ) -> AsyncIterator[str]:
+        """Generate text stream asynchronously using Groq API with rate limiting and circuit breaker.
+
+        Args:
+            prompt: The input prompt
+            temperature: Sampling temperature
+            max_tokens: Maximum tokens to generate
+            model: Optional model override
+
+        Yields:
+            Generated text chunks
+
+        Raises:
+            CircuitBreakerOpen: If circuit breaker is open
+        """
+        model_name = model or self.model
+
+        # Check circuit breaker before making request
+        if not self.circuit_breaker.allow_request():
+            logger.warning(
+                f"Circuit breaker OPEN for Groq API - rejecting request. "
+                f"Will retry after {self.circuit_breaker.recovery_timeout}s"
+            )
+            raise CircuitBreakerOpen(
+                "Groq API circuit breaker is open. Service is temporarily unavailable."
+            )
+
+        # Wait for rate limiter (blocks if at limit)
+        if self.rate_limiter:
+            logger.debug("Waiting for rate limiter...")
+            # Run synchronous rate limiter in executor to not block
+            loop = asyncio.get_event_loop()
+            acquired = await loop.run_in_executor(
+                None, lambda: self.rate_limiter.acquire(timeout=60)
+            )
+            if not acquired:
+                raise Exception(
+                    "Rate limiter timeout - Groq request quota exceeded. Please try again later."
+                )
+
+            # Log rate limit status
+            stats = self.rate_limiter.get_stats()
+            if stats["minute_utilization"] > 0.8 or stats["day_utilization"] > 0.8:
+                logger.warning(
+                    f"High rate limit usage: "
+                    f"{stats['requests_last_minute']}/{stats['requests_per_minute_limit']} req/min, "
+                    f"{stats['requests_last_day']}/{stats['requests_per_day_limit']} req/day"
+                )
+
+        start = time.time()
+        try:
+            logger.debug(f"Calling Groq API async stream with model: {model_name}")
+
+            stream = await self.async_groq_client.chat.completions.create(
+                model=model_name,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=True,
+            )
 
             # Metrics (start)
             if METRICS_ENABLED:
                 rag_llm_request_total.labels(
-                    status="success", model=f"{provider_name}:{model_name}"
+                    status="success", model=f"groq:{model_name}"
                 ).inc()
 
-            async for chunk in provider.generate_stream(
-                prompt=prompt,
-                model=model_name,
-                temperature=temperature,
-                max_tokens=max_tokens,
-            ):
-                yield chunk
+            async for chunk in stream:
+                content = chunk.choices[0].delta.content
+                if content:
+                    yield content
 
             # Record success with circuit breaker (stream completed successfully)
             self.circuit_breaker.record_success()
 
             duration = time.time() - start
-            logger.info(f"{provider_name} stream finished in {duration:.2f}s")
+            logger.info(f"Groq async stream finished in {duration:.2f}s")
 
             if METRICS_ENABLED:
                 rag_llm_latency_seconds.labels(
-                    status="success", model=f"{provider_name}:{model_name}"
+                    status="success", model=f"groq:{model_name}"
                 ).observe(duration)
 
         except Exception as e:
@@ -547,164 +735,38 @@ class LLMService:
 
             if METRICS_ENABLED:
                 rag_llm_request_total.labels(
-                    status="error", model=f"{provider_name}:{model_name}"
+                    status="error", model=f"groq:{model_name}"
                 ).inc()
                 rag_llm_latency_seconds.labels(
-                    status="error", model=f"{provider_name}:{model_name}"
+                    status="error", model=f"groq:{model_name}"
                 ).observe(duration)
 
             # Check for specific error types
             error_msg = str(e)
             if "rate_limit" in error_msg.lower():
-                logger.warning(f"{provider_name} rate limit exceeded: {e}")
+                logger.warning(f"Groq rate limit exceeded: {e}")
             elif (
                 "api_key" in error_msg.lower() or "authentication" in error_msg.lower()
             ):
-                logger.error(f"{provider_name} authentication error: {e}")
+                logger.error(f"Groq authentication error: {e}")
             else:
-                logger.error(f"{provider_name} API error: {e}")
+                logger.error(f"Groq API error: {e}")
 
             raise
-
-    async def async_generate_stream_with_thinking(
-        self,
-        prompt: str,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
-        model: Optional[str] = None,
-    ) -> AsyncIterator[StreamChunk]:
-        """Generate text stream with thinking process separated.
-
-        This method yields typed StreamChunk objects that differentiate between
-        the model's thinking process and the actual answer, allowing frontends
-        to display them differently (e.g., collapsible thinking section).
-
-        Args:
-            prompt: The input prompt
-            temperature: Sampling temperature (None uses default from settings)
-            max_tokens: Maximum number of tokens to generate (None uses default)
-            model: Optional override for the model name
-
-        Yields:
-            StreamChunk objects with type=THINKING or type=ANSWER
-        """
-        temp = temperature if temperature is not None else self.llm_settings.temperature
-        tokens = max_tokens if max_tokens is not None else self.llm_settings.max_tokens
-
-        async for chunk in self._generate_stream_with_thinking_provider(
-            prompt, temp, tokens, model
-        ):
-            yield chunk
-
-    async def _generate_stream_with_thinking_provider(
-        self,
-        prompt: str,
-        temperature: float,
-        max_tokens: int,
-        model: Optional[str] = None,
-    ) -> AsyncIterator[StreamChunk]:
-        """Generate typed stream using provider with rate limiting and circuit breaker.
-
-        Supports dynamic provider switching based on model name.
-
-        Args:
-            prompt: The input prompt
-            temperature: Sampling temperature
-            max_tokens: Maximum tokens to generate
-            model: Optional model override (supports shorthand like "groq", "qwen", "deepinfra")
-
-        Yields:
-            StreamChunk objects with type=THINKING or type=ANSWER
-
-        Raises:
-            CircuitBreakerOpen: If circuit breaker is open
-        """
-        # Get the appropriate provider for this model
-        provider, model_name = self._get_provider_for_model(model)
-        provider_name = provider.provider_name
-
-        # Check circuit breaker before making request
-        if not self.circuit_breaker.allow_request():
-            logger.warning(
-                f"Circuit breaker OPEN for {provider_name} API - rejecting request. "
-                f"Will retry after {self.circuit_breaker.recovery_timeout}s"
-            )
-            raise CircuitBreakerOpen(
-                f"{provider_name} API circuit breaker is open. Service is temporarily unavailable."
-            )
-
-        # Wait for rate limiter (blocks if at limit)
-        if self.rate_limiter:
-            logger.debug("Waiting for rate limiter...")
-            loop = asyncio.get_event_loop()
-            acquired = await loop.run_in_executor(
-                None, lambda: self.rate_limiter.acquire(timeout=60)
-            )
-            if not acquired:
-                raise Exception(
-                    f"Rate limiter timeout - {provider_name} request quota exceeded. Please try again later."
-                )
-
-        start = time.time()
-        try:
-            logger.debug(
-                f"Calling {provider_name} API stream (with thinking) model: {model_name}"
-            )
-
-            # Metrics (start)
-            if METRICS_ENABLED:
-                rag_llm_request_total.labels(
-                    status="success", model=f"{provider_name}:{model_name}"
-                ).inc()
-
-            async for chunk in provider.generate_stream_with_thinking(
-                prompt=prompt,
-                model=model_name,
-                temperature=temperature,
-                max_tokens=max_tokens,
-            ):
-                yield chunk
-
-            # Record success with circuit breaker
-            self.circuit_breaker.record_success()
-
-            duration = time.time() - start
-            logger.info(f"{provider_name} thinking stream finished in {duration:.2f}s")
-
-            if METRICS_ENABLED:
-                rag_llm_latency_seconds.labels(
-                    status="success", model=f"{provider_name}:{model_name}"
-                ).observe(duration)
-
-        except Exception as e:
-            duration = time.time() - start
-            self.circuit_breaker.record_failure()
-
-            if METRICS_ENABLED:
-                rag_llm_request_total.labels(
-                    status="error", model=f"{provider_name}:{model_name}"
-                ).inc()
-                rag_llm_latency_seconds.labels(
-                    status="error", model=f"{provider_name}:{model_name}"
-                ).observe(duration)
-
-            logger.error(f"{provider_name} API error: {e}")
-            raise
-
-
-# Backward compatibility aliases
-GroqLLMService = LLMService  # Alias for existing code
 
 
 # Global service instance (lazy initialization)
-_service: Optional[LLMService] = None
+_service: GroqLLMService = None
 
 
-def get_llm_service() -> LLMService:
+def get_llm_service() -> GroqLLMService:
     """Get the global LLM service instance (lazy initialization)."""
     global _service
     if _service is None:
-        _service = LLMService()
+        _service = GroqLLMService()
+        logger.info(
+            f"Initialized global LLM service - Provider: {_service.llm_settings.provider}, Model: {_service.model}"
+        )
     return _service
 
 
@@ -714,9 +776,7 @@ def generate_with_llm(
     max_tokens: Optional[int] = None,
     model: Optional[str] = None,
 ) -> str:
-    """Synchronous convenience function for generating text with LLM.
-
-    Note: This runs the async generate in an event loop for backward compatibility.
+    """Convenience function for generating text with Groq LLM.
 
     Args:
         prompt: The input prompt to generate text from
@@ -728,44 +788,12 @@ def generate_with_llm(
         Generated text response
     """
     service = get_llm_service()
-
-    # Run async generate in event loop
-    try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            # If we're already in an async context, create a new thread
-            import concurrent.futures
-
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(
-                    asyncio.run,
-                    service.async_generate(
-                        prompt=prompt,
-                        temperature=temperature,
-                        max_tokens=max_tokens,
-                        model=model,
-                    ),
-                )
-                return future.result(timeout=120)
-        else:
-            return loop.run_until_complete(
-                service.async_generate(
-                    prompt=prompt,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    model=model,
-                )
-            )
-    except RuntimeError:
-        # No event loop exists, create one
-        return asyncio.run(
-            service.async_generate(
-                prompt=prompt,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                model=model,
-            )
-        )
+    return service.generate(
+        prompt=prompt,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        model=model,
+    )
 
 
 async def async_generate_with_llm(
@@ -774,7 +802,7 @@ async def async_generate_with_llm(
     max_tokens: Optional[int] = None,
     model: Optional[str] = None,
 ) -> str:
-    """Async convenience function for generating text with LLM.
+    """Async convenience function for generating text with Groq LLM.
 
     Args:
         prompt: The input prompt to generate text from
@@ -800,7 +828,7 @@ async def async_generate_stream_with_llm(
     max_tokens: Optional[int] = None,
     model: Optional[str] = None,
 ) -> AsyncIterator[str]:
-    """Async convenience function for streaming text with LLM.
+    """Async convenience function for streaming text with Groq LLM.
 
     Args:
         prompt: The input prompt to generate text from
@@ -821,51 +849,12 @@ async def async_generate_stream_with_llm(
         yield chunk
 
 
-async def async_generate_stream_with_thinking(
-    prompt: str,
-    temperature: Optional[float] = None,
-    max_tokens: Optional[int] = None,
-    model: Optional[str] = None,
-) -> AsyncIterator[StreamChunk]:
-    """Async convenience function for streaming with thinking process separated.
-
-    This function yields typed StreamChunk objects that differentiate between
-    the model's thinking process and the actual answer, allowing frontends
-    to display them differently (e.g., collapsible thinking section).
-
-    SSE Event Types:
-    - StreamChunk(type=THINKING, content="...") -> Send as "event: thinking"
-    - StreamChunk(type=ANSWER, content="...") -> Send as "event: token"
-
-    Args:
-        prompt: The input prompt to generate text from
-        temperature: Sampling temperature
-        max_tokens: Maximum number of tokens to generate
-        model: Optional model override
-
-    Yields:
-        StreamChunk objects with type=THINKING or type=ANSWER
-    """
-    service = get_llm_service()
-    async for chunk in service.async_generate_stream_with_thinking(
-        prompt=prompt,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        model=model,
-    ):
-        yield chunk
-
-
 __all__ = [
-    "LLMService",
-    "GroqLLMService",  # Backward compatibility
+    "GroqLLMService",
     "get_llm_service",
-    "generate_with_llm",  # Sync version for backward compatibility
+    "generate_with_llm",
     "async_generate_with_llm",
     "async_generate_stream_with_llm",
-    "async_generate_stream_with_thinking",  # Streaming with thinking support
-    "StreamChunk",  # For type hints
-    "ChunkType",  # For type checking
     "CircuitBreakerOpen",
     "CircuitBreaker",
 ]

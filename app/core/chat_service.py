@@ -31,6 +31,7 @@ from app.services.llm import generate_with_llm
 from app.services.response_cache import get_response_cache
 from app.settings import settings
 from app.storage import Session
+from app.core.parsing import ChunkType
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +65,9 @@ class ChatOptions:
     term_id: Optional[str] = None
     level: Optional[str] = None
     model: Optional[str] = None
+    show_thinking: Optional[bool] = (
+        None  # Enable thinking process display (Qwen models)
+    )
     skip_route_cache: bool = False
     api_key: Optional[str] = None
 
@@ -210,6 +214,7 @@ class ChatService:
             if options.max_tokens is not None
             else settings.llm.max_tokens,
             "model": options.model,
+            "show_thinking": options.show_thinking or False,
             "doc_type": options.doc_type,
             "rerank": options.rerank,
             "rerank_lex_weight": options.rerank_lex_weight,
@@ -382,11 +387,12 @@ class ChatService:
         params = ctx.params
         question = ctx.query
 
-        # Build prompt
+        # Build prompt (model-aware: selects Qwen vs Llama prompt template)
         prompt_result = self.prompt_builder.build_prompt(
             question=question,
             context_chunks=formatted_chunks,
             conversation_history=history,
+            model=params.get("model"),
         )
 
         if prompt_result.status == "ambiguous":
@@ -547,11 +553,12 @@ class ChatService:
             yield self._sse_token(msg)
             return
 
-        # Build Prompt
+        # Build Prompt (model-aware: selects Qwen vs Llama prompt template)
         prompt_result = self.prompt_builder.build_prompt(
             question=question,
             context_chunks=formatted_chunks,
             conversation_history=history,
+            model=params.get("model"),
         )
 
         if prompt_result.status in ["ambiguous", "no_context"]:
@@ -580,22 +587,51 @@ class ChatService:
         yield f"event: metadata\ndata: {json.dumps(metadata)}\n\n"
 
         full_answer = []
-        try:
-            from app.services.llm import async_generate_stream_with_llm
+        full_thinking = []
+        show_thinking = params.get("show_thinking", False)
 
-            async for token in async_generate_stream_with_llm(
-                prompt=prompt_result.prompt,
-                temperature=params.get("temperature", 0.1),
-                max_tokens=params.get("max_tokens", 1000),
-                model=params.get("model"),
-            ):
-                if token:
-                    full_answer.append(token)
-                    yield self._sse_token(token)
+        try:
+            if show_thinking:
+                # Use thinking-aware streaming for models that support it
+                from app.services.llm import async_generate_stream_with_thinking
+
+                async for chunk in async_generate_stream_with_thinking(
+                    prompt=prompt_result.prompt,
+                    temperature=params.get("temperature", 0.1),
+                    max_tokens=params.get("max_tokens", 1000),
+                    model=params.get("model"),
+                ):
+                    if chunk.content:
+                        if chunk.type == ChunkType.THINKING:
+                            # Stream thinking process for frontend display
+                            full_thinking.append(chunk.content)
+                            yield self._sse_thinking(chunk.content)
+                        else:
+                            # Stream answer tokens
+                            full_answer.append(chunk.content)
+                            yield self._sse_token(chunk.content)
+            else:
+                # Standard streaming without thinking separation
+                from app.services.llm import async_generate_stream_with_llm
+
+                async for token in async_generate_stream_with_llm(
+                    prompt=prompt_result.prompt,
+                    temperature=params.get("temperature", 0.1),
+                    max_tokens=params.get("max_tokens", 1000),
+                    model=params.get("model"),
+                ):
+                    if token:
+                        full_answer.append(token)
+                        yield self._sse_token(token)
+
         except Exception as e:
             logger.error(f"Stream generation failed: {e}")
             yield f"event: error\ndata: {json.dumps({'detail': 'Generation failed'})}\n\n"
             return
+
+        # Send thinking_done event if there was thinking
+        if full_thinking:
+            yield "event: thinking_done\ndata: \n\n"
 
         yield "event: done\ndata: \n\n"
 
@@ -624,6 +660,7 @@ class ChatService:
         ambiguity=False,
         clarification=False,
         params=None,
+        thinking=None,
     ):
         return ChatResponse(
             answer=answer,
@@ -636,6 +673,7 @@ class ChatService:
                 score=params.get("ambiguity_score", 0.0) if params else 0.0,
                 clarification_requested=clarification,
             ),
+            thinking=thinking,
         )
 
     def _create_blocked_response(self, session):
@@ -646,6 +684,7 @@ class ChatService:
             session_id=session.session_id,
             rewrite_metadata=None,
             ambiguity=AmbiguityMetadata(False, 0.0, False),
+            thinking=None,
         )
 
     def _handle_early_return_sync(self, ctx, request):
@@ -737,6 +776,13 @@ class ChatService:
 
     def _sse_token(self, text):
         return f"event: token\ndata: {json.dumps(text)}\n\n"
+
+    def _sse_thinking(self, text):
+        """Emit SSE event for model thinking process.
+
+        Frontend can display this in a collapsible "Thinking..." section.
+        """
+        return f"event: thinking\ndata: {json.dumps(text)}\n\n"
 
     def _sse_metadata(self, sources, grounded, session_id, is_ambiguous=False):
         meta = {

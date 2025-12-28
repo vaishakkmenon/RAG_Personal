@@ -268,21 +268,47 @@ patterns:
       type: list_expansion
       template: "List all {entity}"
 
-  # PATTERN 7: Temporal (DISABLED)
-  - name: temporal
-    enabled: false
+  # PATTERN 7: Temporal Term Expansion (ENABLED)
+  # Expands "Fall 2022" → "Fall 2022 Fall Term 2022" for better transcript matching
+  # Transcript headings use "Fall Term 2022" but users query "Fall 2022"
+  - name: temporal_term_expansion
+    enabled: true
     priority: 70
-    description: "Temporal queries (What courses in Fall 2022?)"
+    description: "Expand semester queries to include 'Term' variants"
     matching:
-      type: keyword_presence
-      keywords:
-        - "Fall 2022"
-        - "Spring 2022"
-      min_score: 0.5
+      type: regex_list
+      rules:
+        # Match "Fall/Spring/Summer YEAR" patterns
+        - pattern: '(?i)\b(Fall|Spring|Summer)\s+(20\d{2})\b'
+          extract_groups: [1, 2]
+      min_score: 0.8
     rewrite_strategy:
       type: synonym_expansion
       synonyms:
-        "Fall 2022": ["Fall 2022", "Fall Term 2022", "Autumn 2022"]
+        # These will be dynamically applied based on what's found in the query
+        "Fall 2020": ["Fall Term 2020"]
+        "Spring 2020": ["Spring Term 2020"]
+        "Summer 2020": ["Summer Term 2020"]
+        "Fall 2021": ["Fall Term 2021"]
+        "Spring 2021": ["Spring Term 2021"]
+        "Summer 2021": ["Summer Term 2021"]
+        "Fall 2022": ["Fall Term 2022"]
+        "Spring 2022": ["Spring Term 2022"]
+        "Summer 2022": ["Summer Term 2022"]
+        "Fall 2023": ["Fall Term 2023"]
+        "Spring 2023": ["Spring Term 2023"]
+        "Summer 2023": ["Summer Term 2023"]
+        "Fall 2024": ["Fall Term 2024"]
+        "Spring 2024": ["Spring Term 2024"]
+        "Summer 2024": ["Summer Term 2024"]
+        "Fall 2025": ["Fall Term 2025"]
+        "Spring 2025": ["Spring Term 2025"]
+        "Summer 2025": ["Summer Term 2025"]
+    test_cases:
+      - input: "What courses did I take in Fall 2022?"
+        expected_output: "What courses did I take in Fall 2022 Fall Term 2022?"
+      - input: "What was my GPA in Spring 2023?"
+        expected_output: "What was my GPA in Spring 2023 Spring Term 2023?"
 
   # PATTERN 8: Education Level (DISABLED)
   - name: education_level

@@ -27,6 +27,7 @@ REQUIRED_VARS = [
 
 # LLM provider-specific variables
 GROQ_VARS = ["LLM_GROQ_API_KEY"]
+DEEPINFRA_VARS = ["LLM_DEEPINFRA_API_KEY"]
 
 # Production-only variables (warnings if not set in production)
 PRODUCTION_VARS = [
@@ -68,7 +69,7 @@ See .env.example for detailed descriptions and recommended values.
 - REDIS_PASSWORD: Password for Redis authentication
 
 ## LLM Configuration
-- LLM_PROVIDER: LLM provider (must be 'groq')
+- LLM_PROVIDER: LLM provider ('groq' or 'deepinfra')
 - LLM_GROQ_API_KEY: Groq API key (required)
 - LLM_GROQ_MODEL: Groq model name
 - LLM_TEMPERATURE: Generation temperature
@@ -200,17 +201,24 @@ def validate_config() -> None:
 
     # 2. Check provider-specific variables
     provider = os.getenv("LLM_PROVIDER", "groq")
-    if provider != "groq":
-        missing_vars.append(
-            "LLM_PROVIDER must be set to 'groq' (Ollama is no longer supported)"
-        )
+    if provider not in ["groq", "deepinfra"]:
+        missing_vars.append("LLM_PROVIDER must be 'groq' or 'deepinfra'")
 
-    # Always require Groq API key
-    val = os.getenv("LLM_GROQ_API_KEY")
-    if not val:
-        missing_vars.append("LLM_GROQ_API_KEY (required for Groq provider)")
-    elif val in ["your-groq-api-key-here", "change-me"]:
-        insecure_vars.append(("LLM_GROQ_API_KEY", val))
+    # Check provider-specific API keys
+    if provider == "groq":
+        val = os.getenv("LLM_GROQ_API_KEY")
+        if not val:
+            missing_vars.append("LLM_GROQ_API_KEY (required for Groq provider)")
+        elif val in ["your-groq-api-key-here", "change-me"]:
+            insecure_vars.append(("LLM_GROQ_API_KEY", val))
+    elif provider == "deepinfra":
+        val = os.getenv("LLM_DEEPINFRA_API_KEY")
+        if not val:
+            missing_vars.append(
+                "LLM_DEEPINFRA_API_KEY (required for DeepInfra provider)"
+            )
+        elif val in ["your-deepinfra-api-key-here", "change-me"]:
+            insecure_vars.append(("LLM_DEEPINFRA_API_KEY", val))
 
     # 3. Check Grafana password (warn if default)
     grafana_pass = os.getenv("GRAFANA_ADMIN_PASSWORD", "")

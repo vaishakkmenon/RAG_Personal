@@ -54,16 +54,22 @@ except ImportError:
 
     **Events:**
     - `event: metadata`: JSON with sources, session_id, grounded flag, etc. (First event)
+    - `event: thinking`: Model's reasoning process (only if show_thinking=true)
+    - `event: thinking_done`: Signal that thinking is complete (only if show_thinking=true)
     - `event: token`: JSON string of the text chunk (Multiple events)
     - `event: error`: JSON with error details
     - `event: done`: Signal that stream is complete
+
+    **Model Selection:**
+    - `model=groq` or `model=llama-3.1-8b-instant`: Use Groq (fast, no thinking)
+    - `model=deepinfra` or `model=Qwen/Qwen3-32B`: Use DeepInfra Qwen (supports thinking)
 
     **Example Usage:**
     ```bash
     curl -N -X POST http://localhost:8000/chat/stream \\
       -H "Content-Type: application/json" \\
       -H "X-API-Key: $API_KEY" \\
-      -d '{"question": "Tell me about yourself"}'
+      -d '{"question": "Tell me about yourself", "model": "deepinfra", "show_thinking": true}'
     ```
     """,
 )
@@ -82,6 +88,7 @@ async def chat_stream(
     term_id: Optional[str] = None,
     level: Optional[str] = None,
     model: Optional[str] = None,
+    show_thinking: Optional[bool] = None,
     # Dependencies
     api_key: str = Depends(check_api_key),
     chat_service: ChatService = Depends(get_chat_service),
@@ -89,6 +96,13 @@ async def chat_stream(
     """
     Streaming endpoint for RAG chat.
     """
+    # Model can come from request body or query param (body takes precedence)
+    effective_model = request.model or model
+    # show_thinking can come from request body or query param (body takes precedence)
+    effective_show_thinking = (
+        request.show_thinking if request.show_thinking is not None else show_thinking
+    )
+
     # Construct options from query parameters
     options = ChatOptions(
         grounded_only=grounded_only,
@@ -102,7 +116,8 @@ async def chat_stream(
         doc_type=doc_type,
         term_id=term_id,
         level=level,
-        model=model,
+        model=effective_model,
+        show_thinking=effective_show_thinking,
         api_key=api_key,
     )
 

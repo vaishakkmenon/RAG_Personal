@@ -490,18 +490,18 @@ class MetadataInjectionSettings(BaseModel):
 
 
 class LLMSettings(BaseModel):
-    """LLM provider configuration (Groq only)."""
+    """LLM provider configuration (Groq + DeepInfra)."""
 
-    # Provider selection (Groq only)
+    # Provider selection
     provider: str = Field(
         default=os.getenv("LLM_PROVIDER", "groq"),
-        description="LLM provider: must be 'groq'",
+        description="LLM provider: 'groq' or 'deepinfra'",
     )
 
     # Groq settings
     groq_api_key: str = Field(
         default_factory=lambda: read_secret("LLM_GROQ_API_KEY", ""),
-        description="Groq API key (required)",
+        description="Groq API key (required for Groq provider)",
     )
     groq_model: str = Field(
         default=os.getenv("LLM_GROQ_MODEL", "llama-3.1-8b-instant"),
@@ -518,6 +518,24 @@ class LLMSettings(BaseModel):
     groq_requests_per_day: int = Field(
         default=int(os.getenv("LLM_GROQ_REQUESTS_PER_DAY", "13680")),
         description="Rate limit: requests per day (based on Groq tier)",
+    )
+
+    # DeepInfra settings
+    deepinfra_api_key: str = Field(
+        default_factory=lambda: read_secret("LLM_DEEPINFRA_API_KEY", ""),
+        description="DeepInfra API key (required for DeepInfra provider)",
+    )
+    deepinfra_model: str = Field(
+        default=os.getenv("LLM_DEEPINFRA_MODEL", "Qwen/Qwen3-32B"),
+        description="DeepInfra model name (default: Qwen 2.5-14B for quality)",
+    )
+    deepinfra_requests_per_minute: int = Field(
+        default=int(os.getenv("LLM_DEEPINFRA_REQUESTS_PER_MINUTE", "60")),
+        description="Rate limit: requests per minute for DeepInfra",
+    )
+    deepinfra_requests_per_day: int = Field(
+        default=int(os.getenv("LLM_DEEPINFRA_REQUESTS_PER_DAY", "10000")),
+        description="Rate limit: requests per day for DeepInfra",
     )
 
     # Shared generation settings
@@ -539,10 +557,8 @@ class LLMSettings(BaseModel):
     # Validation
     @field_validator("provider")
     def validate_provider(cls, v):
-        if v != "groq":
-            raise ValueError(
-                "Provider must be 'groq' - Ollama is no longer supported in production"
-            )
+        if v not in ["groq", "deepinfra"]:
+            raise ValueError("Provider must be 'groq' or 'deepinfra'")
         return v
 
     @field_validator("temperature")

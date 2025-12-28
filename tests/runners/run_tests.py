@@ -155,9 +155,9 @@ class TwoPhaseTestRunner:
         # Apply delay for all providers to prevent resource contention
         effective_delay = delay
         if self.provider == "groq":
-            delay_reason = "(Groq local - delay helps prevent GPU/CPU overload)"
-        elif self.provider == "groq":
             delay_reason = "(Groq cloud - delay for rate limiting)"
+        elif self.provider == "deepinfra":
+            delay_reason = "(DeepInfra cloud - delay for rate limiting)"
         else:
             delay_reason = "(Unknown provider - applying delay to be safe)"
 
