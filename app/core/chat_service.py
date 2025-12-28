@@ -36,6 +36,7 @@ from app.core.parsing import (
     ReasoningEffort,
     parse_reasoning_effort,
     renumber_citations,
+    StreamingCitationRemapper,
 )
 
 logger = logging.getLogger(__name__)
@@ -608,6 +609,7 @@ class ChatService:
 
         full_answer = []
         full_thinking = []
+        citation_remapper = StreamingCitationRemapper()
         reasoning_effort: ReasoningEffort = params.get(
             "reasoning_effort", ReasoningEffort.NONE
         )
@@ -627,15 +629,17 @@ class ChatService:
                 ):
                     if chunk.content:
                         if chunk.type == ChunkType.THINKING:
-                            # Stream thinking process for frontend display
+                            # Stream thinking process (no citation remapping needed)
                             full_thinking.append(chunk.content)
                             yield self._sse_thinking(chunk.content)
                         else:
-                            # Stream answer tokens
+                            # Stream answer tokens with citation remapping
                             full_answer.append(chunk.content)
-                            yield self._sse_token(chunk.content)
+                            remapped = citation_remapper.process(chunk.content)
+                            if remapped:
+                                yield self._sse_token(remapped)
             else:
-                # Standard streaming - reasoning_effort=OFF means no thinking
+                # Standard streaming - reasoning_effort=NONE means no thinking
                 from app.services.llm import async_generate_stream_with_llm
 
                 async for token in async_generate_stream_with_llm(
@@ -647,7 +651,15 @@ class ChatService:
                 ):
                     if token:
                         full_answer.append(token)
-                        yield self._sse_token(token)
+                        # Remap citations in real-time (like Perplexity)
+                        remapped = citation_remapper.process(token)
+                        if remapped:
+                            yield self._sse_token(remapped)
+
+            # Flush any remaining buffered content
+            final_content = citation_remapper.flush()
+            if final_content:
+                yield self._sse_token(final_content)
 
         except Exception as e:
             logger.error(f"Stream generation failed: {e}")
@@ -658,33 +670,30 @@ class ChatService:
         if full_thinking:
             yield "event: thinking_done\ndata: \n\n"
 
-        # Post-process answer and compute citation remapping
-        answer = "".join(full_answer).strip()
-        remap_result = renumber_citations(answer)
-
-        # Send citation_map event so frontend can reorder sources and fix citation numbers
-        # used_indices contains original source indices in order of first use
-        if remap_result.used_indices:
-            # Reorder sources based on citation order in response
+        # Send reordered sources based on citation usage order
+        used_sources = citation_remapper.get_used_sources()
+        if used_sources:
             reordered_sources = []
-            for orig_idx in remap_result.used_indices:
-                # Sources are 0-indexed, citations are 1-indexed
+            for orig_idx in used_sources:
+                # Sources are 0-indexed in list, citations are 1-indexed
                 source_idx = orig_idx - 1
                 if 0 <= source_idx < len(sources):
                     reordered_sources.append(sources[source_idx].model_dump())
 
-            citation_map_event = {
-                "citation_map": {
-                    str(k): v for k, v in remap_result.citation_map.items()
-                },
-                "reordered_sources": reordered_sources,
-            }
-            yield f"event: citation_map\ndata: {json.dumps(citation_map_event)}\n\n"
+            # Send updated sources in citation order
+            sources_event = {"reordered_sources": reordered_sources}
+            yield f"event: sources_reorder\ndata: {json.dumps(sources_event)}\n\n"
 
         yield "event: done\ndata: \n\n"
+
+        # Build remapped answer for session storage
+        raw_answer = "".join(full_answer).strip()
+        remap_result = renumber_citations(raw_answer)
+        remapped_answer = remap_result.text
+
         try:
             session.add_turn("user", question)
-            session.add_turn("assistant", answer)
+            session.add_turn("assistant", remapped_answer)
             self.session_manager.update_session(session)
         except Exception:
             pass

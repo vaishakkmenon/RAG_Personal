@@ -218,19 +218,6 @@ class DeepInfraProvider(LLMProvider):
                                     if not content:
                                         continue
 
-                                    # DEBUG: Log tokens that might be part of citations
-                                    if (
-                                        "[" in content
-                                        or "]" in content
-                                        or (
-                                            content.strip().isdigit()
-                                            and len(content.strip()) <= 2
-                                        )
-                                    ):
-                                        logger.info(
-                                            f"[TOKEN DEBUG] Token: {repr(content)}"
-                                        )
-
                                     buffer += content
 
                                     # Check for start of thinking block

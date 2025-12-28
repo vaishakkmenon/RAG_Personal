@@ -205,6 +205,98 @@ def strip_thinking_tags(text: str) -> str:
     return result.strip()
 
 
+class StreamingCitationRemapper:
+    """Remaps citations to sequential order during streaming.
+
+    Buffers minimally to detect [N] patterns and remaps before sending to client.
+    Client never sees out-of-order citations.
+
+    Based on token analysis:
+    - " [" or "[" - opening bracket (possibly with leading space)
+    - "1", "3" - the digit(s)
+    - "]." or "]" - closing bracket (possibly with trailing punctuation)
+
+    Usage:
+        remapper = StreamingCitationRemapper()
+        for token in llm_stream:
+            output = remapper.process(token)
+            if output:
+                yield output
+        final = remapper.flush()
+        if final:
+            yield final
+        used_sources = remapper.get_used_sources()  # Original indices in order
+    """
+
+    def __init__(self):
+        self._buffer = ""
+        self._used_sources: List[int] = []  # Original source numbers in citation order
+        self._source_map: Dict[int, int] = {}  # Original -> Sequential
+
+    def process(self, token: str) -> str:
+        """Process token, return remapped text ready for client."""
+        self._buffer += token
+        return self._extract_safe_output()
+
+    def flush(self) -> str:
+        """Flush remaining buffer at end of stream."""
+        # Process any complete citations in buffer
+        result = self._remap_complete_citations(self._buffer)
+        self._buffer = ""
+        return result
+
+    def get_used_sources(self) -> List[int]:
+        """Get original source indices in order of first citation."""
+        return self._used_sources.copy()
+
+    def get_source_map(self) -> Dict[int, int]:
+        """Get mapping of original -> sequential citation numbers."""
+        return self._source_map.copy()
+
+    def _extract_safe_output(self) -> str:
+        """Extract text that's safe to emit (complete citations remapped)."""
+        # Find the last '[' that might be start of incomplete citation
+        last_bracket = self._buffer.rfind("[")
+
+        if last_bracket == -1:
+            # No bracket - emit everything
+            result = self._buffer
+            self._buffer = ""
+            return result
+
+        # Check if there's a ']' after the last '['
+        close_after = self._buffer.find("]", last_bracket)
+
+        if close_after != -1:
+            # Citation is complete - can emit everything
+            result = self._remap_complete_citations(self._buffer)
+            self._buffer = ""
+            return result
+
+        # Incomplete citation - emit up to '[', keep rest buffered
+        safe_part = self._buffer[:last_bracket]
+        self._buffer = self._buffer[last_bracket:]
+        return self._remap_complete_citations(safe_part)
+
+    def _remap_complete_citations(self, text: str) -> str:
+        """Remap all complete citations in text to sequential order."""
+        if not text:
+            return text
+
+        def replace_citation(match):
+            orig_num = int(match.group(1))
+
+            if orig_num not in self._source_map:
+                # First time seeing this source - assign next sequential number
+                seq_num = len(self._used_sources) + 1
+                self._used_sources.append(orig_num)
+                self._source_map[orig_num] = seq_num
+
+            return f"[{self._source_map[orig_num]}]"
+
+        return re.sub(r"\[(\d+)\]", replace_citation, text)
+
+
 @dataclass
 class CitationRemapResult:
     """Result of citation remapping."""
