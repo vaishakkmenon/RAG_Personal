@@ -31,7 +31,7 @@ from app.services.llm import generate_with_llm
 from app.services.response_cache import get_response_cache
 from app.settings import settings
 from app.storage import Session
-from app.core.parsing import ChunkType
+from app.core.parsing import ChunkType, ReasoningEffort, parse_reasoning_effort
 
 logger = logging.getLogger(__name__)
 
@@ -65,9 +65,7 @@ class ChatOptions:
     term_id: Optional[str] = None
     level: Optional[str] = None
     model: Optional[str] = None
-    show_thinking: Optional[bool] = (
-        None  # Enable thinking process display (Qwen models)
-    )
+    reasoning_effort: Optional[str] = None  # "off", "low", "medium", "high"
     skip_route_cache: bool = False
     api_key: Optional[str] = None
 
@@ -200,6 +198,9 @@ class ChatService:
         history = session.get_truncated_history()
 
         # Consolidation of params from options
+        # Parse reasoning_effort - default to OFF for RAG (externalized reasoning)
+        reasoning_effort = parse_reasoning_effort(options.reasoning_effort)
+
         params = {
             "top_k": options.top_k
             if options.top_k is not None
@@ -214,7 +215,7 @@ class ChatService:
             if options.max_tokens is not None
             else settings.llm.max_tokens,
             "model": options.model,
-            "show_thinking": options.show_thinking or False,
+            "reasoning_effort": reasoning_effort,  # ReasoningEffort enum
             "doc_type": options.doc_type,
             "rerank": options.rerank,
             "rerank_lex_weight": options.rerank_lex_weight,
@@ -588,11 +589,14 @@ class ChatService:
 
         full_answer = []
         full_thinking = []
-        show_thinking = params.get("show_thinking", False)
+        reasoning_effort: ReasoningEffort = params.get(
+            "reasoning_effort", ReasoningEffort.NONE
+        )
 
         try:
-            if show_thinking:
-                # Use thinking-aware streaming for models that support it
+            # Use thinking-aware streaming when reasoning is enabled
+            # This parses <think> blocks and streams them separately
+            if reasoning_effort != ReasoningEffort.NONE:
                 from app.services.llm import async_generate_stream_with_thinking
 
                 async for chunk in async_generate_stream_with_thinking(
@@ -600,6 +604,7 @@ class ChatService:
                     temperature=params.get("temperature", 0.1),
                     max_tokens=params.get("max_tokens", 1000),
                     model=params.get("model"),
+                    reasoning_effort=reasoning_effort,
                 ):
                     if chunk.content:
                         if chunk.type == ChunkType.THINKING:
@@ -611,7 +616,7 @@ class ChatService:
                             full_answer.append(chunk.content)
                             yield self._sse_token(chunk.content)
             else:
-                # Standard streaming without thinking separation
+                # Standard streaming - reasoning_effort=OFF means no thinking
                 from app.services.llm import async_generate_stream_with_llm
 
                 async for token in async_generate_stream_with_llm(
@@ -619,6 +624,7 @@ class ChatService:
                     temperature=params.get("temperature", 0.1),
                     max_tokens=params.get("max_tokens", 1000),
                     model=params.get("model"),
+                    reasoning_effort=reasoning_effort,
                 ):
                     if token:
                         full_answer.append(token)
@@ -660,7 +666,6 @@ class ChatService:
         ambiguity=False,
         clarification=False,
         params=None,
-        thinking=None,
     ):
         return ChatResponse(
             answer=answer,
@@ -673,7 +678,6 @@ class ChatService:
                 score=params.get("ambiguity_score", 0.0) if params else 0.0,
                 clarification_requested=clarification,
             ),
-            thinking=thinking,
         )
 
     def _create_blocked_response(self, session):
@@ -684,7 +688,6 @@ class ChatService:
             session_id=session.session_id,
             rewrite_metadata=None,
             ambiguity=AmbiguityMetadata(False, 0.0, False),
-            thinking=None,
         )
 
     def _handle_early_return_sync(self, ctx, request):

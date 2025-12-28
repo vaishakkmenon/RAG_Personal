@@ -2,6 +2,9 @@
 Groq LLM Provider Adapter
 
 Wraps the Groq API for use with the LLM provider abstraction.
+
+Note: Groq models (Llama) do not support reasoning_effort parameter.
+The parameter is accepted for interface compatibility but ignored.
 """
 
 import logging
@@ -9,6 +12,7 @@ from typing import AsyncIterator
 
 from groq import AsyncGroq
 
+from app.core.parsing import ReasoningEffort
 from app.llm.provider import LLMProvider
 from app.settings import settings
 
@@ -43,6 +47,7 @@ class GroqProvider(LLMProvider):
         model: str = None,
         temperature: float = None,
         max_tokens: int = None,
+        reasoning_effort: ReasoningEffort = ReasoningEffort.NONE,
         **kwargs,
     ) -> str:
         """Generate text from a prompt using Groq.
@@ -52,10 +57,12 @@ class GroqProvider(LLMProvider):
             model: Model name (uses default if None)
             temperature: Sampling temperature (uses settings if None)
             max_tokens: Maximum tokens (uses settings if None)
+            reasoning_effort: Ignored - Groq/Llama doesn't support reasoning modes
 
         Returns:
             Generated text response
         """
+        # Note: reasoning_effort is ignored for Groq - Llama models don't support it
         target_model = model or self._model
         temp = temperature if temperature is not None else settings.llm.temperature
         tokens = max_tokens if max_tokens is not None else settings.llm.max_tokens
@@ -78,6 +85,7 @@ class GroqProvider(LLMProvider):
         model: str = None,
         temperature: float = None,
         max_tokens: int = None,
+        reasoning_effort: ReasoningEffort = ReasoningEffort.NONE,
         **kwargs,
     ) -> AsyncIterator[str]:
         """Stream generated text from Groq.
@@ -87,10 +95,12 @@ class GroqProvider(LLMProvider):
             model: Model name (uses default if None)
             temperature: Sampling temperature (uses settings if None)
             max_tokens: Maximum tokens (uses settings if None)
+            reasoning_effort: Ignored - Groq/Llama doesn't support reasoning modes
 
         Yields:
             Generated text chunks
         """
+        # Note: reasoning_effort is ignored for Groq - Llama models don't support it
         target_model = model or self._model
         temp = temperature if temperature is not None else settings.llm.temperature
         tokens = max_tokens if max_tokens is not None else settings.llm.max_tokens

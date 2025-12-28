@@ -6,8 +6,11 @@ Default model: Qwen/Qwen3-32B-Instruct
 Selected Qwen 3 32B because input cost ($0.08/1M) matches the 14B model,
 offering superior reasoning for RAG at effectively the same price.
 
-Note: Qwen 3 models may output <think>...</think> blocks containing reasoning.
-These are parsed and can be streamed separately for frontend display.
+Reasoning Control:
+- Uses DeepInfra's `reasoning_effort` API parameter (not template-level flags)
+- When reasoning_effort="none": No <think> blocks, fastest response
+- When reasoning_effort="low/medium/high": Model produces <think>...</think> blocks
+- The <think> blocks are parsed and can be streamed separately for frontend display
 """
 
 import json
@@ -16,7 +19,12 @@ from typing import AsyncIterator
 
 import aiohttp
 
-from app.core.parsing import parse_llm_response, StreamChunk, ChunkType
+from app.core.parsing import (
+    parse_llm_response,
+    StreamChunk,
+    ChunkType,
+    ReasoningEffort,
+)
 from app.llm.provider import LLMProvider
 from app.settings import settings
 
@@ -55,6 +63,7 @@ class DeepInfraProvider(LLMProvider):
         model: str = None,
         temperature: float = None,
         max_tokens: int = None,
+        reasoning_effort: ReasoningEffort = ReasoningEffort.NONE,
         **kwargs,
     ) -> str:
         """Generate text from a prompt using DeepInfra.
@@ -64,6 +73,9 @@ class DeepInfraProvider(LLMProvider):
             model: Model name (uses default if None)
             temperature: Sampling temperature (uses settings if None)
             max_tokens: Maximum tokens (uses settings if None)
+            reasoning_effort: Controls reasoning depth via DeepInfra's API.
+                NONE (default): No reasoning, fastest response
+                LOW/MEDIUM/HIGH: Increasing reasoning with <think> blocks
 
         Returns:
             Generated text response
@@ -82,7 +94,12 @@ class DeepInfraProvider(LLMProvider):
             "messages": [{"role": "user", "content": prompt}],
             "temperature": temp,
             "max_tokens": tokens,
+            "reasoning_effort": reasoning_effort.value,  # Use enum value directly
         }
+
+        logger.debug(
+            f"DeepInfra request: model={target_model}, reasoning_effort={reasoning_effort.value}"
+        )
 
         try:
             async with aiohttp.ClientSession() as session:
@@ -124,6 +141,7 @@ class DeepInfraProvider(LLMProvider):
         model: str = None,
         temperature: float = None,
         max_tokens: int = None,
+        reasoning_effort: ReasoningEffort = ReasoningEffort.NONE,
         **kwargs,
     ) -> AsyncIterator[str]:
         """Stream generated text from DeepInfra.
@@ -136,6 +154,9 @@ class DeepInfraProvider(LLMProvider):
             model: Model name (uses default if None)
             temperature: Sampling temperature (uses settings if None)
             max_tokens: Maximum tokens (uses settings if None)
+            reasoning_effort: Controls reasoning depth via DeepInfra's API.
+                NONE (default): No reasoning, no <think> blocks, fastest
+                LOW/MEDIUM/HIGH: May produce <think> blocks (filtered here)
 
         Yields:
             Generated text chunks (thinking blocks are filtered out)
@@ -155,7 +176,12 @@ class DeepInfraProvider(LLMProvider):
             "temperature": temp,
             "max_tokens": tokens,
             "stream": True,
+            "reasoning_effort": reasoning_effort.value,  # Use enum value directly
         }
+
+        logger.debug(
+            f"DeepInfra stream: model={target_model}, reasoning_effort={reasoning_effort.value}"
+        )
 
         try:
             async with aiohttp.ClientSession() as session:
@@ -254,6 +280,7 @@ class DeepInfraProvider(LLMProvider):
         model: str = None,
         temperature: float = None,
         max_tokens: int = None,
+        reasoning_effort: ReasoningEffort = ReasoningEffort.NONE,
         **kwargs,
     ) -> AsyncIterator[StreamChunk]:
         """Stream generated text with thinking process as typed chunks.
@@ -267,6 +294,9 @@ class DeepInfraProvider(LLMProvider):
             model: Model name (uses default if None)
             temperature: Sampling temperature (uses settings if None)
             max_tokens: Maximum tokens (uses settings if None)
+            reasoning_effort: Controls reasoning depth via DeepInfra's API.
+                NONE: No <think> blocks produced
+                LOW/MEDIUM/HIGH: Model produces <think> blocks, parsed here
 
         Yields:
             StreamChunk objects with type=THINKING or type=ANSWER
@@ -286,7 +316,12 @@ class DeepInfraProvider(LLMProvider):
             "temperature": temp,
             "max_tokens": tokens,
             "stream": True,
+            "reasoning_effort": reasoning_effort.value,  # Use enum value directly
         }
+
+        logger.debug(
+            f"DeepInfra thinking stream: model={target_model}, reasoning_effort={reasoning_effort.value}"
+        )
 
         try:
             async with aiohttp.ClientSession() as session:

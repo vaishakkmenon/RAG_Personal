@@ -61,11 +61,14 @@ class ChatRequest(BaseModel):
         json_schema_extra={"example": "deepinfra"},
     )
 
-    show_thinking: Optional[bool] = Field(
-        default=False,
-        description="Enable thinking process display for supported models (e.g., Qwen). "
-        "When enabled, streaming responses include 'event: thinking' events.",
-        json_schema_extra={"example": True},
+    reasoning_effort: Optional[str] = Field(
+        default="none",
+        description="Control reasoning effort at request time. "
+        "Options: 'none' (default, fastest), 'low', 'medium', 'high'. "
+        "For RAG, 'none' is recommended as reasoning is externalized via retrieved documents. "
+        "Higher levels enable chain-of-thought but increase latency and token usage.",
+        json_schema_extra={"example": "none"},
+        pattern="^(none|low|medium|high)$",
     )
 
     @field_validator("question")
@@ -229,15 +232,6 @@ class ChatResponse(BaseModel):
     rewrite_metadata: Optional[RewriteMetadata] = Field(
         default=None,
         description="Query rewriting metadata (if query was rewritten by pattern matching)",
-    )
-
-    thinking: Optional[str] = Field(
-        default=None,
-        description="Model's thinking process (for models like Qwen that support reasoning). "
-        "Can be displayed in a collapsible section in the frontend.",
-        json_schema_extra={
-            "example": "Let me analyze the context... I found the GPA information in the transcript..."
-        },
     )
 
 

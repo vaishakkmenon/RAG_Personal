@@ -4,6 +4,9 @@ Response Parsing Utilities
 Handles model-specific output parsing, including Qwen's "Thinking Process" blocks.
 Qwen 3 models can output their reasoning inside <think>...</think> tags before
 the final answer. This module separates thinking from the response.
+
+Also provides the ReasoningEffort abstraction for controlling model reasoning
+at request time - the correct API-level control surface for reasoning-capable models.
 """
 
 import logging
@@ -13,6 +16,49 @@ from enum import Enum
 from typing import Optional, Tuple
 
 logger = logging.getLogger(__name__)
+
+
+class ReasoningEffort(str, Enum):
+    """
+    Reasoning effort levels matching DeepInfra's API.
+
+    Controls how much reasoning the model performs at request time.
+    Values match the API exactly: none, low, medium, high.
+
+    For RAG applications:
+    - NONE: Default for most RAG answers (externalized reasoning via documents)
+    - LOW: Light reasoning for simple multi-step queries
+    - MEDIUM: For query decomposition or agentic flows
+    - HIGH: For complex multi-hop reasoning (rarely needed in RAG)
+
+    Key insight: Reasoning is a request-time capability, not a model configuration.
+    RAG already externalizes reasoning via documents, so full chain-of-thought
+    wastes tokens and latency for most queries.
+    """
+
+    NONE = "none"
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+def parse_reasoning_effort(value: Optional[str]) -> ReasoningEffort:
+    """Parse a string value to ReasoningEffort enum.
+
+    Args:
+        value: String like "none", "low", "medium", "high" or None
+
+    Returns:
+        ReasoningEffort enum value, defaults to NONE if invalid/None
+    """
+    if not value:
+        return ReasoningEffort.NONE
+
+    try:
+        return ReasoningEffort(value.lower())
+    except ValueError:
+        logger.warning(f"Invalid reasoning_effort '{value}', defaulting to 'none'")
+        return ReasoningEffort.NONE
 
 
 class ChunkType(Enum):

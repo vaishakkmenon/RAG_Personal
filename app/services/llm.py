@@ -19,7 +19,7 @@ from functools import wraps
 from app.settings import settings
 from app.services.rate_limiter import RateLimiter
 from app.llm import get_provider, get_llm_provider, resolve_model, LLMProvider
-from app.core.parsing import StreamChunk, ChunkType
+from app.core.parsing import StreamChunk, ChunkType, ReasoningEffort
 
 logger = logging.getLogger(__name__)
 
@@ -285,6 +285,7 @@ class LLMService:
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         model: Optional[str] = None,
+        reasoning_effort: ReasoningEffort = ReasoningEffort.NONE,
     ) -> str:
         """Generate text asynchronously using configured provider.
 
@@ -293,6 +294,7 @@ class LLMService:
             temperature: Sampling temperature (None uses default from settings)
             max_tokens: Maximum number of tokens to generate (None uses default)
             model: Optional override for the model name
+            reasoning_effort: Control reasoning depth (OFF for fastest RAG responses)
 
         Returns:
             Generated text response
@@ -304,7 +306,9 @@ class LLMService:
         temp = temperature if temperature is not None else self.llm_settings.temperature
         tokens = max_tokens if max_tokens is not None else self.llm_settings.max_tokens
 
-        return await self._generate_with_provider(prompt, temp, tokens, model)
+        return await self._generate_with_provider(
+            prompt, temp, tokens, model, reasoning_effort
+        )
 
     @async_retry_with_exponential_backoff(max_retries=2)
     async def _generate_with_provider(
@@ -313,6 +317,7 @@ class LLMService:
         temperature: float,
         max_tokens: int,
         model: Optional[str] = None,
+        reasoning_effort: ReasoningEffort = ReasoningEffort.NONE,
     ) -> str:
         """Generate text using provider with rate limiting and circuit breaker.
 
@@ -323,6 +328,7 @@ class LLMService:
             temperature: Sampling temperature
             max_tokens: Maximum tokens to generate
             model: Optional model override (supports shorthand like "groq", "qwen", "deepinfra")
+            reasoning_effort: Control reasoning depth (OFF for fastest RAG responses)
 
         Returns:
             Generated text
@@ -368,13 +374,16 @@ class LLMService:
 
         start = time.time()
         try:
-            logger.debug(f"Calling {provider_name} API with model: {model_name}")
+            logger.debug(
+                f"Calling {provider_name} API with model: {model_name}, reasoning_effort: {reasoning_effort.value}"
+            )
 
             generated_text = await provider.generate(
                 prompt=prompt,
                 model=model_name,
                 temperature=temperature,
                 max_tokens=max_tokens,
+                reasoning_effort=reasoning_effort,
             )
 
             # Record success with circuit breaker
@@ -431,6 +440,7 @@ class LLMService:
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         model: Optional[str] = None,
+        reasoning_effort: ReasoningEffort = ReasoningEffort.NONE,
     ) -> AsyncIterator[str]:
         """Generate text stream asynchronously using configured provider.
 
@@ -439,6 +449,7 @@ class LLMService:
             temperature: Sampling temperature (None uses default from settings)
             max_tokens: Maximum number of tokens to generate (None uses default)
             model: Optional override for the model name
+            reasoning_effort: Control reasoning depth (OFF for fastest RAG responses)
 
         Yields:
             Generated text chunks
@@ -448,7 +459,7 @@ class LLMService:
         tokens = max_tokens if max_tokens is not None else self.llm_settings.max_tokens
 
         async for chunk in self._generate_stream_with_provider(
-            prompt, temp, tokens, model
+            prompt, temp, tokens, model, reasoning_effort
         ):
             yield chunk
 
@@ -458,6 +469,7 @@ class LLMService:
         temperature: float,
         max_tokens: int,
         model: Optional[str] = None,
+        reasoning_effort: ReasoningEffort = ReasoningEffort.NONE,
     ) -> AsyncIterator[str]:
         """Generate text stream using provider with rate limiting and circuit breaker.
 
@@ -468,6 +480,7 @@ class LLMService:
             temperature: Sampling temperature
             max_tokens: Maximum tokens to generate
             model: Optional model override (supports shorthand like "groq", "qwen", "deepinfra")
+            reasoning_effort: Control reasoning depth (OFF for fastest RAG responses)
 
         Yields:
             Generated text chunks
@@ -512,7 +525,9 @@ class LLMService:
 
         start = time.time()
         try:
-            logger.debug(f"Calling {provider_name} API stream with model: {model_name}")
+            logger.debug(
+                f"Calling {provider_name} API stream with model: {model_name}, reasoning_effort: {reasoning_effort.value}"
+            )
 
             # Metrics (start)
             if METRICS_ENABLED:
@@ -525,6 +540,7 @@ class LLMService:
                 model=model_name,
                 temperature=temperature,
                 max_tokens=max_tokens,
+                reasoning_effort=reasoning_effort,
             ):
                 yield chunk
 
@@ -572,18 +588,21 @@ class LLMService:
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         model: Optional[str] = None,
+        reasoning_effort: ReasoningEffort = ReasoningEffort.NONE,
     ) -> AsyncIterator[StreamChunk]:
         """Generate text stream with thinking process separated.
 
         This method yields typed StreamChunk objects that differentiate between
-        the model's thinking process and the actual answer, allowing frontends
-        to display them differently (e.g., collapsible thinking section).
+        the model's thinking process (<think> blocks) and the actual answer,
+        allowing frontends to display them differently.
 
         Args:
             prompt: The input prompt
             temperature: Sampling temperature (None uses default from settings)
             max_tokens: Maximum number of tokens to generate (None uses default)
             model: Optional override for the model name
+            reasoning_effort: Control reasoning depth. When not OFF, model may
+                produce <think>...</think> blocks that are parsed and streamed.
 
         Yields:
             StreamChunk objects with type=THINKING or type=ANSWER
@@ -592,7 +611,7 @@ class LLMService:
         tokens = max_tokens if max_tokens is not None else self.llm_settings.max_tokens
 
         async for chunk in self._generate_stream_with_thinking_provider(
-            prompt, temp, tokens, model
+            prompt, temp, tokens, model, reasoning_effort
         ):
             yield chunk
 
@@ -602,6 +621,7 @@ class LLMService:
         temperature: float,
         max_tokens: int,
         model: Optional[str] = None,
+        reasoning_effort: ReasoningEffort = ReasoningEffort.NONE,
     ) -> AsyncIterator[StreamChunk]:
         """Generate typed stream using provider with rate limiting and circuit breaker.
 
@@ -612,6 +632,8 @@ class LLMService:
             temperature: Sampling temperature
             max_tokens: Maximum tokens to generate
             model: Optional model override (supports shorthand like "groq", "qwen", "deepinfra")
+            reasoning_effort: Control reasoning depth. When not OFF, model may
+                produce <think>...</think> blocks that are parsed and streamed.
 
         Yields:
             StreamChunk objects with type=THINKING or type=ANSWER
@@ -648,7 +670,7 @@ class LLMService:
         start = time.time()
         try:
             logger.debug(
-                f"Calling {provider_name} API stream (with thinking) model: {model_name}"
+                f"Calling {provider_name} API stream (with thinking) model: {model_name}, reasoning_effort: {reasoning_effort.value}"
             )
 
             # Metrics (start)
@@ -662,6 +684,7 @@ class LLMService:
                 model=model_name,
                 temperature=temperature,
                 max_tokens=max_tokens,
+                reasoning_effort=reasoning_effort,
             ):
                 yield chunk
 
@@ -713,6 +736,7 @@ def generate_with_llm(
     temperature: Optional[float] = None,
     max_tokens: Optional[int] = None,
     model: Optional[str] = None,
+    reasoning_effort: ReasoningEffort = ReasoningEffort.OFF,
 ) -> str:
     """Synchronous convenience function for generating text with LLM.
 
@@ -723,6 +747,7 @@ def generate_with_llm(
         temperature: Sampling temperature
         max_tokens: Maximum number of tokens to generate
         model: Optional model override
+        reasoning_effort: Control reasoning depth (OFF for fastest RAG responses)
 
     Returns:
         Generated text response
@@ -744,6 +769,7 @@ def generate_with_llm(
                         temperature=temperature,
                         max_tokens=max_tokens,
                         model=model,
+                        reasoning_effort=reasoning_effort,
                     ),
                 )
                 return future.result(timeout=120)
@@ -754,6 +780,7 @@ def generate_with_llm(
                     temperature=temperature,
                     max_tokens=max_tokens,
                     model=model,
+                    reasoning_effort=reasoning_effort,
                 )
             )
     except RuntimeError:
@@ -764,6 +791,7 @@ def generate_with_llm(
                 temperature=temperature,
                 max_tokens=max_tokens,
                 model=model,
+                reasoning_effort=reasoning_effort,
             )
         )
 
@@ -773,6 +801,7 @@ async def async_generate_with_llm(
     temperature: Optional[float] = None,
     max_tokens: Optional[int] = None,
     model: Optional[str] = None,
+    reasoning_effort: ReasoningEffort = ReasoningEffort.OFF,
 ) -> str:
     """Async convenience function for generating text with LLM.
 
@@ -781,6 +810,7 @@ async def async_generate_with_llm(
         temperature: Sampling temperature
         max_tokens: Maximum number of tokens to generate
         model: Optional model override
+        reasoning_effort: Control reasoning depth (OFF for fastest RAG responses)
 
     Returns:
         Generated text response
@@ -791,6 +821,7 @@ async def async_generate_with_llm(
         temperature=temperature,
         max_tokens=max_tokens,
         model=model,
+        reasoning_effort=reasoning_effort,
     )
 
 
@@ -799,6 +830,7 @@ async def async_generate_stream_with_llm(
     temperature: Optional[float] = None,
     max_tokens: Optional[int] = None,
     model: Optional[str] = None,
+    reasoning_effort: ReasoningEffort = ReasoningEffort.OFF,
 ) -> AsyncIterator[str]:
     """Async convenience function for streaming text with LLM.
 
@@ -807,6 +839,7 @@ async def async_generate_stream_with_llm(
         temperature: Sampling temperature
         max_tokens: Maximum number of tokens to generate
         model: Optional model override
+        reasoning_effort: Control reasoning depth (OFF for fastest RAG responses)
 
     Yields:
         Generated text chunks
@@ -817,6 +850,7 @@ async def async_generate_stream_with_llm(
         temperature=temperature,
         max_tokens=max_tokens,
         model=model,
+        reasoning_effort=reasoning_effort,
     ):
         yield chunk
 
@@ -826,12 +860,13 @@ async def async_generate_stream_with_thinking(
     temperature: Optional[float] = None,
     max_tokens: Optional[int] = None,
     model: Optional[str] = None,
+    reasoning_effort: ReasoningEffort = ReasoningEffort.OFF,
 ) -> AsyncIterator[StreamChunk]:
     """Async convenience function for streaming with thinking process separated.
 
     This function yields typed StreamChunk objects that differentiate between
-    the model's thinking process and the actual answer, allowing frontends
-    to display them differently (e.g., collapsible thinking section).
+    the model's thinking process (<think> blocks) and the actual answer,
+    allowing frontends to display them differently.
 
     SSE Event Types:
     - StreamChunk(type=THINKING, content="...") -> Send as "event: thinking"
@@ -842,6 +877,8 @@ async def async_generate_stream_with_thinking(
         temperature: Sampling temperature
         max_tokens: Maximum number of tokens to generate
         model: Optional model override
+        reasoning_effort: Control reasoning depth. When not OFF, model may
+            produce <think>...</think> blocks that are parsed and streamed.
 
     Yields:
         StreamChunk objects with type=THINKING or type=ANSWER
@@ -852,6 +889,7 @@ async def async_generate_stream_with_thinking(
         temperature=temperature,
         max_tokens=max_tokens,
         model=model,
+        reasoning_effort=reasoning_effort,
     ):
         yield chunk
 
@@ -866,6 +904,7 @@ __all__ = [
     "async_generate_stream_with_thinking",  # Streaming with thinking support
     "StreamChunk",  # For type hints
     "ChunkType",  # For type checking
+    "ReasoningEffort",  # For controlling reasoning depth
     "CircuitBreakerOpen",
     "CircuitBreaker",
 ]

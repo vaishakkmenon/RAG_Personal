@@ -54,22 +54,35 @@ except ImportError:
 
     **Events:**
     - `event: metadata`: JSON with sources, session_id, grounded flag, etc. (First event)
-    - `event: thinking`: Model's reasoning process (only if show_thinking=true)
-    - `event: thinking_done`: Signal that thinking is complete (only if show_thinking=true)
+    - `event: thinking`: Model's reasoning process (only when reasoning_effort != 'off')
+    - `event: thinking_done`: Signal that thinking is complete
     - `event: token`: JSON string of the text chunk (Multiple events)
     - `event: error`: JSON with error details
     - `event: done`: Signal that stream is complete
 
+    **Reasoning Effort:**
+    - `none` (default): No reasoning, fastest response - best for RAG
+    - `low`: Light reasoning for simple multi-step queries
+    - `medium`: For query decomposition or agentic flows
+    - `high`: Complex multi-hop reasoning (rarely needed)
+
     **Model Selection:**
-    - `model=groq` or `model=llama-3.1-8b-instant`: Use Groq (fast, no thinking)
-    - `model=deepinfra` or `model=Qwen/Qwen3-32B`: Use DeepInfra Qwen (supports thinking)
+    - `model=groq` or `model=llama-3.1-8b-instant`: Use Groq (no reasoning support)
+    - `model=deepinfra` or `model=Qwen/Qwen3-32B`: Use DeepInfra Qwen (supports reasoning)
 
     **Example Usage:**
     ```bash
+    # Fast mode (no reasoning) - recommended for RAG
     curl -N -X POST http://localhost:8000/chat/stream \\
       -H "Content-Type: application/json" \\
       -H "X-API-Key: $API_KEY" \\
-      -d '{"question": "Tell me about yourself", "model": "deepinfra", "show_thinking": true}'
+      -d '{"question": "Tell me about yourself", "model": "deepinfra"}'
+
+    # With reasoning enabled
+    curl -N -X POST http://localhost:8000/chat/stream \\
+      -H "Content-Type: application/json" \\
+      -H "X-API-Key: $API_KEY" \\
+      -d '{"question": "Complex question", "model": "deepinfra", "reasoning_effort": "low"}'
     ```
     """,
 )
@@ -88,7 +101,7 @@ async def chat_stream(
     term_id: Optional[str] = None,
     level: Optional[str] = None,
     model: Optional[str] = None,
-    show_thinking: Optional[bool] = None,
+    reasoning_effort: Optional[str] = None,
     # Dependencies
     api_key: str = Depends(check_api_key),
     chat_service: ChatService = Depends(get_chat_service),
@@ -98,10 +111,8 @@ async def chat_stream(
     """
     # Model can come from request body or query param (body takes precedence)
     effective_model = request.model or model
-    # show_thinking can come from request body or query param (body takes precedence)
-    effective_show_thinking = (
-        request.show_thinking if request.show_thinking is not None else show_thinking
-    )
+    # reasoning_effort can come from request body or query param (body takes precedence)
+    effective_reasoning = request.reasoning_effort or reasoning_effort or "none"
 
     # Construct options from query parameters
     options = ChatOptions(
@@ -117,7 +128,7 @@ async def chat_stream(
         term_id=term_id,
         level=level,
         model=effective_model,
-        show_thinking=effective_show_thinking,
+        reasoning_effort=effective_reasoning,
         api_key=api_key,
     )
 
