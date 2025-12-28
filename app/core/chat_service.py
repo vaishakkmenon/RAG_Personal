@@ -32,7 +32,6 @@ from app.services.response_cache import get_response_cache
 from app.settings import settings
 from app.storage import Session
 from app.core.parsing import (
-    ChunkType,
     ReasoningEffort,
     parse_reasoning_effort,
     renumber_citations,
@@ -639,8 +638,14 @@ class ChatService:
                     model=params.get("model"),
                     reasoning_effort=reasoning_effort,
                 ):
-                    if chunk.content:
-                        if chunk.type == ChunkType.THINKING:
+                    if chunk.is_fallback():
+                        # Notify frontend about provider switch
+                        parts = chunk.content.split(":", 1)
+                        provider = parts[0] if parts else "unknown"
+                        model = parts[1] if len(parts) > 1 else "unknown"
+                        yield self._sse_fallback(provider, model)
+                    elif chunk.content:
+                        if chunk.is_thinking():
                             # Stream thinking process (no processing needed)
                             full_thinking.append(chunk.content)
                             yield self._sse_thinking(chunk.content)
@@ -653,18 +658,31 @@ class ChatService:
             else:
                 # Standard streaming - reasoning_effort=NONE means no thinking
                 from app.services.llm import async_generate_stream_with_llm
+                from app.core.parsing import StreamChunk
 
-                async for token in async_generate_stream_with_llm(
+                async for item in async_generate_stream_with_llm(
                     prompt=prompt_result.prompt,
                     temperature=params.get("temperature", 0.1),
                     max_tokens=params.get("max_tokens", 1000),
                     model=params.get("model"),
                     reasoning_effort=reasoning_effort,
                 ):
-                    if token:
-                        full_answer.append(token)
+                    # Handle fallback notification (StreamChunk) vs regular token (str)
+                    if isinstance(item, StreamChunk):
+                        if item.is_fallback():
+                            parts = item.content.split(":", 1)
+                            provider = parts[0] if parts else "unknown"
+                            model = parts[1] if len(parts) > 1 else "unknown"
+                            yield self._sse_fallback(provider, model)
+                        elif item.content:
+                            full_answer.append(item.content)
+                            processed = process_token(item.content)
+                            if processed:
+                                yield self._sse_token(processed)
+                    elif item:
+                        full_answer.append(item)
                         # Strip markdown + remap citations in real-time
-                        processed = process_token(token)
+                        processed = process_token(item)
                         if processed:
                             yield self._sse_token(processed)
 
@@ -851,6 +869,15 @@ class ChatService:
         Frontend can display this in a collapsible "Thinking..." section.
         """
         return f"event: thinking\ndata: {json.dumps(text)}\n\n"
+
+    def _sse_fallback(
+        self, provider: str, model: str, reason: str = "primary_unavailable"
+    ):
+        """Emit SSE event when switching to fallback provider.
+
+        Frontend can display a notice that response is from a different model.
+        """
+        return f"event: fallback\ndata: {json.dumps({'provider': provider, 'model': model, 'reason': reason})}\n\n"
 
     def _sse_metadata(self, sources, grounded, session_id, is_ambiguous=False):
         meta = {

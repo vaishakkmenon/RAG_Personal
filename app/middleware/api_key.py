@@ -20,6 +20,7 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         "/health/detailed",
         "/health/ready",
         "/health/live",
+        "/health/llm",
         "/metrics",
         "/docs",
         "/openapi.json",

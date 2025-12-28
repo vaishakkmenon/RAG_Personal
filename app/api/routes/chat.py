@@ -54,9 +54,11 @@ except ImportError:
 
     **Events:**
     - `event: metadata`: JSON with sources, session_id, grounded flag, etc. (First event)
-    - `event: thinking`: Model's reasoning process (only when reasoning_effort != 'off')
+    - `event: fallback`: JSON with {provider, model, reason} when switching to fallback provider
+    - `event: thinking`: Model's reasoning process (only when reasoning_effort != 'none')
     - `event: thinking_done`: Signal that thinking is complete
     - `event: token`: JSON string of the text chunk (Multiple events)
+    - `event: sources_reorder`: JSON with reordered sources based on citation order
     - `event: error`: JSON with error details
     - `event: done`: Signal that stream is complete
 

@@ -66,6 +66,7 @@ class ChunkType(Enum):
 
     THINKING = "thinking"
     ANSWER = "answer"
+    FALLBACK = "fallback"  # Indicates switch to fallback provider
 
 
 @dataclass
@@ -84,6 +85,9 @@ class StreamChunk:
 
     def is_answer(self) -> bool:
         return self.type == ChunkType.ANSWER
+
+    def is_fallback(self) -> bool:
+        return self.type == ChunkType.FALLBACK
 
 
 @dataclass

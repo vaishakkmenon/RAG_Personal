@@ -147,3 +147,119 @@ async def liveness_check() -> Dict[str, str]:
     """Kubernetes-style liveness probe"""
     # Just check if process is alive
     return {"status": "alive"}
+
+
+@router.get(
+    "/health/llm",
+    status_code=status.HTTP_200_OK,
+    summary="LLM provider health ping",
+    description="""
+    Ping the LLM provider with a minimal 1-token request to check availability.
+
+    **Use Cases:**
+    - Check if primary provider (DeepInfra) is available after 429 errors
+    - Frontend can poll this to know when to retry with primary provider
+    - Detect cold vs hot model state
+
+    **Response Fields:**
+    - `status`: "available", "busy", or "error"
+    - `provider`: Primary provider name
+    - `model`: Model being used
+    - `response_time_ms`: Time for the ping request
+    - `is_hot`: True if response was fast (<3s), indicating model is loaded
+    - `fallback_available`: Whether fallback provider is configured
+    - `fallback_provider`: Name of fallback provider (if configured)
+
+    **Cost:** ~$0.00001 per ping (1 token)
+
+    **Example Response (available):**
+    ```json
+    {
+      "status": "available",
+      "provider": "deepinfra",
+      "model": "Qwen/Qwen3-32B",
+      "response_time_ms": 245,
+      "is_hot": true,
+      "fallback_available": true,
+      "fallback_provider": "groq"
+    }
+    ```
+
+    **Example Response (busy):**
+    ```json
+    {
+      "status": "busy",
+      "provider": "deepinfra",
+      "model": "Qwen/Qwen3-32B",
+      "error": "429: Model is currently at capacity",
+      "fallback_available": true,
+      "fallback_provider": "groq"
+    }
+    ```
+    """,
+)
+async def llm_health_ping() -> Dict[str, Any]:
+    """Ping LLM provider with minimal 1-token request to check availability."""
+    import time
+    from app.services.llm import get_llm_service
+    from app.core.parsing import ReasoningEffort
+
+    service = get_llm_service()
+    provider_name = service.provider.provider_name
+    model_name = service.provider.default_model
+
+    result = {
+        "provider": provider_name,
+        "model": model_name,
+        "fallback_available": service.fallback_provider is not None,
+        "fallback_provider": (
+            service.fallback_provider.provider_name
+            if service.fallback_provider
+            else None
+        ),
+    }
+
+    start = time.time()
+    try:
+        # Minimal 1-token request - cheapest way to check availability
+        await service.async_generate(
+            prompt="Hi",
+            max_tokens=1,
+            temperature=0,
+            reasoning_effort=ReasoningEffort.NONE,  # No reasoning for ping
+        )
+        elapsed_ms = int((time.time() - start) * 1000)
+
+        result.update(
+            {
+                "status": "available",
+                "response_time_ms": elapsed_ms,
+                "is_hot": elapsed_ms < 3000,  # <3s = model is loaded
+            }
+        )
+        logger.info(f"LLM ping: {provider_name} available in {elapsed_ms}ms")
+
+    except Exception as e:
+        elapsed_ms = int((time.time() - start) * 1000)
+        error_msg = str(e).lower()
+
+        if "429" in error_msg or "busy" in error_msg or "capacity" in error_msg:
+            result.update(
+                {
+                    "status": "busy",
+                    "error": str(e)[:200],
+                    "response_time_ms": elapsed_ms,
+                }
+            )
+            logger.warning(f"LLM ping: {provider_name} busy/rate-limited")
+        else:
+            result.update(
+                {
+                    "status": "error",
+                    "error": str(e)[:200],
+                    "response_time_ms": elapsed_ms,
+                }
+            )
+            logger.error(f"LLM ping failed: {e}")
+
+    return result

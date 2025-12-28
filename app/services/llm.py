@@ -12,7 +12,7 @@ import logging
 import time
 import threading
 from enum import Enum
-from typing import Optional, AsyncIterator
+from typing import Optional, AsyncIterator, Union
 import asyncio
 from functools import wraps
 
@@ -226,6 +226,20 @@ class LLMService:
         self.llm_settings = settings.llm
         self.provider: LLMProvider = get_provider()
 
+        # Initialize fallback provider if primary is DeepInfra and Groq is configured
+        self.fallback_provider: Optional[LLMProvider] = None
+        if (
+            self.provider.provider_name == "deepinfra"
+            and self.llm_settings.groq_api_key
+        ):
+            try:
+                self.fallback_provider = get_llm_provider("groq")
+                logger.info(
+                    f"Fallback provider initialized: groq (model: {self.fallback_provider.default_model})"
+                )
+            except Exception as e:
+                logger.warning(f"Could not initialize fallback provider: {e}")
+
         # Initialize rate limiter (for Groq tier management)
         # Note: DeepInfra has different rate limits, but we use conservative defaults
         self.rate_limiter = RateLimiter(
@@ -245,6 +259,11 @@ class LLMService:
             f"Initialized LLM service - Provider: {self.provider.provider_name}, "
             f"Model: {self.provider.default_model}"
         )
+
+    def _is_retryable_error(self, error: Exception) -> bool:
+        """Check if error is retryable with fallback provider."""
+        error_msg = str(error).lower()
+        return "429" in error_msg or "busy" in error_msg or "rate" in error_msg
 
     def _get_provider_for_model(self, model: Optional[str]) -> tuple[LLMProvider, str]:
         """Get the appropriate provider for a model name.
@@ -441,7 +460,7 @@ class LLMService:
         max_tokens: Optional[int] = None,
         model: Optional[str] = None,
         reasoning_effort: ReasoningEffort = ReasoningEffort.NONE,
-    ) -> AsyncIterator[str]:
+    ) -> AsyncIterator[Union[str, StreamChunk]]:
         """Generate text stream asynchronously using configured provider.
 
         Args:
@@ -470,7 +489,7 @@ class LLMService:
         max_tokens: int,
         model: Optional[str] = None,
         reasoning_effort: ReasoningEffort = ReasoningEffort.NONE,
-    ) -> AsyncIterator[str]:
+    ) -> AsyncIterator[Union[str, StreamChunk]]:
         """Generate text stream using provider with rate limiting and circuit breaker.
 
         Supports dynamic provider switching based on model name.
@@ -568,6 +587,30 @@ class LLMService:
                 rag_llm_latency_seconds.labels(
                     status="error", model=f"{provider_name}:{model_name}"
                 ).observe(duration)
+
+            # Check if we should try fallback provider
+            if self._is_retryable_error(e) and self.fallback_provider:
+                fallback_name = self.fallback_provider.provider_name
+                fallback_model = self.fallback_provider.default_model
+                logger.warning(
+                    f"{provider_name} unavailable (429/busy), falling back to {fallback_name}"
+                )
+                # Yield fallback notification for frontend
+                yield StreamChunk(
+                    type=ChunkType.FALLBACK,
+                    content=f"{fallback_name}:{fallback_model}",
+                )
+                # Try fallback provider
+                async for chunk in self.fallback_provider.generate_stream(
+                    prompt=prompt,
+                    model=fallback_model,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    reasoning_effort=reasoning_effort,
+                ):
+                    yield chunk
+                logger.info(f"Fallback to {fallback_name} succeeded")
+                return
 
             # Check for specific error types
             error_msg = str(e)
@@ -711,6 +754,31 @@ class LLMService:
                     status="error", model=f"{provider_name}:{model_name}"
                 ).observe(duration)
 
+            # Check if we should try fallback provider
+            if self._is_retryable_error(e) and self.fallback_provider:
+                fallback_name = self.fallback_provider.provider_name
+                fallback_model = self.fallback_provider.default_model
+                logger.warning(
+                    f"{provider_name} unavailable (429/busy), falling back to {fallback_name}"
+                )
+                # Yield fallback notification for frontend
+                yield StreamChunk(
+                    type=ChunkType.FALLBACK,
+                    content=f"{fallback_name}:{fallback_model}",
+                )
+                # Try fallback provider - use regular stream since Groq doesn't support thinking
+                async for chunk in self.fallback_provider.generate_stream(
+                    prompt=prompt,
+                    model=fallback_model,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    reasoning_effort=ReasoningEffort.NONE,  # Groq doesn't support reasoning
+                ):
+                    # Wrap in StreamChunk for compatibility
+                    yield StreamChunk(type=ChunkType.ANSWER, content=chunk)
+                logger.info(f"Fallback to {fallback_name} succeeded")
+                return
+
             logger.error(f"{provider_name} API error: {e}")
             raise
 
@@ -831,7 +899,7 @@ async def async_generate_stream_with_llm(
     max_tokens: Optional[int] = None,
     model: Optional[str] = None,
     reasoning_effort: ReasoningEffort = ReasoningEffort.NONE,
-) -> AsyncIterator[str]:
+) -> AsyncIterator[Union[str, StreamChunk]]:
     """Async convenience function for streaming text with LLM.
 
     Args:
