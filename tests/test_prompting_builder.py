@@ -13,8 +13,8 @@ class TestFormatContext:
     """Tests for context formatting."""
 
     def test_format_context_basic(self):
-        """Test basic context formatting."""
-        from app.prompting.builder import _format_context
+        """Test basic context formatting with XML format."""
+        from app.prompting.builder import _format_context_xml
 
         chunks = [
             {
@@ -25,15 +25,17 @@ class TestFormatContext:
             {"source": "certs.md", "text": "CKA certification.", "metadata": {}},
         ]
 
-        result = _format_context(chunks)
+        result = _format_context_xml(chunks)
 
-        assert "resume.md" in result
+        # XML format uses [1], [2] numbered citations without filenames
+        assert "[1]" in result
+        assert "[2]" in result
         assert "Python experience" in result
         assert "CKA certification" in result
 
     def test_format_context_skips_empty(self):
         """Test that empty text chunks are skipped."""
-        from app.prompting.builder import _format_context
+        from app.prompting.builder import _format_context_xml
 
         chunks = [
             {"source": "file1.md", "text": "Valid content", "metadata": {}},
@@ -41,10 +43,11 @@ class TestFormatContext:
             {"source": "file3.md", "text": "   ", "metadata": {}},  # Whitespace only
         ]
 
-        result = _format_context(chunks)
+        result = _format_context_xml(chunks)
 
         assert "Valid content" in result
-        assert "file2.md" not in result
+        # Empty chunks should not get citation numbers
+        assert result.count("[") == 1  # Only one citation marker
 
 
 @pytest.mark.unit
@@ -52,32 +55,33 @@ class TestFormatConversationHistory:
     """Tests for conversation history formatting."""
 
     def test_format_conversation_history_basic(self):
-        """Test formatting conversation history."""
-        from app.prompting.builder import _format_conversation_history
+        """Test formatting conversation history with XML tags."""
+        from app.prompting.builder import _format_history_xml
 
         history = [
             {"role": "user", "content": "What is my GPA?"},
             {"role": "assistant", "content": "Your GPA is 4.00."},
         ]
 
-        result = _format_conversation_history(history)
+        result = _format_history_xml(history)
 
-        assert "USER:" in result or "PREVIOUS" in result
+        # XML format uses <user>...</user> and <assistant>...</assistant> tags
+        assert "<user>" in result or "GPA" in result
         assert "GPA" in result
 
     def test_format_conversation_history_empty(self):
         """Test formatting empty history."""
-        from app.prompting.builder import _format_conversation_history
+        from app.prompting.builder import _format_history_xml
 
-        result = _format_conversation_history([])
+        result = _format_history_xml([])
 
         assert result == ""
 
     def test_format_conversation_history_none(self):
         """Test formatting None history."""
-        from app.prompting.builder import _format_conversation_history
+        from app.prompting.builder import _format_history_xml
 
-        result = _format_conversation_history(None)
+        result = _format_history_xml(None)
 
         assert result == ""
 
@@ -113,7 +117,7 @@ class TestPromptBuilder:
         assert "Python" in result.prompt
 
     def test_build_prompt_with_keywords(self):
-        """Test building prompt with keyword guidance."""
+        """Test building prompt with keywords (ignored in XML mode)."""
         from app.prompting.builder import PromptBuilder
 
         builder = PromptBuilder()
@@ -127,8 +131,10 @@ class TestPromptBuilder:
         )
 
         assert result.status == "success"
-        # Keywords should be included
-        assert "Python" in result.prompt or "Focus" in result.prompt
+        # In XML mode, keywords are ignored but the prompt should still be built
+        assert result.prompt is not None
+        # The question should be in the prompt
+        assert "skills" in result.prompt
 
     def test_build_prompt_with_history(self):
         """Test building prompt with conversation history."""

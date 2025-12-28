@@ -1,22 +1,22 @@
 """
-Unit tests for LLM Service (Groq-only).
+Unit tests for LLM Service (Provider Abstraction).
 
 Tests:
-- Groq generation
-- Error handling (no fallback)
-- Token counting
-- Prompt formatting
-- Temperature and max_tokens
-- Model selection
+- Provider-based generation (via abstraction layer)
+- Error handling
+- Circuit breaker pattern
+- Rate limiting
+- Dynamic provider switching
+- Streaming with thinking support
 """
 
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 
 @pytest.fixture
 def mock_settings():
-    """Mock settings to ensure provider is groq."""
+    """Mock settings for LLM configuration."""
     with patch("app.services.llm.settings") as mock_settings_obj:
         mock_llm_settings = MagicMock()
         mock_llm_settings.provider = "groq"
@@ -27,6 +27,8 @@ def mock_settings():
         mock_llm_settings.groq_requests_per_day = 13680
         mock_llm_settings.temperature = 0.1
         mock_llm_settings.max_tokens = 1000
+        mock_llm_settings.deepinfra_api_key = "test-deepinfra-key"
+        mock_llm_settings.deepinfra_model = "Qwen/Qwen3-32B"
 
         mock_settings_obj.llm = mock_llm_settings
         yield mock_settings_obj
@@ -48,241 +50,195 @@ def mock_rate_limiter():
     return mock_limiter
 
 
+@pytest.fixture
+def mock_provider():
+    """Mock LLM provider with async methods."""
+    provider = MagicMock()
+    provider.provider_name = "groq"
+    provider.default_model = "llama-3.1-8b-instant"
+    provider.generate = AsyncMock(return_value="This is a test response from Groq.")
+    provider.generate_stream = AsyncMock()
+    provider.generate_stream_with_thinking = AsyncMock()
+    return provider
+
+
 @pytest.mark.unit
 @pytest.mark.llm
-class TestGroqGeneration:
-    """Tests for Groq LLM generation."""
+class TestLLMServiceGeneration:
+    """Tests for LLM service generation using provider abstraction."""
 
-    @patch("app.services.llm.AsyncGroq")
-    @patch("app.services.llm.Groq")
-    def test_groq_successful_generation(
-        self, mock_groq_class, mock_async_groq, mock_settings, mock_rate_limiter
+    @pytest.mark.asyncio
+    async def test_successful_generation(
+        self, mock_settings, mock_rate_limiter, mock_provider
     ):
-        """Test successful generation with Groq."""
-        from app.services.llm import GroqLLMService
+        """Test successful async generation with provider."""
+        with patch("app.services.llm.get_provider", return_value=mock_provider):
+            with patch("app.services.llm.RateLimiter", return_value=mock_rate_limiter):
+                from app.services.llm import LLMService
 
-        # Mock Groq client and response
-        mock_groq_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "This is a test response from Groq."
-        mock_groq_client.chat.completions.create.return_value = mock_response
-        mock_groq_class.return_value = mock_groq_client
+                service = LLMService()
+                result = await service.async_generate(prompt="Test prompt")
 
-        # Patch RateLimiter to return our mock
-        with patch("app.services.llm.RateLimiter", return_value=mock_rate_limiter):
-            # Create service instance with Groq
-            service = GroqLLMService()
+                assert result == "This is a test response from Groq."
+                mock_provider.generate.assert_called_once()
 
-            result = service.generate(
-                prompt="Test prompt", model="llama-3.1-8b-instant"
-            )
-
-            assert result == "This is a test response from Groq."
-            assert mock_groq_client.chat.completions.create.called
-
-    @patch("app.services.llm.AsyncGroq")
-    @patch("app.services.llm.Groq")
-    def test_groq_with_temperature(
-        self, mock_groq_class, mock_async_groq, mock_settings, mock_rate_limiter
+    @pytest.mark.asyncio
+    async def test_generation_with_temperature(
+        self, mock_settings, mock_rate_limiter, mock_provider
     ):
-        """Test that temperature parameter is passed to Groq."""
-        from app.services.llm import GroqLLMService
+        """Test that temperature parameter is passed to provider."""
+        with patch("app.services.llm.get_provider", return_value=mock_provider):
+            with patch("app.services.llm.RateLimiter", return_value=mock_rate_limiter):
+                from app.services.llm import LLMService
 
-        mock_groq_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "Test"
-        mock_groq_client.chat.completions.create.return_value = mock_response
-        mock_groq_class.return_value = mock_groq_client
+                service = LLMService()
+                await service.async_generate(prompt="Test", temperature=0.7)
 
-        with patch("app.services.llm.RateLimiter", return_value=mock_rate_limiter):
-            service = GroqLLMService()
-            service.generate(prompt="Test", temperature=0.7)
+                # Verify temperature was passed
+                call_kwargs = mock_provider.generate.call_args.kwargs
+                assert call_kwargs["temperature"] == 0.7
 
-            # Verify temperature was passed
-            call_args = mock_groq_client.chat.completions.create.call_args
-            assert call_args.kwargs["temperature"] == 0.7
-
-    @patch("app.services.llm.AsyncGroq")
-    @patch("app.services.llm.Groq")
-    def test_groq_with_max_tokens(
-        self, mock_groq_class, mock_async_groq, mock_settings, mock_rate_limiter
+    @pytest.mark.asyncio
+    async def test_generation_with_max_tokens(
+        self, mock_settings, mock_rate_limiter, mock_provider
     ):
-        """Test that max_tokens parameter is passed to Groq."""
-        from app.services.llm import GroqLLMService
+        """Test that max_tokens parameter is passed to provider."""
+        with patch("app.services.llm.get_provider", return_value=mock_provider):
+            with patch("app.services.llm.RateLimiter", return_value=mock_rate_limiter):
+                from app.services.llm import LLMService
 
-        mock_groq_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "Test"
-        mock_groq_client.chat.completions.create.return_value = mock_response
-        mock_groq_class.return_value = mock_groq_client
+                service = LLMService()
+                await service.async_generate(prompt="Test", max_tokens=500)
 
-        with patch("app.services.llm.RateLimiter", return_value=mock_rate_limiter):
-            service = GroqLLMService()
-            service.generate(prompt="Test", max_tokens=500)
+                # Verify max_tokens was passed
+                call_kwargs = mock_provider.generate.call_args.kwargs
+                assert call_kwargs["max_tokens"] == 500
 
-            # Verify max_tokens was passed
-            call_args = mock_groq_client.chat.completions.create.call_args
-            assert call_args.kwargs["max_tokens"] == 500
-
-    @patch("app.services.llm.AsyncGroq")
-    @patch("app.services.llm.Groq")
-    def test_groq_model_selection(
-        self, mock_groq_class, mock_async_groq, mock_settings, mock_rate_limiter
+    @pytest.mark.asyncio
+    async def test_model_selection(
+        self, mock_settings, mock_rate_limiter, mock_provider
     ):
         """Test that correct model is used."""
-        from app.services.llm import GroqLLMService
+        with patch("app.services.llm.get_provider", return_value=mock_provider):
+            with patch("app.services.llm.RateLimiter", return_value=mock_rate_limiter):
+                from app.services.llm import LLMService
 
-        mock_groq_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "Test"
-        mock_groq_client.chat.completions.create.return_value = mock_response
-        mock_groq_class.return_value = mock_groq_client
+                service = LLMService()
+                await service.async_generate(
+                    prompt="Test", model="llama-3.3-70b-versatile"
+                )
 
-        with patch("app.services.llm.RateLimiter", return_value=mock_rate_limiter):
-            service = GroqLLMService()
-            service.generate(prompt="Test", model="llama-3.3-70b-versatile")
-
-            # Verify correct model was requested
-            call_args = mock_groq_client.chat.completions.create.call_args
-            assert call_args.kwargs["model"] == "llama-3.3-70b-versatile"
+                # Verify correct model was requested
+                call_kwargs = mock_provider.generate.call_args.kwargs
+                assert call_kwargs["model"] == "llama-3.3-70b-versatile"
 
 
 @pytest.mark.unit
 @pytest.mark.llm
-class TestGroqErrorHandling:
-    """Tests for Groq error handling (no fallback since Ollama removed)."""
+class TestLLMServiceErrorHandling:
+    """Tests for error handling in LLM service."""
 
-    @patch("app.services.llm.AsyncGroq")
-    @patch("app.services.llm.Groq")
-    def test_groq_api_timeout(
-        self, mock_groq_class, mock_async_groq, mock_settings, mock_rate_limiter
+    @pytest.mark.asyncio
+    async def test_api_timeout(self, mock_settings, mock_rate_limiter, mock_provider):
+        """Test handling of API timeout."""
+        mock_provider.generate = AsyncMock(side_effect=TimeoutError("API timeout"))
+
+        with patch("app.services.llm.get_provider", return_value=mock_provider):
+            with patch("app.services.llm.RateLimiter", return_value=mock_rate_limiter):
+                from app.services.llm import LLMService
+
+                service = LLMService()
+
+                with pytest.raises(TimeoutError):
+                    await service.async_generate(prompt="Test")
+
+    @pytest.mark.asyncio
+    async def test_api_error(self, mock_settings, mock_rate_limiter, mock_provider):
+        """Test handling of generic API error."""
+        mock_provider.generate = AsyncMock(
+            side_effect=Exception("API error: 500 Internal Server Error")
+        )
+
+        with patch("app.services.llm.get_provider", return_value=mock_provider):
+            with patch("app.services.llm.RateLimiter", return_value=mock_rate_limiter):
+                from app.services.llm import LLMService
+
+                service = LLMService()
+
+                with pytest.raises(Exception) as exc:
+                    await service.async_generate(prompt="Test")
+                assert "API error" in str(exc.value)
+
+    @pytest.mark.asyncio
+    async def test_authentication_error(
+        self, mock_settings, mock_rate_limiter, mock_provider
     ):
-        """Test handling of Groq API timeout (no fallback)."""
-        from app.services.llm import GroqLLMService
-        from groq import APITimeoutError
-        from httpx import Request
-
-        # Mock Groq client to raise timeout
-        mock_groq_client = MagicMock()
-        mock_request = Request("POST", "https://api.groq.com/test")
-        mock_groq_client.chat.completions.create.side_effect = APITimeoutError(
-            request=mock_request
+        """Test handling of authentication error."""
+        mock_provider.generate = AsyncMock(
+            side_effect=Exception("Authentication error: Invalid API key")
         )
-        mock_groq_class.return_value = mock_groq_client
 
-        with patch("app.services.llm.RateLimiter", return_value=mock_rate_limiter):
-            service = GroqLLMService()
+        with patch("app.services.llm.get_provider", return_value=mock_provider):
+            with patch("app.services.llm.RateLimiter", return_value=mock_rate_limiter):
+                from app.services.llm import LLMService
 
-            # Should raise exception (no fallback)
-            with pytest.raises(APITimeoutError):
-                service.generate(prompt="Test")
+                service = LLMService()
 
-    @patch("app.services.llm.AsyncGroq")
-    @patch("app.services.llm.Groq")
-    def test_groq_api_rate_limit(
-        self, mock_groq_class, mock_async_groq, mock_settings, mock_rate_limiter
-    ):
-        """Test handling of Groq rate limit errors."""
-        from app.services.llm import GroqLLMService
-        from groq import RateLimitError
-        from httpx import Request, Response
+                with pytest.raises(Exception) as exc:
+                    await service.async_generate(prompt="Test")
+                assert "Authentication" in str(exc.value)
 
-        mock_groq_client = MagicMock()
-        mock_response = Response(
-            429, request=Request("POST", "https://api.groq.com/test")
-        )
-        mock_groq_client.chat.completions.create.side_effect = RateLimitError(
-            "Rate limit exceeded",
-            response=mock_response,
-            body={"error": "rate_limit"},
-        )
-        mock_groq_class.return_value = mock_groq_client
 
-        with patch("app.services.llm.RateLimiter", return_value=mock_rate_limiter):
-            service = GroqLLMService()
+@pytest.mark.unit
+@pytest.mark.llm
+class TestCircuitBreaker:
+    """Tests for circuit breaker functionality."""
 
-            with pytest.raises(RateLimitError):
-                service.generate(prompt="Test")
+    def test_circuit_breaker_opens_after_failures(self, mock_settings):
+        """Test that circuit breaker opens after consecutive failures."""
+        from app.services.llm import CircuitBreaker, CircuitState
 
-    @patch("app.services.llm.AsyncGroq")
-    @patch("app.services.llm.Groq")
-    def test_groq_api_error_500(
-        self, mock_groq_class, mock_async_groq, mock_settings, mock_rate_limiter
-    ):
-        """Test handling of Groq server errors."""
-        from app.services.llm import GroqLLMService
-        from groq import InternalServerError
-        from httpx import Request, Response
+        cb = CircuitBreaker(failure_threshold=3, name="test")
 
-        mock_groq_client = MagicMock()
-        mock_response = Response(
-            500, request=Request("POST", "https://api.groq.com/test")
-        )
-        mock_groq_client.chat.completions.create.side_effect = InternalServerError(
-            "Internal Server Error",
-            response=mock_response,
-            body={"error": "server_error"},
-        )
-        mock_groq_class.return_value = mock_groq_client
+        # Record failures up to threshold
+        for _ in range(3):
+            cb.record_failure()
 
-        with patch("app.services.llm.RateLimiter", return_value=mock_rate_limiter):
-            service = GroqLLMService()
+        assert cb.state == CircuitState.OPEN
 
-            with pytest.raises(InternalServerError):
-                service.generate(prompt="Test")
+    def test_circuit_breaker_allows_request_when_closed(self, mock_settings):
+        """Test that requests are allowed when circuit is closed."""
+        from app.services.llm import CircuitBreaker
 
-    @patch("app.services.llm.AsyncGroq")
-    @patch("app.services.llm.Groq")
-    def test_groq_invalid_api_key(
-        self, mock_groq_class, mock_async_groq, mock_settings, mock_rate_limiter
-    ):
-        """Test handling of invalid API key."""
-        from app.services.llm import GroqLLMService
-        from groq import AuthenticationError
-        from httpx import Request, Response
+        cb = CircuitBreaker(name="test")
 
-        mock_groq_client = MagicMock()
-        mock_response = Response(
-            401, request=Request("POST", "https://api.groq.com/test")
-        )
-        mock_groq_client.chat.completions.create.side_effect = AuthenticationError(
-            "Invalid API key",
-            response=mock_response,
-            body={"error": "invalid_api_key"},
-        )
-        mock_groq_class.return_value = mock_groq_client
+        assert cb.allow_request() is True
 
-        with patch("app.services.llm.RateLimiter", return_value=mock_rate_limiter):
-            service = GroqLLMService()
+    def test_circuit_breaker_blocks_request_when_open(self, mock_settings):
+        """Test that requests are blocked when circuit is open."""
+        from app.services.llm import CircuitBreaker, CircuitState
 
-            with pytest.raises(AuthenticationError):
-                service.generate(prompt="Test")
+        cb = CircuitBreaker(failure_threshold=1, name="test")
+        cb.record_failure()  # Opens the circuit
 
-    @patch("app.services.llm.AsyncGroq")
-    @patch("app.services.llm.Groq")
-    def test_groq_malformed_response(
-        self, mock_groq_class, mock_async_groq, mock_settings, mock_rate_limiter
-    ):
-        """Test handling of malformed API response."""
-        from app.services.llm import GroqLLMService
+        assert cb.state == CircuitState.OPEN
+        assert cb.allow_request() is False
 
-        mock_groq_client = MagicMock()
-        # Mock malformed response (choices array is empty)
-        mock_response = MagicMock()
-        mock_response.choices = []  # Empty list will cause IndexError
-        mock_groq_client.chat.completions.create.return_value = mock_response
-        mock_groq_class.return_value = mock_groq_client
+    def test_circuit_breaker_resets_on_success(self, mock_settings):
+        """Test that success resets failure count."""
+        from app.services.llm import CircuitBreaker
 
-        with patch("app.services.llm.RateLimiter", return_value=mock_rate_limiter):
-            service = GroqLLMService()
+        cb = CircuitBreaker(failure_threshold=3, name="test")
 
-            # Should raise IndexError
-            with pytest.raises(IndexError):
-                service.generate(prompt="Test")
+        # Record some failures
+        cb.record_failure()
+        cb.record_failure()
+
+        # Success should reset the count
+        cb.record_success()
+
+        # Should still be closed and able to tolerate more failures
+        assert cb.allow_request() is True
 
 
 @pytest.mark.unit
@@ -290,117 +246,100 @@ class TestGroqErrorHandling:
 class TestLLMPromptFormatting:
     """Tests for prompt formatting."""
 
-    @patch("app.services.llm.AsyncGroq")
-    @patch("app.services.llm.Groq")
-    def test_prompt_structure(
-        self, mock_groq_class, mock_async_groq, mock_settings, mock_rate_limiter
+    @pytest.mark.asyncio
+    async def test_prompt_structure(
+        self, mock_settings, mock_rate_limiter, mock_provider
     ):
         """Test that prompts are properly structured."""
-        from app.services.llm import GroqLLMService
+        with patch("app.services.llm.get_provider", return_value=mock_provider):
+            with patch("app.services.llm.RateLimiter", return_value=mock_rate_limiter):
+                from app.services.llm import LLMService
 
-        mock_groq_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "Test"
-        mock_groq_client.chat.completions.create.return_value = mock_response
-        mock_groq_class.return_value = mock_groq_client
-
-        prompt = """Context: Test context
+                prompt = """Context: Test context
 
 Question: What is my Python experience?
 
 Answer:"""
 
-        with patch("app.services.llm.RateLimiter", return_value=mock_rate_limiter):
-            service = GroqLLMService()
-            service.generate(prompt=prompt)
+                service = LLMService()
+                await service.async_generate(prompt=prompt)
 
-            # Verify prompt was sent correctly
-            call_args = mock_groq_client.chat.completions.create.call_args
-            messages = call_args.kwargs["messages"]
-            assert len(messages) == 1
-            assert messages[0]["role"] == "user"
-            assert "Context:" in messages[0]["content"]
+                # Verify prompt was sent correctly
+                call_kwargs = mock_provider.generate.call_args.kwargs
+                assert "prompt" in call_kwargs
+                assert "Context:" in call_kwargs["prompt"]
 
 
 @pytest.mark.unit
 @pytest.mark.llm
 class TestLLMWrapperFunction:
-    """Tests for the main generate_with_llm wrapper (Groq-only)."""
+    """Tests for the convenience wrapper functions."""
 
-    @patch("app.services.llm._service")
-    def test_wrapper_uses_groq(self, mock_service):
-        """Test that wrapper function delegates to service.generate()."""
-        from app.services.llm import generate_with_llm
+    @pytest.mark.asyncio
+    async def test_async_wrapper_function(
+        self, mock_settings, mock_rate_limiter, mock_provider
+    ):
+        """Test async convenience function for generation."""
+        with patch("app.services.llm.get_provider", return_value=mock_provider):
+            with patch("app.services.llm.RateLimiter", return_value=mock_rate_limiter):
+                # Reset the global service instance
+                import app.services.llm as llm_module
 
-        # Mock the service's generate method
-        mock_service.generate.return_value = "Test response from Groq"
+                llm_module._service = None
 
-        result = generate_with_llm(
-            prompt="Test prompt", temperature=0.1, max_tokens=500
-        )
+                from app.services.llm import async_generate_with_llm
 
-        # Verify service.generate was called with correct parameters
-        mock_service.generate.assert_called_once_with(
-            prompt="Test prompt", temperature=0.1, max_tokens=500, model=None
-        )
-        assert result == "Test response from Groq"
+                result = await async_generate_with_llm(
+                    prompt="Test prompt", temperature=0.1, max_tokens=500
+                )
 
-    @patch("app.services.llm._service")
-    def test_wrapper_passes_parameters(self, mock_service):
-        """Test that wrapper passes parameters correctly."""
-        from app.services.llm import generate_with_llm
-
-        mock_service.generate.return_value = "Test"
-
-        generate_with_llm(prompt="Test prompt", temperature=0.7, max_tokens=1000)
-
-        # Verify parameters were passed
-        mock_service.generate.assert_called_once_with(
-            prompt="Test prompt", temperature=0.7, max_tokens=1000, model=None
-        )
+                assert result == "This is a test response from Groq."
 
 
 @pytest.mark.unit
 @pytest.mark.llm
-class TestRetryExponentials:
-    """Tests for retry decorators."""
+class TestDynamicProviderSwitching:
+    """Tests for dynamic provider switching based on model name."""
 
-    def test_retry_decorator_backoff(self):
-        """Test that synchronous retry decorator backs off correctly."""
-        from app.services.llm import retry_with_exponential_backoff
+    @pytest.mark.asyncio
+    async def test_qwen_shorthand_uses_deepinfra(
+        self, mock_settings, mock_rate_limiter
+    ):
+        """Test that 'qwen' shorthand switches to DeepInfra provider."""
+        mock_groq_provider = MagicMock()
+        mock_groq_provider.provider_name = "groq"
+        mock_groq_provider.default_model = "llama-3.1-8b-instant"
 
-        mock_func = MagicMock()
-        mock_func.__name__ = "mock_func"  # Required for logger
-        mock_func.side_effect = [Exception("Fail 1"), Exception("Fail 2"), "Success"]
+        mock_deepinfra_provider = MagicMock()
+        mock_deepinfra_provider.provider_name = "deepinfra"
+        mock_deepinfra_provider.default_model = "Qwen/Qwen3-32B"
+        mock_deepinfra_provider.generate = AsyncMock(return_value="Qwen response")
 
-        with patch("time.sleep") as mock_sleep:
-            decorated = retry_with_exponential_backoff(max_retries=3, base_delay=1)(
-                mock_func
-            )
-            result = decorated()
+        with patch("app.services.llm.get_provider", return_value=mock_groq_provider):
+            with patch(
+                "app.services.llm.get_llm_provider",
+                return_value=mock_deepinfra_provider,
+            ):
+                with patch(
+                    "app.services.llm.RateLimiter", return_value=mock_rate_limiter
+                ):
+                    from app.services.llm import LLMService
+                    import app.services.llm as llm_module
 
-            assert result == "Success"
-            assert mock_func.call_count == 3
-            # check sleep calls: 1s, then 2s
-            assert mock_sleep.call_count == 2
-            mock_sleep.assert_any_call(1)
-            mock_sleep.assert_any_call(2)
+                    # Clear dynamic providers cache
+                    llm_module._dynamic_providers = {}
 
-    def test_retry_decorator_max_retries_exceeded(self):
-        """Test that decorator raises exception after max retries."""
-        from app.services.llm import retry_with_exponential_backoff
+                    service = LLMService()
+                    result = await service.async_generate(prompt="Test", model="qwen")
 
-        mock_func = MagicMock()
-        mock_func.__name__ = "mock_func"  # Required for logger
-        mock_func.side_effect = Exception("Persistent Fail")
+                    assert result == "Qwen response"
+                    mock_deepinfra_provider.generate.assert_called_once()
 
-        with patch("time.sleep"):
-            decorated = retry_with_exponential_backoff(max_retries=2)(mock_func)
-            with pytest.raises(Exception) as exc:
-                decorated()
-            assert "Persistent Fail" in str(exc.value)
-            assert mock_func.call_count == 2
+
+@pytest.mark.unit
+@pytest.mark.llm
+class TestRetryDecorator:
+    """Tests for async retry decorator."""
 
     @pytest.mark.asyncio
     async def test_async_retry_decorator_backoff(self):
@@ -408,14 +347,12 @@ class TestRetryExponentials:
         from app.services.llm import async_retry_with_exponential_backoff
 
         mock_func = MagicMock()
-        mock_func.__name__ = "mock_func"  # Required for logger
+        mock_func.__name__ = "mock_func"
         mock_func.side_effect = [Exception("Fail 1"), "Success"]
 
-        # Create an async wrapper for the mock because the decorator expects an async func
         async def async_wrapper(*args, **kwargs):
             return mock_func(*args, **kwargs)
 
-        # Async wrapper needs a name too
         async_wrapper.__name__ = "async_wrapper"
 
         with patch("asyncio.sleep") as mock_sleep:
@@ -427,3 +364,26 @@ class TestRetryExponentials:
             assert result == "Success"
             assert mock_func.call_count == 2
             mock_sleep.assert_called_with(1)
+
+    @pytest.mark.asyncio
+    async def test_async_retry_max_retries_exceeded(self):
+        """Test that decorator raises exception after max retries."""
+        from app.services.llm import async_retry_with_exponential_backoff
+
+        mock_func = MagicMock()
+        mock_func.__name__ = "mock_func"
+        mock_func.side_effect = Exception("Persistent Fail")
+
+        async def async_wrapper(*args, **kwargs):
+            return mock_func(*args, **kwargs)
+
+        async_wrapper.__name__ = "async_wrapper"
+
+        with patch("asyncio.sleep"):
+            decorated = async_retry_with_exponential_backoff(max_retries=2)(
+                async_wrapper
+            )
+            with pytest.raises(Exception) as exc:
+                await decorated()
+            assert "Persistent Fail" in str(exc.value)
+            assert mock_func.call_count == 2
