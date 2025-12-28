@@ -214,72 +214,134 @@ class StreamingMarkdownStripper:
     - ## headers → headers
     - Preserves [N] citations
 
-    Uses buffering to handle split tokens like * arriving separately.
+    Tracks state to handle markers split across tokens.
     """
 
     def __init__(self):
         self._buffer = ""
+        self._in_bold = False  # Inside **...**
+        self._in_italic = False  # Inside *...*
+        self._bold_marker = ""  # "**" or "__"
+        self._italic_marker = ""  # "*" or "_"
 
     def process(self, token: str) -> str:
         """Process token and return cleaned text."""
         self._buffer += token
-        return self._extract_clean_output()
+        return self._process_buffer()
 
     def flush(self) -> str:
         """Flush remaining buffer at end of stream."""
-        result = self._strip_markdown(self._buffer)
+        # At end, just strip any remaining markers and return
+        result = self._buffer
+        result = result.replace("**", "").replace("__", "")
+        result = re.sub(r"(?<!\w)\*([^*]*)\*?(?!\w)", r"\1", result)
+        result = re.sub(r"(?<!\w)_([^_]*)_?(?!\w)", r"\1", result)
+        result = re.sub(r"^#{1,6}\s*", "", result, flags=re.MULTILINE)
+        result = re.sub(r"^\s*-\s+", "", result, flags=re.MULTILINE)
         self._buffer = ""
         return result
 
-    def _extract_clean_output(self) -> str:
-        """Extract text that's safe to emit (complete markdown patterns stripped)."""
-        # Check for incomplete patterns at the end that need more tokens
-        # We buffer if we see potential start of markdown that isn't complete yet
+    def _process_buffer(self) -> str:
+        """Process buffer, handling markdown state."""
+        output = ""
 
-        # Check for trailing * or _ that might be start of formatting
-        if self._buffer.endswith("*") or self._buffer.endswith("_"):
-            # Could be start of bold/italic - wait for more
-            if len(self._buffer) > 1:
-                safe = self._buffer[:-1]
-                self._buffer = self._buffer[-1:]
-                return self._strip_markdown(safe)
-            return ""
+        while self._buffer:
+            # Check for ** (bold)
+            if not self._in_bold and not self._in_italic:
+                # Look for opening markers
+                if self._buffer.startswith("**"):
+                    self._in_bold = True
+                    self._bold_marker = "**"
+                    self._buffer = self._buffer[2:]
+                    continue
+                elif self._buffer.startswith("__"):
+                    self._in_bold = True
+                    self._bold_marker = "__"
+                    self._buffer = self._buffer[2:]
+                    continue
+                elif self._buffer.startswith("*") and not self._buffer.startswith("**"):
+                    # Could be italic or incomplete bold
+                    if len(self._buffer) == 1:
+                        # Need more tokens to decide
+                        break
+                    self._in_italic = True
+                    self._italic_marker = "*"
+                    self._buffer = self._buffer[1:]
+                    continue
+                elif self._buffer.startswith("_") and not self._buffer.startswith("__"):
+                    if len(self._buffer) == 1:
+                        break
+                    # Check if it's word boundary
+                    self._in_italic = True
+                    self._italic_marker = "_"
+                    self._buffer = self._buffer[1:]
+                    continue
 
-        # Check for trailing # that might be header
-        if self._buffer.endswith("#"):
-            if len(self._buffer) > 1:
-                safe = self._buffer[:-1]
-                self._buffer = self._buffer[-1:]
-                return self._strip_markdown(safe)
-            return ""
+            # Inside bold - look for closing marker
+            if self._in_bold:
+                close_pos = self._buffer.find(self._bold_marker)
+                if close_pos != -1:
+                    # Found closing marker - emit content
+                    output += self._buffer[:close_pos]
+                    self._buffer = self._buffer[close_pos + len(self._bold_marker) :]
+                    self._in_bold = False
+                    self._bold_marker = ""
+                    continue
+                else:
+                    # No closing marker yet - check if marker might be split
+                    if self._buffer.endswith(self._bold_marker[0]):
+                        # Might be start of closing marker
+                        output += self._buffer[:-1]
+                        self._buffer = self._buffer[-1:]
+                        break
+                    # Output everything and wait for more
+                    output += self._buffer
+                    self._buffer = ""
+                    break
 
-        # No incomplete patterns - process everything
-        result = self._strip_markdown(self._buffer)
-        self._buffer = ""
-        return result
+            # Inside italic - look for closing marker
+            if self._in_italic:
+                close_pos = self._buffer.find(self._italic_marker)
+                if close_pos != -1:
+                    output += self._buffer[:close_pos]
+                    self._buffer = self._buffer[close_pos + 1 :]
+                    self._in_italic = False
+                    self._italic_marker = ""
+                    continue
+                else:
+                    output += self._buffer
+                    self._buffer = ""
+                    break
 
-    def _strip_markdown(self, text: str) -> str:
-        """Strip markdown formatting from text."""
-        if not text:
-            return text
+            # Not in any special mode - handle headers and bullets
+            if self._buffer.startswith("#"):
+                # Skip header markers at line start
+                match = re.match(r"^#{1,6}\s*", self._buffer)
+                if match:
+                    self._buffer = self._buffer[match.end() :]
+                    continue
 
-        # Remove **bold** and __bold__
-        text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
-        text = re.sub(r"__([^_]+)__", r"\1", text)
+            # Check for bullet at line start (after newline or at start)
+            if self._buffer.startswith("- "):
+                self._buffer = self._buffer[2:]
+                continue
 
-        # Remove *italic* and _italic_ (but not inside words)
-        # Be careful not to match _in_variable_names
-        text = re.sub(r"(?<!\w)\*([^*]+)\*(?!\w)", r"\1", text)
-        text = re.sub(r"(?<!\w)_([^_]+)_(?!\w)", r"\1", text)
+            # Check for potential markers at end that need more context
+            if (
+                self._buffer.endswith("*")
+                or self._buffer.endswith("_")
+                or self._buffer.endswith("#")
+            ):
+                if len(self._buffer) > 1:
+                    output += self._buffer[:-1]
+                    self._buffer = self._buffer[-1:]
+                break
 
-        # Remove ## headers at start of lines
-        text = re.sub(r"^#{1,6}\s*", "", text, flags=re.MULTILINE)
+            # No special handling needed - output first char and continue
+            output += self._buffer[0]
+            self._buffer = self._buffer[1:]
 
-        # Remove - bullets at start of lines, but keep the content
-        # Convert "- item" to just "item" (let numbered lists remain)
-        text = re.sub(r"^\s*-\s+", "", text, flags=re.MULTILINE)
-
-        return text
+        return output
 
 
 class StreamingCitationRemapper:
