@@ -19,15 +19,19 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.retrieval.store import _client, COLLECTION_NAME
+from app.retrieval.vector_store import VectorStore, COLLECTION_NAME
 
 
 def clear_collection(confirm: bool = False):
     """Clear the ChromaDB collection."""
 
+    # Get vector store instance
+    vector_store = VectorStore()
+    client = vector_store.get_client()
+
     # Get current count
     try:
-        collection = _client.get_collection(COLLECTION_NAME)
+        collection = client.get_collection(COLLECTION_NAME)
         count = collection.count()
         print(f"Current collection '{COLLECTION_NAME}' has {count} documents")
     except Exception:
@@ -49,17 +53,14 @@ def clear_collection(confirm: bool = False):
 
     # Delete the collection
     print(f"\nDeleting collection '{COLLECTION_NAME}'...")
-    _client.delete_collection(COLLECTION_NAME)
+    client.delete_collection(COLLECTION_NAME)
     print("✓ Collection deleted")
 
     # Recreate empty collection
     print(f"Recreating empty collection '{COLLECTION_NAME}'...")
-    from app.retrieval.store import _embed
-
-    _client.create_collection(
+    client.get_or_create_collection(
         name=COLLECTION_NAME,
         metadata={"hnsw:space": "cosine"},
-        embedding_function=_embed,
     )
     print("✓ Empty collection created")
     print(
