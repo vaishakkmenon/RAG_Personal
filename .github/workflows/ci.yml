@@ -30,6 +30,15 @@ jobs:
       - name: Run linter
         run: docker run --rm ragchatbot:test /opt/venv/bin/ruff check .
 
+      # Free up disk space for Trivy scan (ML images are large)
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          docker system prune -af
+          df -h
+
       # Scan for vulnerabilities with Trivy
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master

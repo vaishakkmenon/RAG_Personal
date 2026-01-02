@@ -110,6 +110,8 @@ COPY --from=builder /opt/venv /opt/venv
 # Copy application code
 COPY app ./app
 COPY scripts ./scripts
+COPY alembic.ini ./
+COPY alembic ./alembic
 
 # Copy NLTK and HF cache
 COPY --from=builder --chown=nonroot:nonroot /home/nonroot/nltk_data /home/nonroot/nltk_data
