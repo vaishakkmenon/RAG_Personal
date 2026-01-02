@@ -33,3 +33,24 @@ api.vaishakmenon.com {
         }
     }
 }
+
+grafana.vaishakmenon.com {
+    # Proxy to Grafana service
+    reverse_proxy grafana:3000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # Enable compression
+    encode gzip
+
+    # Logging
+    log {
+        output file /var/log/caddy/grafana.log {
+            roll_size 10mb
+            roll_keep 5
+        }
+    }
+}
