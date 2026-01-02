@@ -56,15 +56,9 @@ def clear_collection(confirm: bool = False):
     client.delete_collection(COLLECTION_NAME)
     print("✓ Collection deleted")
 
-    # Recreate empty collection
-    print(f"Recreating empty collection '{COLLECTION_NAME}'...")
-    client.get_or_create_collection(
-        name=COLLECTION_NAME,
-        metadata={"hnsw:space": "cosine"},
-    )
-    print("✓ Empty collection created")
+    # Don't recreate - let VectorStore create it with proper embedding function
     print(
-        f"\nCollection '{COLLECTION_NAME}' is now empty and ready for fresh ingestion."
+        f"\nCollection '{COLLECTION_NAME}' deleted. It will be recreated with proper settings on next ingestion."
     )
 
 
