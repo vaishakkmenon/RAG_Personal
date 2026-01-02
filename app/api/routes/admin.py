@@ -62,7 +62,8 @@ async def clear_chromadb() -> Dict[str, Any]:
 async def chromadb_status() -> Dict[str, Any]:
     """Get ChromaDB storage status.
 
-    Returns information about the current state of ChromaDB storage.
+    Returns information about the current state of ChromaDB storage,
+    including actual document and chunk counts from the collection.
 
     Returns:
         Dictionary with storage status and statistics
@@ -75,13 +76,16 @@ async def chromadb_status() -> Dict[str, Any]:
             "message": "ChromaDB directory does not exist",
             "path": str(chroma_path.absolute()),
             "exists": False,
-            "files_count": 0,
-            "dirs_count": 0,
+            "storage_files_count": 0,
+            "storage_dirs_count": 0,
+            "document_count": 0,
+            "chunk_count": 0,
         }
 
     try:
-        files_count = sum(1 for _ in chroma_path.rglob("*") if _.is_file())
-        dirs_count = sum(1 for _ in chroma_path.rglob("*") if _.is_dir())
+        # Get storage file counts (internal ChromaDB files)
+        storage_files_count = sum(1 for _ in chroma_path.rglob("*") if _.is_file())
+        storage_dirs_count = sum(1 for _ in chroma_path.rglob("*") if _.is_dir())
 
         # Get directory size
         total_size = sum(
@@ -98,7 +102,26 @@ async def chromadb_status() -> Dict[str, Any]:
         else:
             size_str = f"{total_size / (1024 ** 3):.2f} GB"
 
-        is_empty = files_count == 0 and dirs_count == 0
+        # Get actual document and chunk counts from ChromaDB collection
+        document_count = 0
+        chunk_count = 0
+        unique_sources = []
+
+        try:
+            from app.retrieval.vector_store import get_vector_store
+
+            store = get_vector_store()
+            docs = store.get_all_documents()
+            chunk_count = len(docs)
+
+            # Count unique source documents
+            sources = set(d.get("metadata", {}).get("source", "unknown") for d in docs)
+            document_count = len(sources)
+            unique_sources = sorted([Path(s).name for s in sources if s != "unknown"])
+        except Exception as e:
+            logger.warning(f"Could not get document counts from ChromaDB: {e}")
+
+        is_empty = storage_files_count == 0 and storage_dirs_count == 0
 
         return {
             "status": "empty" if is_empty else "populated",
@@ -107,8 +130,11 @@ async def chromadb_status() -> Dict[str, Any]:
             else "ChromaDB directory contains data",
             "path": str(chroma_path.absolute()),
             "exists": True,
-            "files_count": files_count,
-            "dirs_count": dirs_count,
+            "document_count": document_count,
+            "chunk_count": chunk_count,
+            "unique_sources": unique_sources,
+            "storage_files_count": storage_files_count,
+            "storage_dirs_count": storage_dirs_count,
             "total_size_bytes": total_size,
             "total_size": size_str,
         }
