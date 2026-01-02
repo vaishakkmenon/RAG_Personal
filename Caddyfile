@@ -37,7 +37,6 @@ api.vaishakmenon.com {
 grafana.vaishakmenon.com {
     # Use internal TLS since Cloudflare handles public SSL
     # Cloudflare "Full" mode will accept self-signed certs from origin
-    tls internal
 
     # Proxy to Grafana service
     reverse_proxy grafana:3000 {
