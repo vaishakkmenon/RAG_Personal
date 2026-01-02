@@ -13,53 +13,52 @@ Usage:
 """
 
 import argparse
+import shutil
 import sys
 from pathlib import Path
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.retrieval.vector_store import VectorStore, COLLECTION_NAME
+from app.settings import settings
 
 
 def clear_collection(confirm: bool = False):
-    """Clear the ChromaDB collection."""
+    """Clear the ChromaDB collection by wiping the data directory."""
 
-    # Get vector store instance
-    vector_store = VectorStore()
-    client = vector_store.get_client()
+    chroma_path = Path(settings.chroma_dir)
 
-    # Get current count
-    try:
-        collection = client.get_collection(COLLECTION_NAME)
-        count = collection.count()
-        print(f"Current collection '{COLLECTION_NAME}' has {count} documents")
-    except Exception:
-        print(f"Collection '{COLLECTION_NAME}' does not exist or is empty")
+    if not chroma_path.exists():
+        print(f"ChromaDB directory '{chroma_path}' does not exist. Nothing to clear.")
         return
 
-    if count == 0:
-        print("Collection is already empty. Nothing to clear.")
+    # Count files to give user an idea of what's there
+    file_count = sum(1 for _ in chroma_path.rglob("*") if _.is_file())
+    print(f"ChromaDB directory '{chroma_path}' contains {file_count} files")
+
+    if file_count == 0:
+        print("Directory is already empty. Nothing to clear.")
         return
 
     # Confirmation
     if confirm:
         response = input(
-            f"\nAre you sure you want to delete all {count} documents? (yes/no): "
+            "\nAre you sure you want to delete all ChromaDB data? (yes/no): "
         )
         if response.lower() != "yes":
             print("Aborted.")
             return
 
-    # Delete the collection
-    print(f"\nDeleting collection '{COLLECTION_NAME}'...")
-    client.delete_collection(COLLECTION_NAME)
-    print("✓ Collection deleted")
+    # Wipe the directory contents (but keep the directory itself)
+    print(f"\nClearing ChromaDB directory '{chroma_path}'...")
+    for item in chroma_path.iterdir():
+        if item.is_dir():
+            shutil.rmtree(item)
+        else:
+            item.unlink()
 
-    # Don't recreate - let VectorStore create it with proper embedding function
-    print(
-        f"\nCollection '{COLLECTION_NAME}' deleted. It will be recreated with proper settings on next ingestion."
-    )
+    print("✓ ChromaDB data cleared")
+    print("\nCollection will be recreated with proper settings on next ingestion.")
 
 
 if __name__ == "__main__":

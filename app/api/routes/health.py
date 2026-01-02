@@ -56,14 +56,17 @@ logger = logging.getLogger(__name__)
 async def health() -> Dict[str, Any]:
     """Returns basic system health status."""
     # Get model based on provider
-    if settings.llm.provider == "groq":
+    provider = settings.llm.provider
+    if provider == "groq":
         model = settings.llm.groq_model
+    elif provider == "deepinfra":
+        model = settings.llm.deepinfra_model
     else:
         model = "unknown"
 
     return {
         "status": "healthy",
-        "provider": settings.llm.provider,
+        "provider": provider,
         "model": model,
         "socket": socket.gethostname(),
     }
