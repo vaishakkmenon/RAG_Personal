@@ -78,15 +78,25 @@ I earned a Master of Science (M.S.) degree in Computer Science from the Universi
 
 ## Personal Projects Summary
 
-I have built several personal projects demonstrating expertise in machine learning, artificial intelligence, and cloud infrastructure. My personal projects include a FastAPI RAG Service (a retrieval-augmented generation chatbot), a GPT From Scratch implementation (a decoder-only transformer architecture), and a Music Genre Classification system (a CNN-based audio classifier). These personal projects showcase my skills in machine learning, deep learning, natural language processing, retrieval systems, and software development.
+I have built several personal projects demonstrating expertise in machine learning, artificial intelligence, and cloud infrastructure. My personal projects include a FastAPI RAG Service (a learning project for RAG fundamentals and benchmarking), a Personal Portfolio RAG System (a production-grade portfolio assistant), a GPT From Scratch implementation (a decoder-only transformer architecture), and a Music Genre Classification system (a CNN-based audio classifier). These personal projects showcase my skills in machine learning, deep learning, natural language processing, retrieval systems, production infrastructure, and software development.
 
-## FastAPI RAG Service
+## FastAPI RAG Service (Learning Project)
 
-I built and tuned a retrieval-augmented generation (RAG) chatbot using FastAPI, ChromaDB, and LLaMA models. This personal project demonstrates my expertise in RAG systems, vector databases, large language model integration, and building production-ready AI applications. The FastAPI RAG Service is a complete retrieval-augmented generation system that combines semantic search with generative AI.
+I built a retrieval-augmented generation chatbot as a learning project to understand RAG fundamentals, vector database operations, and LLM integration patterns. This project served as my introduction to RAG architecture, focusing on semantic search, embedding generation, and grounded text generation before building production systems.
 
-I developed this RAG service with reproducible evaluations on the SQuAD v2 dataset using 500 examples. The system achieved strong performance metrics including an F1 score of approximately 0.54, NoAnswer recall of approximately 0.92, and median latency around 130 milliseconds. The retrieval component of the RAG system achieved Recall@5 of approximately 0.85 and Hit@1 of approximately 0.65, demonstrating effective semantic search capabilities.
+I developed reproducible evaluations on the SQuAD v2 dataset using 500 examples. The system achieved an F1 score of 0.54, NoAnswer recall of 0.92, median latency of 130ms, Retrieval Recall@5 of 0.85, and Hit@1 of 0.65. These benchmarks provided quantitative insight into retrieval effectiveness and established a foundation for understanding RAG system behavior.
 
-This personal project showcases my ability to build machine learning systems, implement retrieval-augmented generation architectures, work with vector databases like ChromaDB, integrate large language models, and create performant FastAPI applications. The project demonstrates practical application of machine learning and AI technologies in a real-world retrieval system.
+This project taught me RAG architecture fundamentals, vector database operations, embedding model selection, and evaluation methodology using FastAPI, ChromaDB, LLaMA models, and sentence transformers. These foundational skills directly informed my subsequent Personal Portfolio RAG System.
+
+## Personal Portfolio RAG System
+
+I built a production-grade RAG system serving as an intelligent portfolio assistant for my professional website, enabling natural language queries about my background, education, certifications, and projects. The system transforms static resume documents into an interactive knowledge base.
+
+The technical architecture combines BM25 lexical search with ChromaDB vector search using BGE v1.5 embeddings, refined through hybrid reranking. It includes negative inference detection with adaptive thresholding to prevent hallucinated responses about non-existent entities, and a multi-LLM provider system (Groq, DeepInfra) with circuit breaker failover for high availability.
+
+For production infrastructure, I implemented Redis-based caching that reduces latency by 70-80% on cache hits, Prometheus metrics with Grafana dashboards for monitoring, and containerized deployment using Docker Compose with Caddy for TLS termination. The security layer includes input validation, prompt injection guard using Llama Prompt Guard, output validation for PII scrubbing, multi-level rate limiting, and API key/JWT authentication.
+
+Technologies: Python, FastAPI, ChromaDB, Redis, Docker, Prometheus, Grafana, Groq API, DeepInfra API, Sentence Transformers, BM25, Llama Prompt Guard.
 
 ## GPT From Scratch
 
