@@ -40,7 +40,7 @@ source_file: "/mnt/data/CKA_Cert.pdf"
 
 I earned the Certified Kubernetes Administrator (CKA) certification on June 26, 2024 (2024-06-26). The CKA certification was issued by the Cloud Native Computing Foundation (CNCF) and The Linux Foundation. My CKA certification is valid through June 26, 2026 (2026-06-26), which is three years from the date I earned the certification.
 
-The Certified Kubernetes Administrator (CKA) certification validates my expertise in Kubernetes container orchestration and cluster administration. I earned the CKA certification to demonstrate my hands-on experience with Kubernetes that I gained through my Infrastructure Internships at Maven Wave Partners and personal projects.
+The Certified Kubernetes Administrator (CKA) certification validates my expertise in Kubernetes container orchestration and cluster administration. I earned the CKA certification to demonstrate my hands-on experience with Kubernetes that I gained through my professional infrastructure roles.
 
 # Full Certification Name
 
@@ -60,6 +60,6 @@ The CKA certification also validates my expertise in Kubernetes security and Rol
 
 # Practical Experience
 
-I earned the CKA certification after gaining hands-on experience with Kubernetes during my three Infrastructure Internships at Maven Wave Partners in Chicago, Illinois. During these internships in the summers of 2021, 2022, and 2023, I worked extensively with Kubernetes container orchestration on Google Cloud Platform. I built microservices using Kubernetes, managed cloud-native applications in Kubernetes clusters, and deployed containerized applications to Kubernetes.
+I earned the CKA certification after gaining hands-on experience with Kubernetes during my three Infrastructure Internships at Maven Wave Partners in Chicago, Illinois. During these internships in the summers of 2021, 2022, and 2023, I worked extensively with Kubernetes container orchestration on Google Cloud Platform to manage cloud-native infrastructure.
 
 The Certified Kubernetes Administrator certification I earned on June 26, 2024 validates the practical Kubernetes skills I developed through real-world infrastructure work. The CKA certification demonstrates my ability to administer Kubernetes clusters, troubleshoot container orchestration issues, and maintain production Kubernetes environments.
