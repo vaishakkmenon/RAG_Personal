@@ -78,7 +78,7 @@ I earned a Master of Science (M.S.) degree in Computer Science from the Universi
 
 ## Personal Projects Summary
 
-I have built several personal projects demonstrating expertise in machine learning, artificial intelligence, and cloud infrastructure. My personal projects include a FastAPI RAG Service (a learning project for RAG fundamentals and benchmarking), a Personal Portfolio RAG System (a production-grade portfolio assistant), a GPT From Scratch implementation (a decoder-only transformer architecture), and a Music Genre Classification system (a CNN-based audio classifier). These personal projects showcase my skills in machine learning, deep learning, natural language processing, retrieval systems, production infrastructure, and software development.
+I have built several personal projects demonstrating expertise in machine learning, artificial intelligence, and cloud infrastructure. My personal projects include a FastAPI RAG Service (a learning project for RAG fundamentals and benchmarking), a Personal Portfolio RAG System (a production-grade portfolio assistant), a Pomodoro Focus (a productivity platform using Next.js 15), a GPT From Scratch implementation (a decoder-only transformer architecture), and a Music Genre Classification system (a CNN-based audio classifier). These personal projects showcase my skills in machine learning, deep learning, natural language processing, retrieval systems, production infrastructure, and software development.
 
 ## FastAPI RAG Service (Learning Project)
 
@@ -146,7 +146,7 @@ This certification validates my cloud computing knowledge and experience with Am
 
 I earned the AWS Certified AI Practitioner certification, an AWS certification that validates knowledge of artificial intelligence, machine learning, and AI services available on Amazon Web Services. This certification demonstrates my understanding of AI and machine learning concepts, AWS AI services, responsible AI practices, and how to apply AI solutions using AWS technologies.
 
-The AWS Certified AI Practitioner certification validates my expertise in both artificial intelligence concepts and AWS cloud platform capabilities for AI and machine learning workloads. This certification complements my hands-on machine learning experience from personal projects like the FastAPI RAG Service and GPT From Scratch implementation.
+The AWS Certified AI Practitioner certification validates my expertise in both artificial intelligence concepts and AWS cloud platform capabilities for AI and machine learning workloads. This certification complements my hands-on machine learning experience from practical applications like the FastAPI RAG Service and GPT From Scratch implementation.
 
 ---
 
