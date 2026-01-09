@@ -115,6 +115,10 @@ if added > 0:
 "
 
     echo "✅ Knowledge base reingest complete!"
+
+    # Restart API to reload ChromaDB (files changed on disk)
+    echo "🔄 Restarting API service to load new data..."
+    docker compose -f docker-compose.prod.yml restart api
 fi
 
 echo ""
