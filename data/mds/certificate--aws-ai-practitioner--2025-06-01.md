@@ -62,7 +62,8 @@ The AWS Certified AI Practitioner certification I earned on June 1, 2025 demonst
 
 # Relationship to Machine Learning Experience
 
-I earned the AWS Certified AI Practitioner certification to complement my hands-on machine learning experience from practical applications. I have built several machine learning and AI projects including a FastAPI RAG Service (retrieval-augmented generation chatbot), a GPT From Scratch implementation (decoder-only transformer architecture), and a Music Genre Classification system (CNN-based audio classifier).
+I earned the AWS Certified AI Practitioner certification to complement my hands-on machine learning experience from practical applications.
+
 
 The AWS Certified AI Practitioner certification I earned validates my expertise in both artificial intelligence concepts and AWS cloud platform capabilities for AI and machine learning workloads. This certification complements my practical machine learning experience and demonstrates my understanding of cloud-based AI services on Amazon Web Services.
 
