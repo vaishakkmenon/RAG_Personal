@@ -38,6 +38,10 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
+# Load environment variables (needed for REDIS_PASSWORD)
+# Use tr -d '\r' to handle potential Windows CRLF line endings
+export $(grep -v '^#' .env | tr -d '\r' | xargs)
+
 # 2. Pull latest code
 echo "📥 Pulling latest changes from git..."
 # Check if we are in a git repo
@@ -81,7 +85,7 @@ if [ "$REINGEST" = true ]; then
 
     # Clear Redis cache (Response Cache)
     echo "🧹 Clearing Redis response cache..."
-    docker compose -f docker-compose.prod.yml exec -T redis redis-cli flushall
+    docker compose -f docker-compose.prod.yml exec -T redis redis-cli -a "$REDIS_PASSWORD" flushall
 
     # Trigger reingest via API
     echo "📥 Ingesting documents..."
