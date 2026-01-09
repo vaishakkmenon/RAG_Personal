@@ -79,6 +79,10 @@ if [ "$REINGEST" = true ]; then
     echo "🗑️  Clearing existing knowledge base..."
     docker compose -f docker-compose.prod.yml exec -T api python scripts/clear_chromadb.py
 
+    # Clear Redis cache (Response Cache)
+    echo "🧹 Clearing Redis response cache..."
+    docker compose -f docker-compose.prod.yml exec -T redis redis-cli flushall
+
     # Trigger reingest via API
     echo "📥 Ingesting documents..."
     docker compose -f docker-compose.prod.yml exec -T api python -c "
