@@ -60,6 +60,7 @@ The CKA certification also validates my expertise in Kubernetes security and Rol
 
 # Practical Experience
 
-I earned the CKA certification after gaining hands-on experience with Kubernetes during my three Infrastructure Internships at Maven Wave Partners in Chicago, Illinois. During these internships in the summers of 2021, 2022, and 2023, I worked extensively with Kubernetes container orchestration on Google Cloud Platform to manage cloud-native infrastructure.
+I earned the CKA certification after gaining hands-on experience with Kubernetes in professional environments. I have worked extensively with Kubernetes container orchestration to manage cloud-native infrastructure.
+
 
 The Certified Kubernetes Administrator certification I earned on June 26, 2024 validates the practical Kubernetes skills I developed through real-world infrastructure work. The CKA certification demonstrates my ability to administer Kubernetes clusters, troubleshoot container orchestration issues, and maintain production Kubernetes environments.
