@@ -90,13 +90,21 @@ This project taught me RAG architecture fundamentals, vector database operations
 
 ## Personal Portfolio RAG System
 
-I built a production-grade RAG system serving as an intelligent portfolio assistant for my professional website, enabling natural language queries about my background, education, certifications, and projects. The system transforms static resume documents into an interactive knowledge base.
+I architected a production-grade, full-stack Retrieval-Augmented Generation (RAG) system that serves as an intelligent portfolio assistant. Unlike standard chatbots, this system features a proprietary "Glass Box" user interface that transparently visualizes the AI's reasoning process in real-time. The solution integrates a high-performance Python backend with a bleeding-edge Next.js frontend, creating a seamless, interactive experience for querying my professional background, education, and projects.
 
-The technical architecture combines BM25 lexical search with ChromaDB vector search using BGE v1.5 embeddings, refined through hybrid reranking. It includes negative inference detection with adaptive thresholding to prevent hallucinated responses about non-existent entities, and a multi-LLM provider system (Groq, DeepInfra) with circuit breaker failover for high availability.
+I engineered the frontend architecture using Next.js 15 and React 19, bypassing standard REST polling in favor of Server-Sent Events (SSE). This streaming architecture decouples "Chain of Thought" reasoning tokens from the final response, allowing the UI to display a pulsing "Thinking..." state before streaming the answer. I implemented a secure Edge Proxy layer (Netlify Edge) to route requests, effectively masking sensitive API keys from the client bundle while managing network resilience through exponential backoff strategies.
 
-For production infrastructure, I implemented Redis-based caching that reduces latency by 70-80% on cache hits, Prometheus metrics with Grafana dashboards for monitoring, and containerized deployment using Docker Compose with Caddy for TLS termination. The security layer includes input validation, prompt injection guard using Llama Prompt Guard, output validation for PII scrubbing, multi-level rate limiting, and API key/JWT authentication.
+On the backend, I optimized retrieval performance via a hybrid engine combining BM25 lexical search and ChromaDB vector search (BGE v1.5 embeddings). I implemented semantic-lexical reranking and Redis-based caching, achieving a 2.12s mean latency (a 7.8x improvement) under concurrent load. To mitigate hallucinations, I engineered a negative inference detection system with adaptive thresholding that identifies and reformulates queries about non-existent entities, ensuring the model never fabricates credentials.
 
-Technologies: Python, FastAPI, ChromaDB, Redis, Docker, Prometheus, Grafana, Groq API, DeepInfra API, Sentence Transformers, BM25, Llama Prompt Guard.
+Technologies: Next.js 15, React 19, TypeScript, Server-Sent Events (SSE), Python, FastAPI, ChromaDB, Redis, Netlify Edge, Docker, Prometheus, Groq API.
+
+## Pomodoro Focus
+
+I developed "Pomodoro Focus," a high-fidelity productivity platform designed to demonstrate mastery of the modern React ecosystem. Unlike typical todo applications, this project leverages the cutting-edge capabilities of Next.js 15 and React 19 to deliver a performant, server-rendered user experience. I designed a sophisticated "Glassmorphism" UI using Tailwind CSS v4 and Framer Motion, creating an immersive environment that includes a custom media dock for mixing audio streams from Spotify and YouTube.
+
+To ensure production-grade security, I engineered a strict Content Security Policy (CSP) that mitigates Cross-Site Scripting (XSS) risks while safely permitting complex third-party media embeds. I solved cross-site cookie restrictions by architecting a custom subdomain authentication flow using Clerk, allowing for persistent user sessions and seamless state management across the application's ecosystem. This project bridges the gap between aesthetic product design and rigorous software engineering.
+
+Technologies: Next.js 15, React 19, TypeScript, PostgreSQL (Neon), Tailwind CSS v4, Clerk Authentication, Framer Motion, Content Security Policy (CSP).
 
 ## GPT From Scratch
 
