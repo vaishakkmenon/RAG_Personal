@@ -31,8 +31,15 @@ WORKDIR /workspace
 # upgrade pip
 RUN pip install --upgrade pip wheel setuptools
 
-# Copy requirements
-COPY requirements.txt requirements.lock.tx[t] ./
+# Copy ONLY the production requirements
+COPY requirements-prod.txt requirements-prod.lock.tx[t] ./
+
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu \
+    && if [ -f requirements-prod.lock.txt ]; then \
+    pip install --no-cache-dir -r requirements-prod.lock.txt --extra-index-url https://download.pytorch.org/whl/cpu; \
+    else \
+    pip install --no-cache-dir -r requirements-prod.txt --extra-index-url https://download.pytorch.org/whl/cpu; \
+    fi
 
 # Install dependencies
 # Note: Wolfi is glibc compatible, so standard wheels (torch cpu) work fine.

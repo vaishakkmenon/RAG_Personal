@@ -10,6 +10,7 @@ import argparse
 import json
 import logging
 import sys
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
@@ -39,8 +40,11 @@ def get_chroma_collection():
     """Get ChromaDB collection (lazy initialization)."""
     global _chroma_client, _chroma_collection
     if _chroma_collection is None:
-        _chroma_client = chromadb.PersistentClient(
-            path="./data/chroma", settings=Settings(allow_reset=False)
+        chroma_host = os.getenv("CHROMA_HOST", "chromadb")
+        chroma_port = int(os.getenv("CHROMA_PORT", 8000))
+
+        _chroma_client = chromadb.HttpClient(
+            host=chroma_host, port=chroma_port, settings=Settings(allow_reset=False)
         )
         _chroma_collection = _chroma_client.get_collection("personal_rag")
     return _chroma_collection

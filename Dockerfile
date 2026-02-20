@@ -39,9 +39,9 @@ COPY requirements.txt requirements.lock.tx[t] ./
 RUN pip install --no-cache-dir \
     torch --index-url https://download.pytorch.org/whl/cpu \
     && if [ -f requirements.lock.txt ]; then \
-    pip install --no-cache-dir -r requirements.lock.txt; \
+    pip install --no-cache-dir -r requirements.lock.txt --extra-index-url https://download.pytorch.org/whl/cpu; \
     else \
-    pip install --no-cache-dir -r requirements.txt; \
+    pip install --no-cache-dir -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu; \
     fi
 
 # Download NLTK data

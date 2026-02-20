@@ -108,7 +108,8 @@ services:
       - ./config:/workspace/config:ro
 
       # Data directories
-      - ./data/chroma:/workspace/data/chroma
+      # - ./data/chroma:/workspace/data/chroma
+      - ./data/chroma:/workspace/data/chroma:rw
       - ./data/docs:/workspace/data/docs
       - ./data/mds:/workspace/data/mds:ro
       - ./data/eval:/workspace/data/eval
@@ -119,6 +120,8 @@ services:
       redis:
         condition: service_healthy
       postgres:
+        condition: service_healthy
+      chromadb:
         condition: service_healthy
 
     # Security hardening
@@ -264,6 +267,29 @@ services:
         max-size: "10m"
         max-file: "3"
         labels: "service=postgres"
+
+  # ==========================================================================
+  # ChromaDB Service - Vector database for RAG
+  # ==========================================================================
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: rag_chromadb
+    hostname: chromadb
+    environment:
+      - IS_PERSISTENT=TRUE
+      - PERSIST_DIRECTORY=/data
+      - ANONYMIZED_TELEMETRY=FALSE
+    volumes:
+      - ./data/chroma:/data
+    networks:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8000' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   # ==========================================================================
   # Redis Service - Session storage and caching

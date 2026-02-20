@@ -6,6 +6,7 @@ Handles low-level interaction with ChromaDB: connection, document storage, and s
 
 import logging
 import random
+import os
 from typing import Any, Dict, List, Optional
 
 import chromadb
@@ -25,8 +26,12 @@ COLLECTION_NAME: str = settings.collection_name
 class VectorStore:
     def __init__(self):
         self._embed = SentenceTransformerEmbeddingFunction(EMBED_MODEL)
-        self._client = chromadb.PersistentClient(
-            path=CHROMA_PATH,
+        chroma_host = os.getenv("CHROMA_HOST", "chromadb")
+        chroma_port = int(os.getenv("CHROMA_PORT", 8000))
+
+        self._client = chromadb.HttpClient(
+            host=chroma_host,
+            port=chroma_port,
             settings=ChromaSettings(allow_reset=False),
         )
         self._collection = self._client.get_or_create_collection(
