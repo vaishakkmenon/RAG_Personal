@@ -41,15 +41,15 @@ RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/wh
     pip install --no-cache-dir -r requirements-prod.txt --extra-index-url https://download.pytorch.org/whl/cpu; \
     fi
 
-# Install dependencies
-# Note: Wolfi is glibc compatible, so standard wheels (torch cpu) work fine.
-RUN pip install --no-cache-dir \
-    torch --index-url https://download.pytorch.org/whl/cpu \
-    && if [ -f requirements.lock.txt ]; then \
-    pip install --no-cache-dir -r requirements.lock.txt; \
-    else \
-    pip install --no-cache-dir -r requirements.txt; \
-    fi
+# # Install dependencies
+# # Note: Wolfi is glibc compatible, so standard wheels (torch cpu) work fine.
+# RUN pip install --no-cache-dir \
+#     torch --index-url https://download.pytorch.org/whl/cpu \
+#     && if [ -f requirements.lock.txt ]; then \
+#     pip install --no-cache-dir -r requirements.lock.txt; \
+#     else \
+#     pip install --no-cache-dir -r requirements.txt; \
+#     fi
 
 # Download NLTK data
 ENV NLTK_DATA=/home/nonroot/nltk_data

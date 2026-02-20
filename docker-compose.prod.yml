@@ -136,13 +136,15 @@ services:
     volumes:
       # Production: NO source code mounts (baked into image)
       # Only persistent data directories
-      - ./data/chroma:/workspace/data/chroma
+      - ./data/chroma:/workspace/data/chroma:rw
       - ./data/docs:/workspace/data/docs:ro
       - ./data/mds:/workspace/data/mds:ro
       - ./config:/workspace/config:ro
 
     depends_on:
       redis:
+        condition: service_healthy
+      chromadb:
         condition: service_healthy
 
     # Security hardening
@@ -383,6 +385,39 @@ services:
 
     networks:
       - rag_network
+
+  # ==========================================================================
+  # ChromaDB Service - Vector database for RAG (Production)
+  # ==========================================================================
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: rag_chromadb_prod
+    hostname: chromadb
+    environment:
+      - IS_PERSISTENT=TRUE
+      - PERSIST_DIRECTORY=/data
+      - ANONYMIZED_TELEMETRY=FALSE
+    volumes:
+      - ./data/chroma:/data
+    networks:
+      - rag_network
+    restart: always
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    # Limits for your VPS
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+    # Python-based native health check for Wolfi compatibility
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8000/api/v1/heartbeat\").read()' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   # ==========================================================================
   # Discord Webhook Adapter - Converts Alertmanager format to Discord format
