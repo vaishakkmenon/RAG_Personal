@@ -221,8 +221,8 @@ class ChatService:
             "max_tokens": options.max_tokens
             if options.max_tokens is not None
             else settings.llm.max_tokens,
-            "model": options.model,
-            "reasoning_effort": reasoning_effort,  # ReasoningEffort enum
+            "model": request.model or options.model,
+            "reasoning_effort": reasoning_effort,
             "doc_type": options.doc_type,
             "rerank": options.rerank,
             "rerank_lex_weight": options.rerank_lex_weight,
