@@ -16,6 +16,7 @@ uvloop==0.21.0              # High-performance event loop
 httptools==0.6.4            # Fast HTTP parsing
 websockets==13.1            # WebSocket support
 httpx==0.28.1               # HTTP client
+aiohttp>=3.13.3             # Asynchronous HTTP client/server
 
 # Note: uvicorn is the recommended ASGI server for FastAPI (no gunicorn needed)
 
@@ -30,6 +31,11 @@ rank-bm25==0.2.2              # BM25 keyword search for hybrid retrieval
 # sentence-transformers needs torch for BGE model inference
 torch>=2.6.0
 transformers==4.55.2
+
+# --- Database ---
+sqlalchemy==2.0.25
+psycopg2-binary==2.9.9
+alembic==1.13.1
 
 # --- Security Fixes ---
 starlette>=0.49.1  # CVE-2025-62727
@@ -47,6 +53,11 @@ nltk==3.9.1                   # For BM25 tokenization
 # --- Metrics ---
 prometheus-client==0.22.1
 prometheus-fastapi-instrumentator==7.1.0
+
+# --- Authentication ---
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+python-jose[cryptography]==3.4.0  # CVE-2024-33663
 
 # ============================================================================
 # Production Savings:

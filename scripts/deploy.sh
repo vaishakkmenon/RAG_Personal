@@ -58,8 +58,7 @@ docker compose -f docker-compose.prod.yml build
 
 # 4. Restart Services
 echo "🔄 Restarting services..."
-# up -d --remove-orphans will recreate containers if image changed
-docker compose -f docker-compose.prod.yml up -d --remove-orphans
+docker compose -f docker-compose.prod.yml up -d --remove-orphans --wait
 
 # 5. Prune Docker System (Clean up old images to save space)
 echo "🧹 Cleaning up old images..."
@@ -76,8 +75,8 @@ if [ "$REINGEST" = true ]; then
     echo "📚 Starting knowledge base reingest..."
 
     # Wait for API to be healthy
-    echo "⏳ Waiting for API to be ready..."
-    sleep 10
+    echo "🔄 Restarting services..."
+    docker compose -f docker-compose.prod.yml up -d --remove-orphans --wait
 
     # Clear ChromaDB collection
     echo "🗑️  Clearing existing knowledge base..."
