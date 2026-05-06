@@ -15,7 +15,7 @@ jobs:
 
       # Build the test stage image from your multi-stage Dockerfile
       - name: Build test image
-        run: docker build --target test -t ragchatbot:test .
+        run: docker build --target test -f Dockerfile.prod -t ragchatbot:test .
 
       # Run unit tests INSIDE the container with API_KEY from Actions secrets.
       # We pass it at runtime (-e), not at build time (safer; nothing baked into the image).
