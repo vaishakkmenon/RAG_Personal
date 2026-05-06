@@ -37,9 +37,8 @@ class TestVectorStoreOperations:
     """Tests for VectorStore specific logic."""
 
     def setup_method(self):
-        # Mock dependencies to avoid real I/O during init
         with (
-            patch("app.retrieval.vector_store.chromadb.PersistentClient"),
+            patch("chromadb.HttpClient"),
             patch("app.retrieval.vector_store.SentenceTransformerEmbeddingFunction"),
         ):
             self.store = VectorStore()

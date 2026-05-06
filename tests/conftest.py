@@ -15,7 +15,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-_chroma_patch = patch("chromadb.PersistentClient")
+_chroma_patch = patch("chromadb.HttpClient")
 _embed_patch = patch("app.retrieval.vector_store.SentenceTransformerEmbeddingFunction")
 _chroma_patch.start()
 _embed_patch.start()
