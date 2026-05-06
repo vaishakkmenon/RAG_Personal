@@ -54,13 +54,13 @@ RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/wh
 # Download NLTK data
 ENV NLTK_DATA=/home/nonroot/nltk_data
 RUN mkdir -p $NLTK_DATA \
-    && python -c "import nltk; nltk.download('stopwords', download_dir='$NLTK_DATA'); nltk.download('punkt', download_dir='$NLTK_DATA'); nltk.download('punkt_tab', download_dir='$NLTK_DATA')"
+    && /opt/venv/bin/python -c "import nltk; nltk.download('stopwords', download_dir='$NLTK_DATA'); nltk.download('punkt', download_dir='$NLTK_DATA'); nltk.download('punkt_tab', download_dir='$NLTK_DATA')"
 
 # Pre-download embedding model
 # We set HF_HOME to a specific directory to ensure we capture the download
 ENV HF_HOME=/home/nonroot/.cache/huggingface
 RUN mkdir -p $HF_HOME \
-    && python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-small-en-v1.5')" \
+    && /opt/venv/bin/python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-small-en-v1.5')" \
     && chown -R nonroot:nonroot /home/nonroot
 
 # ============================================================================
@@ -88,7 +88,7 @@ RUN test -d ./tests || (echo "WARNING: tests directory not found" && exit 0)
 ENTRYPOINT []
 
 # Default: Run unit tests (not integration tests which need services)
-CMD ["python", "-m", "pytest", "-m", "not integration", "-v", "--tb=short"]
+CMD ["/opt/venv/bin/python", "-m", "pytest", "-m", "not integration", "-v", "--tb=short"]
 
 # ============================================================================
 # Stage 3: Runtime
