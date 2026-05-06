@@ -2,12 +2,13 @@ import os
 import pytest
 from unittest.mock import MagicMock
 import json
-from app.main import app
-from app.api.dependencies import get_chat_service
 
 # We don't need a global client, we'll use the one from conftest or create a new one if needed for overrides
 if os.environ.get("CI"):
     pytest.skip("Skipping this file in GitHub Actions", allow_module_level=True)
+
+from app.main import app
+from app.api.dependencies import get_chat_service
 
 
 @pytest.fixture
