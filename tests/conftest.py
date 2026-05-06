@@ -15,6 +15,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
+_chroma_patch = patch("chromadb.PersistentClient")
+_embed_patch = patch("app.retrieval.vector_store.SentenceTransformerEmbeddingFunction")
+_chroma_patch.start()
+_embed_patch.start()
+
 
 # ============================================================================
 # Environment Setup
@@ -65,10 +70,9 @@ def setup_test_environment():
 def client() -> Generator[TestClient, None, None]:
     """
     Create a FastAPI test client with mocked dependencies.
-
-    This avoids starting real services (ChromaDB, Redis, LLM).
+    ChromaDB is patched at module level above to prevent
+    connection attempts during collection.
     """
-    # Import here to avoid circular imports and ensure env vars are set
     from app.main import app
 
     with TestClient(app, raise_server_exceptions=False) as test_client:
