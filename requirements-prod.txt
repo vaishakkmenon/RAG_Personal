@@ -47,8 +47,8 @@ tqdm==4.67.1
 pyyaml==6.0.2
 pydantic==2.11.7
 python-dotenv==1.1.1
-python-multipart==0.0.20
-nltk==3.9.1                   # For BM25 tokenization
+python-multipart==0.0.22
+nltk==3.9.4                   # For BM25 tokenization
 
 # --- Metrics ---
 prometheus-client==0.22.1
