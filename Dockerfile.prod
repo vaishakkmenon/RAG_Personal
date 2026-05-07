@@ -28,8 +28,8 @@ ENV PATH="$VENV/bin:$PATH"
 
 WORKDIR /workspace
 
-# upgrade pip
-RUN pip install --upgrade pip "wheel>=0.46.2" "setuptools>=78.1.1"
+# upgrade pip and wheel first
+RUN pip install --upgrade pip "wheel>=0.46.2"
 
 # Copy ONLY the production requirements
 COPY requirements-prod.txt requirements-prod.lock.tx[t] ./
@@ -38,15 +38,9 @@ RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/wh
     && pip install --no-cache-dir -r requirements-prod.txt \
     --extra-index-url https://download.pytorch.org/whl/cpu
 
-# # Install dependencies
-# # Note: Wolfi is glibc compatible, so standard wheels (torch cpu) work fine.
-# RUN pip install --no-cache-dir \
-#     torch --index-url https://download.pytorch.org/whl/cpu \
-#     && if [ -f requirements.lock.txt ]; then \
-#     pip install --no-cache-dir -r requirements.lock.txt; \
-#     else \
-#     pip install --no-cache-dir -r requirements.txt; \
-#     fi
+# Force setuptools to patched version AFTER all other installs
+# Some packages downgrade setuptools as a side effect
+RUN pip install --upgrade "setuptools>=78.1.1"
 
 # Download NLTK data
 ENV NLTK_DATA=/home/nonroot/nltk_data
