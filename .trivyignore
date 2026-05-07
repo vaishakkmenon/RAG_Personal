@@ -1,0 +1,9 @@
+@"
+# .trivyignore
+# CVE-2026-30922: pyasn1 DoS via unbounded recursion
+# Cannot upgrade pyasn1 beyond 0.4.x — python-jose 3.4.0 requires pyasn1<0.5.0
+# pyasn1 is only used internally by python-jose for JWT parsing, not exposed
+# to direct ASN.1 input from untrusted sources. Exploitability is low.
+# Track: replace python-jose with PyJWT when time permits.
+CVE-2026-30922
+"@ | Out-File -FilePath .trivyignore -Encoding UTF8
