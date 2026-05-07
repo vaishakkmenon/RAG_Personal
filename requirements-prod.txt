@@ -45,7 +45,6 @@ filelock>=3.20.1   # CVE-2025-68146
 # --- Data / utils ---
 tqdm==4.67.1
 pyyaml==6.0.2
-pyasn1==0.6.3
 pydantic==2.11.7
 python-dotenv==1.1.1
 python-multipart==0.0.27
