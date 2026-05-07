@@ -29,7 +29,7 @@ ENV PATH="$VENV/bin:$PATH"
 WORKDIR /workspace
 
 # upgrade pip
-RUN pip install --upgrade pip wheel setuptools
+RUN pip install --upgrade pip wheel setuptools==78.1.1
 
 # Copy ONLY the production requirements
 COPY requirements-prod.txt requirements-prod.lock.tx[t] ./

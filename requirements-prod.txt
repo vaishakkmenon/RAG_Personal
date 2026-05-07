@@ -45,9 +45,10 @@ filelock>=3.20.1   # CVE-2025-68146
 # --- Data / utils ---
 tqdm==4.67.1
 pyyaml==6.0.2
+pyasn1==0.6.3
 pydantic==2.11.7
 python-dotenv==1.1.1
-python-multipart==0.0.22
+python-multipart==0.0.27
 pytest-asyncio==0.23.8
 nltk==3.9.4                   # For BM25 tokenization
 
